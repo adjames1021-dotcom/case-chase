@@ -190,15 +190,9 @@
   }
 
   .modal h2 {
-    margin: 0 0 4px;
+    margin: 0 0 18px;
     color: #fff;
     text-align: center;
-  }
-  .modal .sub {
-    text-align: center;
-    color: #888;
-    font-size: 13px;
-    margin-bottom: 18px;
   }
 
   /* ---------- Spinner reel (CS-style) ---------- */
@@ -243,6 +237,7 @@
   }
 
   .reel-item {
+    box-sizing: border-box;
     flex: 0 0 auto;
     width: 130px;
     height: 130px;
@@ -332,7 +327,6 @@
 <div class="modal-backdrop hidden" id="open-modal">
   <div class="modal">
     <h2 id="open-case-name">Case Name</h2>
-    <div class="sub">Good luck.</div>
 
     <div class="reel-viewport">
       <div class="reel-track" id="reel-track"></div>
@@ -353,7 +347,6 @@
 <div class="modal-backdrop hidden" id="contents-modal">
   <div class="modal">
     <h2 id="contents-case-name">Case Contents</h2>
-    <div class="sub">Drop chances by rarity</div>
     <div class="contents-list" id="contents-list"></div>
     <div class="modal-actions">
       <button class="btn-secondary" id="contents-close-btn">Close</button>
@@ -402,21 +395,21 @@
       id: 'standard',
       name: 'Standard Case',
       icon: '📦',
-      price: 100,
+      price: 0,
       rarityOrder: RARITIES_3,
       odds: { common: 0.70, uncommon: 0.25, rare: 0.05 },
       items: {
         common: [
-          { name: 'Scuffed Badge', icon: '🔘', value: 5 },
-          { name: 'Rusty Coin', icon: '🪙', value: 8 },
-          { name: 'Worn Token', icon: '🎫', value: 10 },
+          { name: 'Scuffed Badge', icon: '🔘', value: 1 },
+          { name: 'Rusty Coin', icon: '🪙', value: 1 },
+          { name: 'Worn Token', icon: '🎫', value: 2 },
         ],
         uncommon: [
-          { name: 'Polished Badge', icon: '🥉', value: 25 },
-          { name: 'Silver Token', icon: '🎟️', value: 32 },
+          { name: 'Polished Badge', icon: '🥉', value: 3 },
+          { name: 'Silver Token', icon: '🎟️', value: 4 },
         ],
         rare: [
-          { name: 'Golden Badge', icon: '🥇', value: 120 },
+          { name: 'Golden Badge', icon: '🥇', value: 8 },
         ],
       },
     },
