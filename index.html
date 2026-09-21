@@ -49,7 +49,7 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    margin-bottom: 28px;
+    margin-bottom: 20px;
   }
 
   .topbar h1 {
@@ -57,6 +57,12 @@
     letter-spacing: 1px;
     margin: 0;
     color: #fff;
+  }
+
+  .topbar-right {
+    display: flex;
+    align-items: center;
+    gap: 10px;
   }
 
   .coins {
@@ -68,6 +74,40 @@
     font-size: 16px;
     color: #ffd447;
   }
+
+  .reset-btn {
+    background: transparent;
+    border: 1px solid #333;
+    color: #777;
+    padding: 8px 14px;
+    border-radius: 8px;
+    font-size: 12px;
+    cursor: pointer;
+  }
+  .reset-btn:hover { color: #ff6b6b; border-color: #ff6b6b; }
+
+  /* ---------- Tabs ---------- */
+  .tabs {
+    display: flex;
+    gap: 8px;
+    max-width: 1100px;
+    margin: 0 auto 24px;
+  }
+  .tab-btn {
+    background: #111;
+    border: 1px solid #262626;
+    color: #999;
+    padding: 9px 20px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+  }
+  .tab-btn:hover { color: #ccc; border-color: #444; }
+  .tab-btn.active { background: #1e6fff; border-color: #1e6fff; color: #fff; }
+
+  .view.hidden { display: none; }
 
   .case-grid {
     display: grid;
@@ -213,6 +253,169 @@
   .chip.legendary { background: rgba(255,159,28,0.15); color: var(--legendary); }
   .chip.mythic { background: rgba(255,61,61,0.15); color: var(--mythic); }
 
+  /* ---------- Inventory ---------- */
+  .inventory-summary {
+    display: flex;
+    align-items: center;
+    gap: 22px;
+    max-width: 1100px;
+    margin: 0 auto 20px;
+    background: #111;
+    border: 1px solid #262626;
+    border-radius: 10px;
+    padding: 14px 20px;
+  }
+  .inventory-summary > div { font-weight: 700; color: #ccc; font-size: 14px; }
+  .inventory-summary .val-total { color: #ffd447; }
+  .inventory-summary .sell-all-btn {
+    margin-left: auto;
+    width: auto;
+    padding: 8px 16px;
+  }
+
+  .inventory-grid, .upgrader-inventory {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+    gap: 12px;
+    max-width: 1100px;
+    margin: 0 auto;
+  }
+
+  .inv-item {
+    box-sizing: border-box;
+    position: relative;
+    overflow: hidden;
+    background: linear-gradient(180deg, #1c1c1c 0%, #141414 75%);
+    border: 1px solid #2a2a2a;
+    border-radius: 8px;
+    padding: 12px 8px 10px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 4px;
+  }
+  .inv-item::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 6px;
+  }
+  .inv-icon { font-size: 30px; }
+  .inv-name { font-size: 11px; color: #ccc; font-weight: 600; line-height: 1.2; min-height: 26px; }
+  .inv-item .val { font-size: 11px; color: #ffd447; font-weight: 700; }
+
+  .sell-btn {
+    margin-top: 4px;
+    background: #222;
+    border: 1px solid #333;
+    color: #ddd;
+    font-size: 11px;
+    padding: 5px 0;
+    border-radius: 6px;
+    cursor: pointer;
+    width: 100%;
+  }
+  .sell-btn:hover { border-color: #666; color: #fff; }
+
+  .empty-state {
+    grid-column: 1 / -1;
+    text-align: center;
+    color: #555;
+    padding: 40px 0;
+    font-size: 13px;
+  }
+
+  .upgrader-inventory .inv-item.selectable { cursor: pointer; }
+  .upgrader-inventory .inv-item.selectable:hover { border-color: #666; }
+  .upgrader-inventory .inv-item.selected {
+    border-color: #1e6fff;
+    box-shadow: 0 0 0 2px rgba(30,111,255,0.4);
+  }
+
+  /* ---------- Upgrader ---------- */
+  .upgrader-panel {
+    display: flex;
+    gap: 24px;
+    max-width: 1100px;
+    margin: 0 auto;
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+  .upgrader-col { flex: 1; min-width: 260px; }
+  .upgrader-controls {
+    flex: 0 0 260px;
+    background: #111;
+    border: 1px solid #262626;
+    border-radius: 10px;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+  .upgrader-label {
+    font-size: 12px;
+    font-weight: 700;
+    color: #888;
+    margin-bottom: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .stake-value, .target-value { font-size: 14px; font-weight: 700; color: #ccc; }
+  .stake-value span, .target-value span { color: #ffd447; }
+  .multiplier-selector { display: flex; gap: 6px; }
+  .mult-btn {
+    flex: 1;
+    background: #151515;
+    border: 1px solid #333;
+    color: #999;
+    padding: 8px 0;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+  .mult-btn:hover:not(.active) { border-color: #666; color: #ccc; }
+  .mult-btn.active { background: #1e6fff; border-color: #1e6fff; color: #fff; }
+  .chance-display { font-size: 14px; font-weight: 700; color: #4caf50; }
+
+  .upgrade-bar-wrap { max-width: 680px; margin: 28px auto 0; }
+  .upgrade-bar {
+    position: relative;
+    height: 34px;
+    border-radius: 6px;
+    overflow: hidden;
+    background: #3d1414;
+    border: 1px solid #262626;
+  }
+  .upgrade-bar-win {
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    background: linear-gradient(180deg, #4caf50, #2e7d32);
+  }
+  .upgrade-bar-marker {
+    position: absolute;
+    top: -5px;
+    bottom: -5px;
+    width: 3px;
+    background: #fff;
+    box-shadow: 0 0 10px #fff, 0 0 18px #fff;
+    left: 0%;
+    transform: translateX(-50%);
+  }
+  .upgrade-result {
+    text-align: center;
+    margin-top: 14px;
+    font-size: 16px;
+    font-weight: 700;
+  }
+  .upgrade-result.win { color: #4caf50; }
+  .upgrade-result.lose { color: #ff5555; }
+
   /* ---------- Modal ---------- */
   .modal-backdrop {
     position: fixed;
@@ -232,6 +435,12 @@
     padding: 26px;
     width: min(760px, 92vw);
     box-sizing: border-box;
+  }
+
+  #contents-modal .modal h2 {
+    margin: 0 0 18px;
+    color: #fff;
+    text-align: center;
   }
 
   .modal-header {
@@ -415,12 +624,6 @@
   .btn-primary { background: #1e6fff; color: #fff; }
   .btn-secondary { background: #222; color: #ddd; border: 1px solid #333 !important; }
 
-  #contents-modal .modal h2 {
-    margin: 0 0 18px;
-    color: #fff;
-    text-align: center;
-  }
-
   /* contents list modal */
   .contents-list {
     display: grid;
@@ -440,11 +643,60 @@
 
 <div id="shop-overlay">
   <div class="topbar">
-    <h1>CASE CHASE &mdash; CASE SHOP</h1>
-    <div class="coins">🪙 <span id="coin-total">0</span></div>
+    <h1>CASE CHASE</h1>
+    <div class="topbar-right">
+      <button class="reset-btn" id="reset-save-btn">Reset Save</button>
+      <div class="coins">🪙 <span id="coin-total">0</span></div>
+    </div>
   </div>
 
-  <div class="case-grid" id="case-grid"></div>
+  <div class="tabs">
+    <button class="tab-btn active" data-view="cases">Cases</button>
+    <button class="tab-btn" data-view="inventory">Inventory</button>
+    <button class="tab-btn" data-view="upgrader">Upgrader</button>
+  </div>
+
+  <div class="view" id="view-cases">
+    <div class="case-grid" id="case-grid"></div>
+  </div>
+
+  <div class="view hidden" id="view-inventory">
+    <div class="inventory-summary">
+      <div>Items: <span id="inv-count">0</span></div>
+      <div>Total Value: 🪙 <span class="val-total" id="inv-total">0</span></div>
+      <button class="contents-btn sell-all-btn" id="sell-all-btn">Sell All</button>
+    </div>
+    <div class="inventory-grid" id="inventory-grid"></div>
+  </div>
+
+  <div class="view hidden" id="view-upgrader">
+    <div class="upgrader-panel">
+      <div class="upgrader-col">
+        <div class="upgrader-label">Select items to stake</div>
+        <div class="upgrader-inventory" id="upgrader-inventory"></div>
+      </div>
+      <div class="upgrader-controls">
+        <div class="stake-value">Stake: <span id="stake-total">🪙 0</span></div>
+        <div class="multiplier-selector" id="multiplier-selector">
+          <button class="mult-btn" data-mult="2">2x</button>
+          <button class="mult-btn active" data-mult="3">3x</button>
+          <button class="mult-btn" data-mult="5">5x</button>
+          <button class="mult-btn" data-mult="10">10x</button>
+        </div>
+        <div class="target-value">Target: <span id="target-total">🪙 0</span></div>
+        <div class="chance-display">Win Chance: <span id="chance-display">0%</span></div>
+        <button class="open-btn" id="upgrade-btn" disabled>Upgrade</button>
+      </div>
+    </div>
+
+    <div class="upgrade-bar-wrap hidden" id="upgrade-bar-wrap">
+      <div class="upgrade-bar" id="upgrade-bar">
+        <div class="upgrade-bar-win" id="upgrade-bar-win"></div>
+        <div class="upgrade-bar-marker" id="upgrade-bar-marker"></div>
+      </div>
+      <div class="upgrade-result hidden" id="upgrade-result"></div>
+    </div>
+  </div>
 </div>
 
 <!-- Opening modal -->
@@ -576,12 +828,52 @@
   ];
 
   /* ---------------------------------------------------------------
-   * State
+   * State + save / load
    * ------------------------------------------------------------- */
+  const SAVE_KEY = 'case-chase-save-v1';
+
   const state = {
     coins: 1000,
     inventory: [],
   };
+
+  let idCounter = 0;
+  function makeId() {
+    idCounter += 1;
+    return `item-${Date.now()}-${idCounter}`;
+  }
+
+  function saveGame() {
+    try {
+      localStorage.setItem(SAVE_KEY, JSON.stringify({
+        coins: state.coins,
+        inventory: state.inventory,
+      }));
+    } catch (e) {
+      // storage unavailable (private mode, disabled, etc.) - fail silently
+    }
+  }
+
+  function loadGame() {
+    try {
+      const raw = localStorage.getItem(SAVE_KEY);
+      if (!raw) return;
+      const saved = JSON.parse(raw);
+      if (typeof saved.coins === 'number') state.coins = saved.coins;
+      if (Array.isArray(saved.inventory)) state.inventory = saved.inventory;
+    } catch (e) {
+      // corrupt save - ignore and keep defaults
+    }
+  }
+
+  function valueToRarity(value) {
+    if (value < 10) return 'common';
+    if (value < 50) return 'uncommon';
+    if (value < 200) return 'rare';
+    if (value < 1000) return 'epic';
+    if (value < 5000) return 'legendary';
+    return 'mythic';
+  }
 
   const MAX_QTY = 3;
   const caseQty = {};
@@ -590,6 +882,32 @@
   function updateCoinDisplay() {
     document.getElementById('coin-total').textContent = state.coins.toLocaleString();
   }
+
+  /* ---------------------------------------------------------------
+   * Tabs
+   * ------------------------------------------------------------- */
+  function switchView(name) {
+    document.querySelectorAll('.view').forEach(v => v.classList.add('hidden'));
+    document.getElementById(`view-${name}`).classList.remove('hidden');
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.view === name));
+    if (name === 'inventory') renderInventory();
+    if (name === 'upgrader') renderUpgrader();
+  }
+
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => switchView(btn.dataset.view));
+  });
+
+  document.getElementById('reset-save-btn').addEventListener('click', () => {
+    if (!confirm('Reset all progress? This clears your coins and inventory.')) return;
+    state.coins = 1000;
+    state.inventory = [];
+    selectedUpgradeIds.clear();
+    saveGame();
+    updateCoinDisplay();
+    renderInventory();
+    renderUpgrader();
+  });
 
   /* ---------------------------------------------------------------
    * Render shop
@@ -695,7 +1013,7 @@
   }
 
   /* ---------------------------------------------------------------
-   * Case opening (CS:GO-style spinning reel)
+   * Case opening (CS:GO-style spinning reel, sequential rounds)
    * ------------------------------------------------------------- */
   const openModal = document.getElementById('open-modal');
   const reelTrack = document.getElementById('reel-track');
@@ -738,6 +1056,7 @@
 
     state.coins -= totalCost;
     updateCoinDisplay();
+    saveGame();
 
     currentCase = c;
     opening = true;
@@ -832,16 +1151,17 @@
   }
 
   collectBtn.addEventListener('click', () => {
-    const total = roundResults.reduce((sum, r) => sum + r.item.value, 0);
-    state.coins += total;
     roundResults.forEach(r => {
       state.inventory.push({
+        id: makeId(),
         caseId: currentCase.id,
         rarity: r.rarity,
-        ...r.item,
+        name: r.item.name,
+        icon: r.item.icon,
+        value: r.item.value,
       });
     });
-    updateCoinDisplay();
+    saveGame();
 
     opening = false;
     pendingReward = null;
@@ -857,8 +1177,196 @@
   }
 
   /* ---------------------------------------------------------------
+   * Inventory
+   * ------------------------------------------------------------- */
+  function sellItem(id) {
+    const idx = state.inventory.findIndex(i => i.id === id);
+    if (idx === -1) return;
+    const [item] = state.inventory.splice(idx, 1);
+    state.coins += item.value;
+    updateCoinDisplay();
+    saveGame();
+    renderInventory();
+  }
+
+  document.getElementById('sell-all-btn').addEventListener('click', () => {
+    if (state.inventory.length === 0) return;
+    const total = state.inventory.reduce((sum, i) => sum + i.value, 0);
+    state.coins += total;
+    state.inventory = [];
+    updateCoinDisplay();
+    saveGame();
+    renderInventory();
+  });
+
+  function renderInventory() {
+    const grid = document.getElementById('inventory-grid');
+    document.getElementById('inv-count').textContent = state.inventory.length;
+    const total = state.inventory.reduce((sum, i) => sum + i.value, 0);
+    document.getElementById('inv-total').textContent = total.toLocaleString();
+
+    grid.innerHTML = '';
+    if (state.inventory.length === 0) {
+      grid.innerHTML = '<div class="empty-state">No items yet</div>';
+      return;
+    }
+
+    state.inventory.slice().reverse().forEach(item => {
+      const el = document.createElement('div');
+      el.className = `inv-item rar-${item.rarity}`;
+      el.innerHTML = `
+        <div class="inv-icon">${item.icon}</div>
+        <div class="inv-name">${item.name}</div>
+        <div class="val">🪙 ${item.value.toLocaleString()}</div>
+        <button class="sell-btn" data-id="${item.id}">Sell</button>
+      `;
+      grid.appendChild(el);
+    });
+
+    grid.querySelectorAll('.sell-btn').forEach(btn => {
+      btn.addEventListener('click', () => sellItem(btn.dataset.id));
+    });
+  }
+
+  /* ---------------------------------------------------------------
+   * Upgrader (CS-style upgrade wheel/bar)
+   * ------------------------------------------------------------- */
+  const selectedUpgradeIds = new Set();
+  let currentMultiplier = 3;
+  let upgrading = false;
+
+  document.querySelectorAll('.mult-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      currentMultiplier = Number(btn.dataset.mult);
+      document.querySelectorAll('.mult-btn').forEach(b => b.classList.toggle('active', b === btn));
+      updateUpgraderTotals();
+    });
+  });
+
+  function renderUpgrader() {
+    const list = document.getElementById('upgrader-inventory');
+    list.innerHTML = '';
+
+    if (state.inventory.length === 0) {
+      list.innerHTML = '<div class="empty-state">No items to upgrade</div>';
+    } else {
+      state.inventory.slice().reverse().forEach(item => {
+        const el = document.createElement('div');
+        el.className = `inv-item rar-${item.rarity} selectable${selectedUpgradeIds.has(item.id) ? ' selected' : ''}`;
+        el.innerHTML = `
+          <div class="inv-icon">${item.icon}</div>
+          <div class="inv-name">${item.name}</div>
+          <div class="val">🪙 ${item.value.toLocaleString()}</div>
+        `;
+        el.addEventListener('click', () => {
+          if (upgrading) return;
+          if (selectedUpgradeIds.has(item.id)) {
+            selectedUpgradeIds.delete(item.id);
+          } else {
+            selectedUpgradeIds.add(item.id);
+          }
+          renderUpgrader();
+        });
+        list.appendChild(el);
+      });
+    }
+
+    updateUpgraderTotals();
+  }
+
+  function getStakeTotal() {
+    return state.inventory
+      .filter(i => selectedUpgradeIds.has(i.id))
+      .reduce((sum, i) => sum + i.value, 0);
+  }
+
+  function updateUpgraderTotals() {
+    const stakeTotal = getStakeTotal();
+    const targetTotal = Math.round(stakeTotal * currentMultiplier);
+    const chance = stakeTotal > 0 ? Math.min(95, 100 / currentMultiplier) : 0;
+
+    document.getElementById('stake-total').textContent = `🪙 ${stakeTotal.toLocaleString()}`;
+    document.getElementById('target-total').textContent = `🪙 ${targetTotal.toLocaleString()}`;
+    document.getElementById('chance-display').textContent = `${chance.toFixed(1)}%`;
+    document.getElementById('upgrade-btn').disabled = stakeTotal <= 0 || upgrading;
+  }
+
+  document.getElementById('upgrade-btn').addEventListener('click', runUpgrade);
+
+  function runUpgrade() {
+    if (upgrading) return;
+    const stakeTotal = getStakeTotal();
+    if (stakeTotal <= 0) return;
+
+    const targetTotal = Math.round(stakeTotal * currentMultiplier);
+    const chance = Math.min(95, 100 / currentMultiplier);
+
+    // Consume the staked items immediately - they're at risk during the spin.
+    state.inventory = state.inventory.filter(i => !selectedUpgradeIds.has(i.id));
+    selectedUpgradeIds.clear();
+    saveGame();
+    renderInventory();
+    renderUpgrader();
+
+    upgrading = true;
+    document.getElementById('upgrade-btn').disabled = true;
+
+    const barWrap = document.getElementById('upgrade-bar-wrap');
+    const winZone = document.getElementById('upgrade-bar-win');
+    const marker = document.getElementById('upgrade-bar-marker');
+    const resultEl = document.getElementById('upgrade-result');
+
+    winZone.style.width = `${chance}%`;
+    resultEl.classList.add('hidden');
+    barWrap.classList.remove('hidden');
+
+    marker.style.transition = 'none';
+    marker.style.left = '0%';
+    // Force reflow so the transition below actually animates from 0.
+    // eslint-disable-next-line no-unused-expressions
+    marker.offsetHeight;
+
+    const win = Math.random() * 100 < chance;
+    const landing = win
+      ? Math.random() * chance
+      : chance + Math.random() * (100 - chance);
+
+    requestAnimationFrame(() => {
+      marker.style.transition = 'left 3.2s cubic-bezier(0.12, 0.79, 0.24, 1)';
+      marker.style.left = `${landing}%`;
+    });
+
+    setTimeout(() => {
+      if (win) {
+        const prize = {
+          id: makeId(),
+          caseId: 'upgrade',
+          rarity: valueToRarity(targetTotal),
+          name: 'Upgraded Prize',
+          icon: '💠',
+          value: targetTotal,
+        };
+        state.inventory.push(prize);
+        resultEl.innerHTML =
+          `<span class="chip ${prize.rarity}">${RARITY_LABEL[prize.rarity]}</span> Won 🪙 ${prize.value.toLocaleString()}`;
+        resultEl.className = 'upgrade-result win';
+      } else {
+        resultEl.textContent = 'Lost the upgrade';
+        resultEl.className = 'upgrade-result lose';
+      }
+      resultEl.classList.remove('hidden');
+
+      saveGame();
+      renderInventory();
+      renderUpgrader();
+      upgrading = false;
+    }, 3400);
+  }
+
+  /* ---------------------------------------------------------------
    * Init
    * ------------------------------------------------------------- */
+  loadGame();
   updateCoinDisplay();
   renderShop();
 </script>
