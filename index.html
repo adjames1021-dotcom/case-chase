@@ -122,6 +122,9 @@
     color: #ffd447;
     margin-bottom: 12px;
   }
+  .case-card .price.free {
+    color: #4caf50;
+  }
 
   .open-btn {
     background: #1e6fff;
@@ -473,11 +476,15 @@
         .map(r => `<span class="chip ${r}">${RARITY_LABEL[r]}</span>`)
         .join('');
 
+      const priceHtml = c.price === 0
+        ? `<div class="price free">FREE</div>`
+        : `<div class="price">🪙 ${c.price.toLocaleString()}</div>`;
+
       card.innerHTML = `
         <div class="case-art">${c.icon}</div>
         <h2>${c.name}</h2>
         <div class="rarities">${rarityChips}</div>
-        <div class="price">🪙 ${c.price.toLocaleString()}</div>
+        ${priceHtml}
         <button class="open-btn" data-case="${c.id}">Open Case</button>
         <button class="contents-btn" data-contents="${c.id}">View Contents</button>
       `;
@@ -636,11 +643,13 @@
 
   collectBtn.addEventListener('click', () => {
     if (pendingReward) {
+      state.coins += pendingReward.item.value;
       state.inventory.push({
         caseId: currentCase.id,
         rarity: pendingReward.rarity,
         ...pendingReward.item,
       });
+      updateCoinDisplay();
     }
     opening = false;
     pendingReward = null;
