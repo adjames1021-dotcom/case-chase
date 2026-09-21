@@ -5,6 +5,15 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Case Chase</title>
 <style>
+  :root {
+    --common: #b0b3b8;
+    --uncommon: #4caf50;
+    --rare: #3d9dff;
+    --epic: #a24dff;
+    --legendary: #ff9f1c;
+    --mythic: #ff3d3d;
+  }
+
   html, body {
     margin: 0;
     padding: 0;
@@ -12,18 +21,350 @@
     height: 100%;
     background: #000;
     overflow: hidden;
+    font-family: 'Segoe UI', Arial, sans-serif;
+    color: #eee;
   }
 
   #game-canvas {
     display: block;
     background: #000;
+    position: fixed;
+    top: 0;
+    left: 0;
+  }
+
+  /* ---------- Shop overlay ---------- */
+  #shop-overlay {
+    position: fixed;
+    inset: 0;
+    overflow-y: auto;
+    padding: 24px 32px 60px;
+    box-sizing: border-box;
+  }
+
+  .topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 28px;
+  }
+
+  .topbar h1 {
+    font-size: 22px;
+    letter-spacing: 1px;
+    margin: 0;
+    color: #fff;
+  }
+
+  .coins {
+    background: #111;
+    border: 1px solid #2a2a2a;
+    border-radius: 8px;
+    padding: 8px 16px;
+    font-weight: 600;
+    font-size: 16px;
+    color: #ffd447;
+  }
+
+  .case-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 22px;
+    max-width: 1100px;
+    margin: 0 auto;
+  }
+
+  .case-card {
+    background: linear-gradient(180deg, #141414, #0a0a0a);
+    border: 1px solid #262626;
+    border-radius: 12px;
+    padding: 18px;
+    text-align: center;
+    transition: transform 0.15s ease, border-color 0.15s ease;
+  }
+
+  .case-card:hover {
+    transform: translateY(-4px);
+    border-color: #444;
+  }
+
+  .case-art {
+    width: 100%;
+    aspect-ratio: 1 / 1;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 54px;
+    margin-bottom: 14px;
+    background:
+      repeating-linear-gradient(45deg, #1c1c1c 0 10px, #161616 10px 20px);
+    border: 2px solid #333;
+    box-shadow: inset 0 0 30px rgba(0,0,0,0.6);
+  }
+
+  .case-card h2 {
+    font-size: 17px;
+    margin: 4px 0 2px;
+    color: #fff;
+  }
+
+  .case-card .rarities {
+    font-size: 11px;
+    color: #888;
+    margin-bottom: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .case-card .price {
+    font-weight: 700;
+    color: #ffd447;
+    margin-bottom: 12px;
+  }
+
+  .open-btn {
+    background: #1e6fff;
+    color: #fff;
+    border: none;
+    padding: 10px 18px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    width: 100%;
+    transition: background 0.15s ease, opacity 0.15s ease;
+  }
+
+  .open-btn:hover:not(:disabled) { background: #3a85ff; }
+  .open-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  .contents-btn {
+    background: transparent;
+    color: #999;
+    border: 1px solid #333;
+    padding: 7px 14px;
+    border-radius: 8px;
+    font-size: 12px;
+    cursor: pointer;
+    width: 100%;
+    margin-top: 8px;
+  }
+  .contents-btn:hover { color: #fff; border-color: #666; }
+
+  /* ---------- Rarity chips ---------- */
+  .chip {
+    display: inline-block;
+    padding: 2px 7px;
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: 700;
+    margin: 0 2px;
+  }
+  .chip.common { background: rgba(176,179,184,0.15); color: var(--common); }
+  .chip.uncommon { background: rgba(76,175,80,0.15); color: var(--uncommon); }
+  .chip.rare { background: rgba(61,157,255,0.15); color: var(--rare); }
+  .chip.epic { background: rgba(162,77,255,0.15); color: var(--epic); }
+  .chip.legendary { background: rgba(255,159,28,0.15); color: var(--legendary); }
+  .chip.mythic { background: rgba(255,61,61,0.15); color: var(--mythic); }
+
+  /* ---------- Modal ---------- */
+  .modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.85);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 50;
+  }
+  .hidden { display: none !important; }
+
+  .modal {
+    background: #0d0d0d;
+    border: 1px solid #2a2a2a;
+    border-radius: 14px;
+    padding: 26px;
+    width: min(760px, 92vw);
+    box-sizing: border-box;
+  }
+
+  .modal h2 {
+    margin: 0 0 4px;
+    color: #fff;
+    text-align: center;
+  }
+  .modal .sub {
+    text-align: center;
+    color: #888;
+    font-size: 13px;
+    margin-bottom: 18px;
+  }
+
+  /* ---------- Spinner reel (CS-style) ---------- */
+  .reel-viewport {
+    position: relative;
+    width: 100%;
+    max-width: 680px;
+    margin: 0 auto 20px;
+    height: 150px;
+    overflow: hidden;
+    border-radius: 8px;
+    background: #050505;
+    border: 1px solid #262626;
+  }
+
+  .reel-viewport::before {
+    content: "";
+    position: absolute;
+    left: 50%;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background: #ffd447;
+    box-shadow: 0 0 10px #ffd447, 0 0 20px #ffd447;
+    z-index: 5;
+    transform: translateX(-1px);
+  }
+  .reel-viewport::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: linear-gradient(90deg, #050505 0%, transparent 12%, transparent 88%, #050505 100%);
+    z-index: 4;
+  }
+
+  .reel-track {
+    display: flex;
+    align-items: center;
+    height: 100%;
+    will-change: transform;
+  }
+
+  .reel-item {
+    flex: 0 0 auto;
+    width: 130px;
+    height: 130px;
+    margin: 0 8px;
+    border-radius: 8px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    font-size: 40px;
+    border: 2px solid #333;
+    background: #111;
+  }
+
+  .reel-item .val {
+    font-size: 11px;
+    margin-top: 6px;
+    color: #ffd447;
+    font-weight: 700;
+  }
+
+  .rar-common { border-color: var(--common); box-shadow: inset 0 -30px 25px -20px rgba(176,179,184,0.35); }
+  .rar-uncommon { border-color: var(--uncommon); box-shadow: inset 0 -30px 25px -20px rgba(76,175,80,0.35); }
+  .rar-rare { border-color: var(--rare); box-shadow: inset 0 -30px 25px -20px rgba(61,157,255,0.35); }
+  .rar-epic { border-color: var(--epic); box-shadow: inset 0 -30px 25px -20px rgba(162,77,255,0.4); }
+  .rar-legendary { border-color: var(--legendary); box-shadow: inset 0 -30px 25px -20px rgba(255,159,28,0.45); }
+  .rar-mythic { border-color: var(--mythic); box-shadow: inset 0 -30px 25px -20px rgba(255,61,61,0.5); }
+
+  .result-box {
+    text-align: center;
+    margin-top: 4px;
+  }
+  .result-box .item-name {
+    font-size: 20px;
+    font-weight: 700;
+    color: #fff;
+  }
+  .result-box .item-val {
+    color: #ffd447;
+    font-weight: 700;
+    margin-top: 2px;
+  }
+
+  .modal-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    margin-top: 20px;
+  }
+  .modal-actions button {
+    padding: 10px 22px;
+    border-radius: 8px;
+    border: none;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .btn-primary { background: #1e6fff; color: #fff; }
+  .btn-secondary { background: #222; color: #ddd; border: 1px solid #333 !important; }
+
+  /* contents list modal */
+  .contents-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: 12px;
+  }
+  .contents-list .reel-item {
+    margin: 0;
+    width: auto;
+    height: 110px;
+    font-size: 30px;
   }
 </style>
 </head>
 <body>
 <canvas id="game-canvas"></canvas>
 
+<div id="shop-overlay">
+  <div class="topbar">
+    <h1>CASE CHASE &mdash; CASE SHOP</h1>
+    <div class="coins">🪙 <span id="coin-total">0</span></div>
+  </div>
+
+  <div class="case-grid" id="case-grid"></div>
+</div>
+
+<!-- Opening modal -->
+<div class="modal-backdrop hidden" id="open-modal">
+  <div class="modal">
+    <h2 id="open-case-name">Case Name</h2>
+    <div class="sub">Good luck.</div>
+
+    <div class="reel-viewport">
+      <div class="reel-track" id="reel-track"></div>
+    </div>
+
+    <div class="result-box hidden" id="result-box">
+      <div class="item-name" id="result-name"></div>
+      <div class="item-val" id="result-val"></div>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn-primary hidden" id="collect-btn">Collect</button>
+    </div>
+  </div>
+</div>
+
+<!-- Contents preview modal -->
+<div class="modal-backdrop hidden" id="contents-modal">
+  <div class="modal">
+    <h2 id="contents-case-name">Case Contents</h2>
+    <div class="sub">Drop chances by rarity</div>
+    <div class="contents-list" id="contents-list"></div>
+    <div class="modal-actions">
+      <button class="btn-secondary" id="contents-close-btn">Close</button>
+    </div>
+  </div>
+</div>
+
 <script>
+  /* ---------------------------------------------------------------
+   * Canvas base
+   * ------------------------------------------------------------- */
   const canvas = document.getElementById('game-canvas');
   const ctx = canvas.getContext('2d');
 
@@ -37,10 +378,294 @@
   function gameLoop() {
     ctx.fillStyle = '#000';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
-
     requestAnimationFrame(gameLoop);
   }
   requestAnimationFrame(gameLoop);
+
+  /* ---------------------------------------------------------------
+   * Case / item data (placeholder art = emoji icons, no image assets)
+   * ------------------------------------------------------------- */
+  const RARITIES_3 = ['common', 'uncommon', 'rare'];
+  const RARITIES_6 = ['common', 'uncommon', 'rare', 'epic', 'legendary', 'mythic'];
+
+  const RARITY_LABEL = {
+    common: 'Common',
+    uncommon: 'Uncommon',
+    rare: 'Rare',
+    epic: 'Epic',
+    legendary: 'Legendary',
+    mythic: 'Mythic',
+  };
+
+  const CASES = [
+    {
+      id: 'standard',
+      name: 'Standard Case',
+      icon: '📦',
+      price: 100,
+      rarityOrder: RARITIES_3,
+      odds: { common: 0.70, uncommon: 0.25, rare: 0.05 },
+      items: {
+        common: [
+          { name: 'Scuffed Badge', icon: '🔘', value: 5 },
+          { name: 'Rusty Coin', icon: '🪙', value: 8 },
+          { name: 'Worn Token', icon: '🎫', value: 10 },
+        ],
+        uncommon: [
+          { name: 'Polished Badge', icon: '🥉', value: 25 },
+          { name: 'Silver Token', icon: '🎟️', value: 32 },
+        ],
+        rare: [
+          { name: 'Golden Badge', icon: '🥇', value: 120 },
+        ],
+      },
+    },
+    {
+      id: 'premium',
+      name: 'Premium Case',
+      icon: '🗃️',
+      price: 500,
+      rarityOrder: RARITIES_6,
+      odds: { common: 0.50, uncommon: 0.25, rare: 0.15, epic: 0.07, legendary: 0.025, mythic: 0.005 },
+      items: {
+        common: [
+          { name: 'Scrap Metal', icon: '🔩', value: 10 },
+          { name: 'Tin Charm', icon: '🧷', value: 15 },
+        ],
+        uncommon: [
+          { name: 'Bronze Relic', icon: '🏺', value: 40 },
+          { name: 'Jade Charm', icon: '📿', value: 55 },
+        ],
+        rare: [
+          { name: 'Sapphire Shard', icon: '🔷', value: 150 },
+          { name: 'Ruby Fragment', icon: '🔺', value: 180 },
+        ],
+        epic: [
+          { name: 'Amethyst Core', icon: '🔮', value: 600 },
+        ],
+        legendary: [
+          { name: "Phoenix Feather", icon: '🪶', value: 2000 },
+        ],
+        mythic: [
+          { name: "Dragon's Eye", icon: '🐉', value: 10000 },
+        ],
+      },
+    },
+  ];
+
+  /* ---------------------------------------------------------------
+   * State
+   * ------------------------------------------------------------- */
+  const state = {
+    coins: 1000,
+    inventory: [],
+  };
+
+  function updateCoinDisplay() {
+    document.getElementById('coin-total').textContent = state.coins.toLocaleString();
+  }
+
+  /* ---------------------------------------------------------------
+   * Render shop
+   * ------------------------------------------------------------- */
+  const caseGrid = document.getElementById('case-grid');
+
+  function renderShop() {
+    caseGrid.innerHTML = '';
+    CASES.forEach(c => {
+      const card = document.createElement('div');
+      card.className = 'case-card';
+
+      const rarityChips = c.rarityOrder
+        .map(r => `<span class="chip ${r}">${RARITY_LABEL[r]}</span>`)
+        .join('');
+
+      card.innerHTML = `
+        <div class="case-art">${c.icon}</div>
+        <h2>${c.name}</h2>
+        <div class="rarities">${rarityChips}</div>
+        <div class="price">🪙 ${c.price.toLocaleString()}</div>
+        <button class="open-btn" data-case="${c.id}">Open Case</button>
+        <button class="contents-btn" data-contents="${c.id}">View Contents</button>
+      `;
+      caseGrid.appendChild(card);
+    });
+
+    caseGrid.querySelectorAll('.open-btn').forEach(btn => {
+      btn.addEventListener('click', () => tryOpenCase(btn.dataset.case));
+    });
+    caseGrid.querySelectorAll('.contents-btn').forEach(btn => {
+      btn.addEventListener('click', () => showContents(btn.dataset.contents));
+    });
+  }
+
+  /* ---------------------------------------------------------------
+   * Contents modal
+   * ------------------------------------------------------------- */
+  const contentsModal = document.getElementById('contents-modal');
+  document.getElementById('contents-close-btn').addEventListener('click', () => {
+    contentsModal.classList.add('hidden');
+  });
+
+  function showContents(caseId) {
+    const c = CASES.find(x => x.id === caseId);
+    document.getElementById('contents-case-name').textContent = `${c.name} — Contents`;
+    const list = document.getElementById('contents-list');
+    list.innerHTML = '';
+
+    c.rarityOrder.forEach(r => {
+      c.items[r].forEach(item => {
+        const el = document.createElement('div');
+        el.className = `reel-item rar-${r}`;
+        el.innerHTML = `
+          <div>${item.icon}</div>
+          <div class="val">🪙 ${item.value.toLocaleString()}</div>
+        `;
+        list.appendChild(el);
+      });
+    });
+
+    contentsModal.classList.remove('hidden');
+  }
+
+  /* ---------------------------------------------------------------
+   * Weighted random pick
+   * ------------------------------------------------------------- */
+  function pickRarity(c) {
+    const roll = Math.random();
+    let cumulative = 0;
+    for (const r of c.rarityOrder) {
+      cumulative += c.odds[r];
+      if (roll <= cumulative) return r;
+    }
+    return c.rarityOrder[c.rarityOrder.length - 1];
+  }
+
+  function pickItem(c, rarity) {
+    const pool = c.items[rarity];
+    return pool[Math.floor(Math.random() * pool.length)];
+  }
+
+  /* ---------------------------------------------------------------
+   * Case opening (CS:GO-style spinning reel)
+   * ------------------------------------------------------------- */
+  const openModal = document.getElementById('open-modal');
+  const reelTrack = document.getElementById('reel-track');
+  const resultBox = document.getElementById('result-box');
+  const collectBtn = document.getElementById('collect-btn');
+
+  const SLOT_WIDTH = 130 + 16; // width + margins
+  const REEL_LENGTH = 60;
+  const WINNING_INDEX = 50;
+
+  let opening = false;
+  let pendingReward = null;
+  let currentCase = null;
+
+  function buildReelItemEl(rarity, item) {
+    const el = document.createElement('div');
+    el.className = `reel-item rar-${rarity}`;
+    el.innerHTML = `
+      <div>${item.icon}</div>
+      <div class="val">🪙 ${item.value.toLocaleString()}</div>
+    `;
+    return el;
+  }
+
+  function tryOpenCase(caseId) {
+    if (opening) return;
+    const c = CASES.find(x => x.id === caseId);
+    if (state.coins < c.price) {
+      flashInsufficientFunds();
+      return;
+    }
+
+    state.coins -= c.price;
+    updateCoinDisplay();
+
+    currentCase = c;
+    opening = true;
+
+    // Determine the real outcome up front.
+    const winRarity = pickRarity(c);
+    const winItem = pickItem(c, winRarity);
+    pendingReward = { rarity: winRarity, item: winItem };
+
+    // Build a randomized reel, forcing the winning item at WINNING_INDEX.
+    reelTrack.innerHTML = '';
+    reelTrack.style.transition = 'none';
+    reelTrack.style.transform = 'translateX(0px)';
+
+    for (let i = 0; i < REEL_LENGTH; i++) {
+      let rarity, item;
+      if (i === WINNING_INDEX) {
+        rarity = winRarity;
+        item = winItem;
+      } else {
+        rarity = pickRarity(c);
+        item = pickItem(c, rarity);
+      }
+      reelTrack.appendChild(buildReelItemEl(rarity, item));
+    }
+
+    document.getElementById('open-case-name').textContent = c.name;
+    resultBox.classList.add('hidden');
+    collectBtn.classList.add('hidden');
+    openModal.classList.remove('hidden');
+
+    // Force reflow so the transition below actually animates from 0.
+    // eslint-disable-next-line no-unused-expressions
+    reelTrack.offsetHeight;
+
+    const viewportWidth = reelTrack.parentElement.clientWidth;
+    const jitter = (Math.random() - 0.5) * (SLOT_WIDTH * 0.7);
+    const targetCenter = WINNING_INDEX * SLOT_WIDTH + SLOT_WIDTH / 2;
+    const finalX = -(targetCenter - viewportWidth / 2) + jitter;
+
+    requestAnimationFrame(() => {
+      reelTrack.style.transition = 'transform 6.2s cubic-bezier(0.12, 0.79, 0.24, 1)';
+      reelTrack.style.transform = `translateX(${finalX}px)`;
+    });
+
+    setTimeout(() => {
+      revealResult();
+    }, 6400);
+  }
+
+  function revealResult() {
+    const { rarity, item } = pendingReward;
+    document.getElementById('result-name').innerHTML =
+      `<span class="chip ${rarity}">${RARITY_LABEL[rarity]}</span> ${item.name}`;
+    document.getElementById('result-val').textContent = `🪙 ${item.value.toLocaleString()}`;
+    resultBox.classList.remove('hidden');
+    collectBtn.classList.remove('hidden');
+  }
+
+  collectBtn.addEventListener('click', () => {
+    if (pendingReward) {
+      state.inventory.push({
+        caseId: currentCase.id,
+        rarity: pendingReward.rarity,
+        ...pendingReward.item,
+      });
+    }
+    opening = false;
+    pendingReward = null;
+    openModal.classList.add('hidden');
+  });
+
+  function flashInsufficientFunds() {
+    const coinsEl = document.querySelector('.coins');
+    coinsEl.style.color = '#ff5555';
+    coinsEl.style.transition = 'color 0.15s ease';
+    setTimeout(() => { coinsEl.style.color = ''; }, 400);
+  }
+
+  /* ---------------------------------------------------------------
+   * Init
+   * ------------------------------------------------------------- */
+  updateCoinDisplay();
+  renderShop();
 </script>
 </body>
 </html>
