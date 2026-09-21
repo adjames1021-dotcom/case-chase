@@ -381,40 +381,56 @@
   .mult-btn.active { background: #1e6fff; border-color: #1e6fff; color: #fff; }
   .chance-display { font-size: 14px; font-weight: 700; color: #4caf50; }
 
-  .upgrade-bar-wrap { max-width: 680px; margin: 28px auto 0; }
-  .upgrade-bar {
+  .wheel-wrap {
     position: relative;
-    height: 34px;
-    border-radius: 6px;
-    overflow: hidden;
-    background: #3d1414;
-    border: 1px solid #262626;
+    width: 220px;
+    height: 220px;
+    margin: 28px auto 0;
   }
-  .upgrade-bar-win {
+
+  .wheel-pointer {
     position: absolute;
-    left: 0;
-    top: 0;
-    bottom: 0;
-    background: linear-gradient(180deg, #4caf50, #2e7d32);
-  }
-  .upgrade-bar-marker {
-    position: absolute;
-    top: -5px;
-    bottom: -5px;
-    width: 3px;
-    background: #fff;
-    box-shadow: 0 0 10px #fff, 0 0 18px #fff;
-    left: 0%;
+    top: -2px;
+    left: 50%;
     transform: translateX(-50%);
+    width: 0;
+    height: 0;
+    border-left: 11px solid transparent;
+    border-right: 11px solid transparent;
+    border-top: 18px solid #ffd447;
+    z-index: 5;
+    filter: drop-shadow(0 0 6px rgba(255, 212, 71, 0.8));
   }
-  .upgrade-result {
-    text-align: center;
-    margin-top: 14px;
-    font-size: 16px;
-    font-weight: 700;
+
+  .wheel {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    border: 6px solid #161616;
+    box-shadow: 0 0 0 2px #333, inset 0 0 30px rgba(0, 0, 0, 0.6);
+    box-sizing: border-box;
+    transition: box-shadow 0.4s ease;
   }
-  .upgrade-result.win { color: #4caf50; }
-  .upgrade-result.lose { color: #ff5555; }
+
+  .wheel.outcome-win {
+    box-shadow: 0 0 0 2px #4caf50, 0 0 26px 6px rgba(76, 175, 80, 0.6), inset 0 0 30px rgba(0, 0, 0, 0.6);
+  }
+  .wheel.outcome-lose {
+    box-shadow: 0 0 0 2px #ff5555, 0 0 26px 6px rgba(255, 85, 85, 0.55), inset 0 0 30px rgba(0, 0, 0, 0.6);
+  }
+
+  .wheel-hub {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    background: #111;
+    border: 3px solid #333;
+    z-index: 3;
+  }
 
   /* ---------- Modal ---------- */
   .modal-backdrop {
@@ -689,12 +705,10 @@
       </div>
     </div>
 
-    <div class="upgrade-bar-wrap hidden" id="upgrade-bar-wrap">
-      <div class="upgrade-bar" id="upgrade-bar">
-        <div class="upgrade-bar-win" id="upgrade-bar-win"></div>
-        <div class="upgrade-bar-marker" id="upgrade-bar-marker"></div>
-      </div>
-      <div class="upgrade-result hidden" id="upgrade-result"></div>
+    <div class="wheel-wrap hidden" id="upgrade-wheel-wrap">
+      <div class="wheel-pointer"></div>
+      <div class="wheel" id="upgrade-wheel"></div>
+      <div class="wheel-hub"></div>
     </div>
   </div>
 </div>
@@ -1311,29 +1325,34 @@
     upgrading = true;
     document.getElementById('upgrade-btn').disabled = true;
 
-    const barWrap = document.getElementById('upgrade-bar-wrap');
-    const winZone = document.getElementById('upgrade-bar-win');
-    const marker = document.getElementById('upgrade-bar-marker');
-    const resultEl = document.getElementById('upgrade-result');
+    const wheelWrap = document.getElementById('upgrade-wheel-wrap');
+    const wheel = document.getElementById('upgrade-wheel');
 
-    winZone.style.width = `${chance}%`;
-    resultEl.classList.add('hidden');
-    barWrap.classList.remove('hidden');
+    wheel.classList.remove('outcome-win', 'outcome-lose');
+    wheel.style.background = `conic-gradient(from 0deg, #4caf50 0% ${chance}%, #3d1414 ${chance}% 100%)`;
+    wheelWrap.classList.remove('hidden');
 
-    marker.style.transition = 'none';
-    marker.style.left = '0%';
+    wheel.style.transition = 'none';
+    wheel.style.transform = 'rotate(0deg)';
     // Force reflow so the transition below actually animates from 0.
     // eslint-disable-next-line no-unused-expressions
-    marker.offsetHeight;
+    wheel.offsetHeight;
 
     const win = Math.random() * 100 < chance;
     const landing = win
       ? Math.random() * chance
       : chance + Math.random() * (100 - chance);
 
+    // The wheel's 0% mark sits under the fixed top pointer and fills
+    // clockwise, so spinning clockwise by (360 - landingAngle) brings the
+    // landing point back around to the pointer.
+    const landingAngle = (landing / 100) * 360;
+    const spins = 6;
+    const finalRotation = spins * 360 + ((360 - landingAngle) % 360);
+
     requestAnimationFrame(() => {
-      marker.style.transition = 'left 3.2s cubic-bezier(0.12, 0.79, 0.24, 1)';
-      marker.style.left = `${landing}%`;
+      wheel.style.transition = 'transform 4s cubic-bezier(0.12, 0.79, 0.24, 1)';
+      wheel.style.transform = `rotate(${finalRotation}deg)`;
     });
 
     setTimeout(() => {
@@ -1347,20 +1366,16 @@
           value: targetTotal,
         };
         state.inventory.push(prize);
-        resultEl.innerHTML =
-          `<span class="chip ${prize.rarity}">${RARITY_LABEL[prize.rarity]}</span> Won 🪙 ${prize.value.toLocaleString()}`;
-        resultEl.className = 'upgrade-result win';
+        wheel.classList.add('outcome-win');
       } else {
-        resultEl.textContent = 'Lost the upgrade';
-        resultEl.className = 'upgrade-result lose';
+        wheel.classList.add('outcome-lose');
       }
-      resultEl.classList.remove('hidden');
 
       saveGame();
       renderInventory();
       renderUpgrader();
       upgrading = false;
-    }, 3400);
+    }, 4200);
   }
 
   /* ---------------------------------------------------------------
