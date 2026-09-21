@@ -2,1411 +2,1898 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Case Chase</title>
 <style>
   :root {
-    --panel: #1d140b;
-    --panel-2: #130d07;
-    --panel-border: #3d2c17;
-    --panel-border-hover: #70502a;
-    --tan: #ecdcc0;
-    --tan-dim: #b39b7a;
-    --tan-faint: #6b5a42;
-    --orange: #e8791c;
-    --orange-light: #ff9a3c;
-    --orange-text: #2a1608;
-    --gold: #ffb347;
+    --bg: #f6f4ef;
+    --surface: #ffffff;
+    --surface-2: #fbfaf7;
+    --line: #e7e2d9;
+    --line-strong: #d8d2c6;
+    --ink: #1e1c19;
+    --ink-2: #6d665b;
+    --ink-3: #a29a8e;
+    --orange: #f26a1b;
+    --orange-dark: #cf540b;
+    --orange-soft: #fff0e4;
 
-    --common: #b0b3b8;
-    --uncommon: #4caf50;
-    --rare: #3d9dff;
-    --epic: #a24dff;
-    --legendary: #ff9f1c;
-    --mythic: #ff3d3d;
+    --common: #9aa3ad;
+    --uncommon: #3f9a52;
+    --rare: #2f7fd6;
+    --epic: #8b46d6;
+    --legendary: #e08a12;
+    --mythic: #d63b3b;
+
+    --shadow-sm: 0 1px 2px rgba(31,26,18,.06);
+    --shadow: 0 4px 16px rgba(31,26,18,.08);
+    --shadow-lg: 0 18px 50px rgba(31,26,18,.18);
   }
+
+  * { box-sizing: border-box; }
 
   html, body {
     margin: 0;
     padding: 0;
-    width: 100%;
-    height: 100%;
-    background: #000;
-    overflow: hidden;
-    font-family: 'Segoe UI', Arial, sans-serif;
-    color: var(--tan);
+    min-height: 100%;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
   }
 
-  #game-canvas {
-    display: block;
-    background: #000;
-    position: fixed;
+  body {
+    background-image:
+      radial-gradient(circle at 12% -5%, rgba(242,106,27,.07), transparent 42%),
+      radial-gradient(circle at 92% 0%, rgba(242,106,27,.05), transparent 38%);
+    background-attachment: fixed;
+  }
+
+  button { font-family: inherit; }
+
+  /* ---------- Header ---------- */
+  header {
+    position: sticky;
     top: 0;
-    left: 0;
+    z-index: 40;
+    background: rgba(246,244,239,.88);
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid var(--line);
   }
 
-  /* ---------- Shop overlay ---------- */
-  #shop-overlay {
-    position: fixed;
-    inset: 0;
-    overflow-y: auto;
-    padding: 24px 32px 60px;
-    box-sizing: border-box;
-    background:
-      radial-gradient(circle at 15% 0%, rgba(232,121,28,0.09), transparent 35%),
-      radial-gradient(circle at 90% 10%, rgba(236,220,192,0.05), transparent 35%);
-  }
-
-  .topbar {
+  .header-inner {
+    max-width: 1160px;
+    margin: 0 auto;
+    padding: 14px 22px;
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    margin-bottom: 20px;
+    gap: 18px;
   }
 
-  .topbar h1 {
-    font-size: 22px;
-    letter-spacing: 1px;
-    margin: 0;
-    color: var(--tan);
-  }
-
-  .topbar-right {
+  .brand {
     display: flex;
     align-items: center;
     gap: 10px;
+    margin-right: auto;
   }
 
-  .coins {
-    background: var(--panel);
-    border: 1px solid var(--panel-border);
-    border-radius: 8px;
-    padding: 8px 16px;
+  .brand-mark {
+    width: 30px;
+    height: 30px;
+    border-radius: 9px;
+    background: linear-gradient(140deg, var(--orange), var(--orange-dark));
+    display: grid;
+    place-items: center;
+    box-shadow: 0 3px 10px rgba(242,106,27,.35);
+  }
+  .brand-mark svg { width: 17px; height: 17px; }
+
+  .brand h1 {
+    margin: 0;
+    font-size: 17px;
+    font-weight: 800;
+    letter-spacing: -.2px;
+  }
+  .brand span {
+    display: block;
+    font-size: 10px;
     font-weight: 600;
-    font-size: 16px;
-    color: var(--gold);
-    box-shadow: 0 3px 10px rgba(0,0,0,0.4);
+    letter-spacing: 1.4px;
+    text-transform: uppercase;
+    color: var(--ink-3);
   }
 
-  .reset-btn {
-    background: transparent;
-    border: 1px solid var(--panel-border);
-    color: var(--tan-dim);
-    padding: 8px 14px;
-    border-radius: 8px;
-    font-size: 12px;
-    cursor: pointer;
-    transition: color 0.15s ease, border-color 0.15s ease;
+  .balance {
+    display: flex;
+    align-items: baseline;
+    gap: 7px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 11px;
+    padding: 9px 16px;
+    box-shadow: var(--shadow-sm);
   }
-  .reset-btn:hover { color: #ff6b6b; border-color: #ff6b6b; }
+  .balance b {
+    font-size: 17px;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+  }
+  .balance i {
+    font-style: normal;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    color: var(--orange);
+    text-transform: uppercase;
+  }
+  .balance.bump b { animation: bump .45s ease; }
+  @keyframes bump {
+    0% { transform: scale(1); }
+    35% { transform: scale(1.18); color: var(--orange); }
+    100% { transform: scale(1); }
+  }
+
+  .icon-btn {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    color: var(--ink-2);
+    width: 38px;
+    height: 38px;
+    border-radius: 11px;
+    cursor: pointer;
+    display: grid;
+    place-items: center;
+    transition: .15s ease;
+    box-shadow: var(--shadow-sm);
+  }
+  .icon-btn:hover { border-color: var(--orange); color: var(--orange); }
+  .icon-btn svg { width: 16px; height: 16px; }
 
   /* ---------- Tabs ---------- */
   .tabs {
+    max-width: 1160px;
+    margin: 0 auto;
+    padding: 0 22px;
     display: flex;
-    gap: 8px;
-    max-width: 1100px;
-    margin: 0 auto 24px;
+    gap: 4px;
   }
-  .tab-btn {
-    background: var(--panel);
-    border: 1px solid var(--panel-border);
-    color: var(--tan-dim);
-    padding: 9px 20px;
-    border-radius: 8px;
+  .tab {
+    position: relative;
+    background: none;
+    border: 0;
+    padding: 11px 16px 13px;
     font-size: 13px;
     font-weight: 700;
+    color: var(--ink-3);
     cursor: pointer;
-    transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+    border-radius: 9px 9px 0 0;
+    transition: color .15s ease;
   }
-  .tab-btn:hover { color: var(--tan); border-color: var(--panel-border-hover); }
-  .tab-btn.active { background: var(--orange); border-color: var(--orange); color: var(--orange-text); }
+  .tab:hover { color: var(--ink-2); }
+  .tab.active { color: var(--ink); }
+  .tab.active::after {
+    content: '';
+    position: absolute;
+    left: 14px; right: 14px; bottom: -1px;
+    height: 2px;
+    border-radius: 2px;
+    background: var(--orange);
+  }
+  .tab .pill {
+    display: inline-block;
+    margin-left: 6px;
+    background: var(--orange-soft);
+    color: var(--orange-dark);
+    border-radius: 20px;
+    padding: 1px 7px;
+    font-size: 10px;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+  }
 
-  .view.hidden { display: none; }
+  /* ---------- Layout ---------- */
+  main {
+    max-width: 1160px;
+    margin: 0 auto;
+    padding: 28px 22px 80px;
+  }
+  .panel { display: none; }
+  .panel.active { display: block; animation: fade .25s ease; }
+  @keyframes fade { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
 
+  .section-head {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 18px;
+    flex-wrap: wrap;
+  }
+  .section-head h2 {
+    margin: 0;
+    font-size: 20px;
+    font-weight: 800;
+    letter-spacing: -.3px;
+  }
+  .section-head p {
+    margin: 4px 0 0;
+    font-size: 13px;
+    color: var(--ink-2);
+  }
+
+  /* ---------- Case grid ---------- */
   .case-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-    gap: 22px;
-    max-width: 1100px;
-    margin: 0 auto;
+    grid-template-columns: repeat(auto-fill, minmax(232px, 1fr));
+    gap: 16px;
   }
 
   .case-card {
-    background: linear-gradient(180deg, var(--panel), var(--panel-2));
-    border: 1px solid var(--panel-border);
-    border-radius: 12px;
-    padding: 18px;
-    text-align: center;
-    box-shadow: 0 4px 14px rgba(0,0,0,0.45);
-    transition: transform 0.15s ease, border-color 0.15s ease;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    padding: 16px;
+    box-shadow: var(--shadow-sm);
+    transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease;
+    display: flex;
+    flex-direction: column;
   }
-
   .case-card:hover {
-    transform: translateY(-4px);
-    border-color: var(--panel-border-hover);
+    transform: translateY(-3px);
+    box-shadow: var(--shadow);
+    border-color: var(--line-strong);
   }
 
   .case-art {
+    height: 128px;
+    border-radius: 12px;
+    display: grid;
+    place-items: center;
+    margin-bottom: 14px;
     position: relative;
     overflow: hidden;
-    width: 100%;
-    aspect-ratio: 1 / 1;
-    border-radius: 10px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 54px;
-    margin-bottom: 14px;
-    background: radial-gradient(circle at 32% 24%, #4a3826 0%, #22160c 60%, #100a06 100%);
-    border: 2px solid var(--panel-border-hover);
-    box-shadow:
-      inset 0 0 30px rgba(0,0,0,0.7),
-      inset 0 2px 0 rgba(255,255,255,0.06);
   }
-
+  .case-art svg { width: 108px; height: 108px; position: relative; z-index: 1; }
   .case-art::after {
-    content: "";
+    content: '';
     position: absolute;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    height: 16%;
-    background: repeating-linear-gradient(45deg, var(--orange) 0 10px, #1d140b 10px 20px);
-    opacity: 0.9;
+    inset: 0;
+    background: repeating-linear-gradient(135deg, rgba(255,255,255,.14) 0 8px, transparent 8px 16px);
   }
 
-  .case-card h2 {
-    font-size: 17px;
-    margin: 4px 0 2px;
-    color: var(--tan);
+  .case-name {
+    font-size: 14.5px;
+    font-weight: 800;
+    letter-spacing: -.2px;
   }
-
-  .case-card .rarities {
-    font-size: 11px;
-    color: var(--tan-dim);
-    margin-bottom: 10px;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-  }
-
-  .case-card .price {
-    font-weight: 700;
-    color: var(--gold);
+  .case-sub {
+    font-size: 11.5px;
+    color: var(--ink-3);
+    margin-top: 2px;
     margin-bottom: 12px;
   }
-  .case-card .price.free {
-    color: #4caf50;
-  }
 
-  .qty-selector {
+  .odds-bar {
     display: flex;
-    gap: 6px;
-    margin-bottom: 10px;
-  }
-
-  .qty-btn {
-    flex: 1;
-    background: var(--panel);
-    border: 1px solid var(--panel-border);
-    color: var(--tan-dim);
-    padding: 6px 0;
-    border-radius: 6px;
-    font-size: 12px;
-    font-weight: 700;
-    cursor: pointer;
-    transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
-  }
-  .qty-btn:hover:not(.active) { border-color: var(--panel-border-hover); color: var(--tan); }
-  .qty-btn.active {
-    background: var(--orange);
-    border-color: var(--orange);
-    color: var(--orange-text);
-  }
-
-  .open-btn {
-    background: var(--orange);
-    color: var(--orange-text);
-    border: none;
-    padding: 10px 18px;
-    border-radius: 8px;
-    font-size: 14px;
-    font-weight: 700;
-    cursor: pointer;
-    width: 100%;
-    transition: background 0.15s ease, opacity 0.15s ease;
-  }
-
-  .open-btn:hover:not(:disabled) { background: var(--orange-light); }
-  .open-btn:disabled { opacity: 0.4; cursor: not-allowed; }
-
-  .contents-btn {
-    background: transparent;
-    color: var(--tan-dim);
-    border: 1px solid var(--panel-border);
-    padding: 7px 14px;
-    border-radius: 8px;
-    font-size: 12px;
-    cursor: pointer;
-    width: 100%;
-    margin-top: 8px;
-    transition: color 0.15s ease, border-color 0.15s ease;
-  }
-  .contents-btn:hover { color: var(--tan); border-color: var(--panel-border-hover); }
-
-  /* ---------- Rarity chips ---------- */
-  .chip {
-    display: inline-block;
-    padding: 2px 7px;
+    height: 5px;
     border-radius: 4px;
-    font-size: 10px;
-    font-weight: 700;
-    margin: 0 2px;
+    overflow: hidden;
+    margin-bottom: 14px;
+    background: var(--line);
   }
-  .chip.common { background: rgba(176,179,184,0.15); color: var(--common); }
-  .chip.uncommon { background: rgba(76,175,80,0.15); color: var(--uncommon); }
-  .chip.rare { background: rgba(61,157,255,0.15); color: var(--rare); }
-  .chip.epic { background: rgba(162,77,255,0.15); color: var(--epic); }
-  .chip.legendary { background: rgba(255,159,28,0.15); color: var(--legendary); }
-  .chip.mythic { background: rgba(255,61,61,0.15); color: var(--mythic); }
+  .odds-bar span { height: 100%; }
 
-  /* ---------- Inventory ---------- */
-  .inventory-summary {
+  .case-foot {
+    margin-top: auto;
     display: flex;
     align-items: center;
-    gap: 22px;
-    max-width: 1100px;
-    margin: 0 auto 20px;
-    background: var(--panel);
-    border: 1px solid var(--panel-border);
+    gap: 8px;
+  }
+  .case-price {
+    font-size: 15px;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+    margin-right: auto;
+  }
+  .case-price.free { color: var(--uncommon); }
+
+  .btn {
+    border: 0;
     border-radius: 10px;
-    padding: 14px 20px;
-    box-shadow: 0 4px 14px rgba(0,0,0,0.45);
+    padding: 10px 16px;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: .15s ease;
+    white-space: nowrap;
   }
-  .inventory-summary > div { font-weight: 700; color: var(--tan); font-size: 14px; }
-  .inventory-summary .val-total { color: var(--gold); }
-  .inventory-summary .sell-all-btn {
-    margin-left: auto;
-    width: auto;
-    padding: 8px 16px;
+  .btn-primary {
+    background: var(--orange);
+    color: #fff;
+    box-shadow: 0 3px 10px rgba(242,106,27,.3);
   }
+  .btn-primary:hover:not(:disabled) { background: var(--orange-dark); }
+  .btn-ghost {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    color: var(--ink-2);
+  }
+  .btn-ghost:hover:not(:disabled) { border-color: var(--orange); color: var(--orange); }
+  .btn:disabled { opacity: .45; cursor: not-allowed; box-shadow: none; }
+  .btn-sm { padding: 7px 12px; font-size: 12px; }
 
-  .inventory-grid, .upgrader-inventory {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
-    gap: 12px;
-    max-width: 1100px;
-    margin: 0 auto;
+  .link-btn {
+    background: none;
+    border: 0;
+    color: var(--ink-3);
+    font-size: 11.5px;
+    font-weight: 700;
+    cursor: pointer;
+    padding: 0;
+    text-decoration: underline;
+    text-underline-offset: 3px;
   }
-
-  .inv-item {
-    box-sizing: border-box;
+  .link-btn:hover { color: var(--orange); }
+</style>
+<style>
+  /* ---------- Item card ---------- */
+  .item {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 13px;
+    padding: 10px;
     position: relative;
     overflow: hidden;
-    background: linear-gradient(180deg, var(--panel) 0%, var(--panel-2) 75%);
-    border: 1px solid var(--panel-border);
-    border-radius: 8px;
-    padding: 12px 8px 10px;
     display: flex;
     flex-direction: column;
+    gap: 6px;
+  }
+  .item::before {
+    content: '';
+    position: absolute;
+    left: 0; right: 0; bottom: 0;
+    height: 3px;
+    background: var(--rc, var(--common));
+  }
+  .item-art {
+    height: 62px;
+    border-radius: 9px;
+    display: grid;
+    place-items: center;
+    background:
+      radial-gradient(circle at 50% 120%, color-mix(in srgb, var(--rc) 22%, transparent), transparent 70%),
+      var(--surface-2);
+  }
+  .item-art svg { width: 96%; height: 84%; }
+  .item-name {
+    font-size: 11.5px;
+    font-weight: 700;
+    line-height: 1.25;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .item-meta {
+    display: flex;
     align-items: center;
-    text-align: center;
-    gap: 4px;
+    justify-content: space-between;
+    gap: 6px;
   }
-  .inv-item::after {
-    content: "";
-    position: absolute;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    height: 6px;
-  }
-  .inv-icon { font-size: 30px; }
-  .inv-name { font-size: 11px; color: var(--tan); font-weight: 600; line-height: 1.2; min-height: 26px; }
-  .inv-item .val { font-size: 11px; color: var(--gold); font-weight: 700; }
-
-  .sell-btn {
-    margin-top: 4px;
-    background: var(--panel-2);
-    border: 1px solid var(--panel-border);
-    color: var(--tan);
-    font-size: 11px;
-    padding: 5px 0;
-    border-radius: 6px;
-    cursor: pointer;
-    width: 100%;
-    transition: color 0.15s ease, border-color 0.15s ease;
-  }
-  .sell-btn:hover { border-color: var(--panel-border-hover); color: var(--orange-light); }
-
-  .empty-state {
-    grid-column: 1 / -1;
-    text-align: center;
-    color: var(--tan-faint);
-    padding: 40px 0;
-    font-size: 13px;
-  }
-
-  .upgrader-inventory .inv-item.selectable { cursor: pointer; }
-  .upgrader-inventory .inv-item.selectable:hover { border-color: var(--panel-border-hover); }
-  .upgrader-inventory .inv-item.selected {
-    border-color: var(--orange);
-    box-shadow: 0 0 0 2px rgba(232,121,28,0.4);
-  }
-
-  /* ---------- Upgrader ---------- */
-  .upgrader-panel {
-    display: flex;
-    gap: 24px;
-    max-width: 1100px;
-    margin: 0 auto;
-    align-items: flex-start;
-    flex-wrap: wrap;
-  }
-  .upgrader-col { flex: 1; min-width: 260px; }
-  .upgrader-controls {
-    flex: 0 0 260px;
-    background: var(--panel);
-    border: 1px solid var(--panel-border);
-    border-radius: 10px;
-    padding: 20px;
-    display: flex;
-    flex-direction: column;
-    gap: 14px;
-    box-shadow: 0 4px 14px rgba(0,0,0,0.45);
-  }
-  .upgrader-label {
-    font-size: 12px;
-    font-weight: 700;
-    color: var(--tan-dim);
-    margin-bottom: 10px;
+  .item-rarity {
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: .7px;
     text-transform: uppercase;
-    letter-spacing: 0.5px;
+    color: var(--rc);
   }
-  .stake-value, .target-value { font-size: 14px; font-weight: 700; color: var(--tan); }
-  .stake-value span, .target-value span { color: var(--gold); }
-  .multiplier-selector { display: flex; gap: 6px; }
-  .mult-btn {
-    flex: 1;
-    background: var(--panel-2);
-    border: 1px solid var(--panel-border);
-    color: var(--tan-dim);
-    padding: 8px 0;
-    border-radius: 6px;
+  .item-value {
     font-size: 12px;
-    font-weight: 700;
-    cursor: pointer;
-    transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
-  }
-  .mult-btn:hover:not(.active) { border-color: var(--panel-border-hover); color: var(--tan); }
-  .mult-btn.active { background: var(--orange); border-color: var(--orange); color: var(--orange-text); }
-  .chance-display { font-size: 14px; font-weight: 700; color: var(--gold); }
-
-  .wheel-wrap {
-    position: relative;
-    width: 220px;
-    height: 220px;
-    margin: 28px auto 0;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
   }
 
-  .wheel-pointer {
-    position: absolute;
-    top: -2px;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 0;
-    height: 0;
-    border-left: 11px solid transparent;
-    border-right: 11px solid transparent;
-    border-top: 18px solid var(--gold);
-    z-index: 5;
-    filter: drop-shadow(0 0 6px rgba(255, 179, 71, 0.8));
-  }
-
-  .wheel {
-    width: 100%;
-    height: 100%;
-    border-radius: 50%;
-    border: 6px solid var(--panel);
-    box-shadow: 0 0 0 2px var(--panel-border), inset 0 0 30px rgba(0, 0, 0, 0.6);
-    box-sizing: border-box;
-    transition: box-shadow 0.4s ease;
-  }
-
-  .wheel.outcome-win {
-    box-shadow: 0 0 0 2px #4caf50, 0 0 26px 6px rgba(76, 175, 80, 0.6), inset 0 0 30px rgba(0, 0, 0, 0.6);
-  }
-  .wheel.outcome-lose {
-    box-shadow: 0 0 0 2px #ff5555, 0 0 26px 6px rgba(255, 85, 85, 0.55), inset 0 0 30px rgba(0, 0, 0, 0.6);
-  }
-
-  .wheel-hub {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    width: 34px;
-    height: 34px;
-    border-radius: 50%;
-    background: var(--panel);
-    border: 3px solid var(--panel-border);
-    z-index: 3;
-  }
-
-  /* ---------- Modal ---------- */
-  .modal-backdrop {
+  /* ---------- Reel / opening modal ---------- */
+  .overlay {
     position: fixed;
     inset: 0;
-    background: rgba(0,0,0,0.85);
-    display: flex;
+    z-index: 100;
+    background: rgba(35,29,22,.42);
+    backdrop-filter: blur(4px);
+    display: none;
     align-items: center;
     justify-content: center;
-    z-index: 50;
+    padding: 24px;
   }
-  .hidden { display: none !important; }
+  .overlay.open { display: flex; animation: fade .2s ease; }
 
-  .modal {
-    background: var(--panel-2);
-    border: 1px solid var(--panel-border);
-    border-radius: 14px;
-    padding: 26px;
-    width: min(760px, 92vw);
-    box-sizing: border-box;
-    box-shadow: 0 12px 36px rgba(0,0,0,0.6);
+  .sheet {
+    background: var(--bg);
+    border: 1px solid var(--line);
+    border-radius: 20px;
+    box-shadow: var(--shadow-lg);
+    width: 100%;
+    max-width: 880px;
+    max-height: 90vh;
+    overflow-y: auto;
+    padding: 24px;
   }
-
-  #contents-modal .modal h2 {
-    margin: 0 0 18px;
-    color: var(--tan);
-    text-align: center;
-  }
-
-  .modal-header {
-    position: relative;
+  .sheet-head {
     display: flex;
     align-items: center;
-    justify-content: center;
+    justify-content: space-between;
+    gap: 12px;
     margin-bottom: 18px;
   }
-
-  .modal-header h2 {
+  .sheet-head h3 {
     margin: 0;
-    color: var(--tan);
-    text-align: center;
+    font-size: 17px;
+    font-weight: 800;
   }
+  .sheet-head p { margin: 3px 0 0; font-size: 12.5px; color: var(--ink-2); }
 
-  .round-indicator {
-    position: absolute;
-    right: 0;
-    top: 50%;
-    transform: translateY(-50%);
-    background: var(--panel);
-    border: 1px solid var(--panel-border);
-    color: var(--gold);
-    font-size: 12px;
-    font-weight: 700;
-    padding: 4px 10px;
-    border-radius: 20px;
-  }
-  .round-indicator:empty { display: none; }
-
-  /* ---------- Spinner reel (CS-style) ---------- */
-  .reel-viewport {
+  .reel-wrap {
     position: relative;
-    width: 100%;
-    max-width: 680px;
-    margin: 0 auto 20px;
-    height: 150px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 14px 0;
+    margin-bottom: 12px;
     overflow: hidden;
-    border-radius: 8px;
-    background: repeating-linear-gradient(135deg, #140f09 0 14px, #1a130c 14px 28px);
-    border: 1px solid var(--panel-border);
   }
+  .reel-wrap::before,
+  .reel-wrap::after {
+    content: '';
+    position: absolute;
+    top: 0; bottom: 0;
+    width: 72px;
+    z-index: 3;
+    pointer-events: none;
+  }
+  .reel-wrap::before { left: 0; background: linear-gradient(90deg, var(--surface), transparent); }
+  .reel-wrap::after { right: 0; background: linear-gradient(270deg, var(--surface), transparent); }
 
-  .reel-viewport::before {
-    content: "";
+  .marker {
+    position: absolute;
+    top: 0; bottom: 0;
+    left: 50%;
+    width: 2px;
+    margin-left: -1px;
+    background: var(--orange);
+    z-index: 4;
+    border-radius: 2px;
+  }
+  .marker::before, .marker::after {
+    content: '';
     position: absolute;
     left: 50%;
-    top: 0;
-    bottom: 0;
-    width: 2px;
-    background: var(--gold);
-    box-shadow: 0 0 10px var(--gold), 0 0 20px var(--gold);
-    z-index: 5;
-    transform: translateX(-1px);
+    margin-left: -6px;
+    border-left: 6px solid transparent;
+    border-right: 6px solid transparent;
   }
-  .reel-viewport::after {
-    content: "";
-    position: absolute;
-    inset: 0;
-    pointer-events: none;
-    background: linear-gradient(90deg, #0d0904 0%, transparent 12%, transparent 88%, #0d0904 100%);
-    z-index: 4;
-  }
+  .marker::before { top: -1px; border-top: 8px solid var(--orange); }
+  .marker::after { bottom: -1px; border-bottom: 8px solid var(--orange); }
 
   .reel-track {
     display: flex;
-    align-items: center;
-    height: 100%;
+    gap: 10px;
+    padding-left: 0;
     will-change: transform;
   }
-
-  .reel-item {
-    box-sizing: border-box;
-    position: relative;
-    overflow: hidden;
-    flex: 0 0 auto;
-    width: 130px;
-    height: 130px;
-    margin: 0 8px;
-    border-radius: 6px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    font-size: 40px;
-    border: 1px solid var(--panel-border);
-    background: linear-gradient(180deg, var(--panel) 0%, var(--panel-2) 75%);
+  .reel-track .item {
+    width: 116px;
+    flex: 0 0 116px;
+  }
+  .reel-wrap.done .item.win {
+    box-shadow: 0 0 0 2px var(--rc), 0 8px 22px color-mix(in srgb, var(--rc) 35%, transparent);
   }
 
-  .reel-item .val {
-    font-size: 11px;
-    margin-top: 6px;
-    color: var(--gold);
-    font-weight: 700;
+  .result-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 12px;
+    margin-bottom: 18px;
   }
+  .result-grid .item { animation: pop .35s cubic-bezier(.2,1.3,.4,1) backwards; }
+  @keyframes pop { from { opacity: 0; transform: scale(.85); } to { opacity: 1; transform: none; } }
 
-  .reel-item::after,
-  .tray-item::after {
-    content: "";
-    position: absolute;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    height: 6px;
-  }
-
-  .rar-common { border-color: var(--common); }
-  .rar-uncommon { border-color: var(--uncommon); }
-  .rar-rare { border-color: var(--rare); }
-  .rar-epic { border-color: var(--epic); }
-  .rar-legendary { border-color: var(--legendary); }
-  .rar-mythic { border-color: var(--mythic); }
-
-  .rar-common::after { background: var(--common); box-shadow: 0 0 8px var(--common); }
-  .rar-uncommon::after { background: var(--uncommon); box-shadow: 0 0 8px var(--uncommon); }
-  .rar-rare::after { background: var(--rare); box-shadow: 0 0 8px var(--rare); }
-  .rar-epic::after { background: var(--epic); box-shadow: 0 0 8px var(--epic); }
-  .rar-legendary::after { background: var(--legendary); box-shadow: 0 0 8px var(--legendary); }
-  .rar-mythic::after { background: var(--mythic); box-shadow: 0 0 8px var(--mythic); }
-
-  .results-tray {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    justify-content: center;
-    margin: 0 0 14px;
-  }
-
-  .tray-item {
-    box-sizing: border-box;
-    position: relative;
-    overflow: hidden;
-    width: 64px;
-    height: 64px;
-    border-radius: 6px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    font-size: 22px;
-    background: linear-gradient(180deg, var(--panel) 0%, var(--panel-2) 75%);
-    border: 1px solid var(--panel-border);
-  }
-
-  .tray-item .val {
-    font-size: 9px;
-    margin-top: 2px;
-    color: var(--gold);
-    font-weight: 700;
-  }
-
-  .result-box {
-    text-align: center;
-    margin-top: 4px;
-  }
-  .result-box .item-name {
-    font-size: 20px;
-    font-weight: 700;
-    color: var(--tan);
-  }
-  .result-box .item-val {
-    color: var(--gold);
-    font-weight: 700;
-    margin-top: 2px;
-  }
-
-  .modal-actions {
+  .sheet-actions {
     display: flex;
     gap: 10px;
-    justify-content: center;
-    margin-top: 20px;
+    align-items: center;
+    justify-content: flex-end;
+    flex-wrap: wrap;
   }
-  .modal-actions button {
-    padding: 10px 22px;
+  .payout {
+    margin-right: auto;
+    font-size: 13px;
+    color: var(--ink-2);
+  }
+  .payout b { color: var(--ink); font-variant-numeric: tabular-nums; }
+  .payout .up { color: var(--uncommon); }
+  .payout .down { color: var(--mythic); }
+
+  /* ---------- Inventory ---------- */
+  .toolbar {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-wrap: wrap;
+    margin-bottom: 18px;
+  }
+  select.control, input.control {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 9px 12px;
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--ink);
+    font-family: inherit;
+    cursor: pointer;
+    box-shadow: var(--shadow-sm);
+  }
+  select.control:focus, input.control:focus { outline: 2px solid var(--orange-soft); border-color: var(--orange); }
+
+  .inv-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(158px, 1fr));
+    gap: 13px;
+  }
+  .inv-grid .item { padding-bottom: 10px; }
+  .inv-grid .item .sell {
+    width: 100%;
+    margin-top: 2px;
+    background: var(--surface-2);
+    border: 1px solid var(--line);
+    color: var(--ink-2);
     border-radius: 8px;
-    border: none;
+    padding: 6px;
+    font-size: 11.5px;
     font-weight: 700;
     cursor: pointer;
+    transition: .15s ease;
   }
-  .btn-primary { background: var(--orange); color: var(--orange-text); }
-  .btn-primary:hover { background: var(--orange-light); }
-  .btn-secondary { background: var(--panel); color: var(--tan); border: 1px solid var(--panel-border) !important; }
-  .btn-secondary:hover { border-color: var(--panel-border-hover) !important; }
+  .inv-grid .item .sell:hover { background: var(--orange); border-color: var(--orange); color: #fff; }
 
-  /* contents list modal */
-  .contents-list {
+  .empty {
+    border: 1px dashed var(--line-strong);
+    border-radius: 16px;
+    padding: 54px 24px;
+    text-align: center;
+    color: var(--ink-3);
+    background: var(--surface-2);
+  }
+  .empty h3 { margin: 0 0 6px; font-size: 15px; color: var(--ink-2); font-weight: 700; }
+  .empty p { margin: 0; font-size: 13px; }
+
+  .stat-row {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
     gap: 12px;
+    margin-bottom: 22px;
   }
-  .contents-list .reel-item {
-    margin: 0;
-    width: auto;
-    height: 110px;
+  .stat {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 13px;
+    padding: 13px 15px;
+    box-shadow: var(--shadow-sm);
+  }
+  .stat i {
+    display: block;
+    font-style: normal;
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    margin-bottom: 5px;
+  }
+  .stat b { font-size: 18px; font-weight: 800; font-variant-numeric: tabular-nums; }
+
+  /* ---------- Upgrader ---------- */
+  .up-layout {
+    display: grid;
+    grid-template-columns: 1fr 340px;
+    gap: 20px;
+    align-items: start;
+  }
+  @media (max-width: 880px) {
+    .up-layout { grid-template-columns: 1fr; }
+    .header-inner { flex-wrap: wrap; }
+  }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    padding: 18px;
+    box-shadow: var(--shadow-sm);
+  }
+  .card h4 {
+    margin: 0 0 4px;
+    font-size: 14px;
+    font-weight: 800;
+  }
+  .card .hint {
+    margin: 0 0 14px;
+    font-size: 12px;
+    color: var(--ink-3);
+  }
+
+  .pick-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(132px, 1fr));
+    gap: 10px;
+    max-height: 340px;
+    overflow-y: auto;
+    padding: 2px;
+  }
+  .pick-grid .item {
+    cursor: pointer;
+    transition: .15s ease;
+  }
+  .pick-grid .item:hover { border-color: var(--line-strong); transform: translateY(-2px); }
+  .pick-grid .item.sel {
+    border-color: var(--orange);
+    box-shadow: 0 0 0 2px var(--orange-soft);
+  }
+  .pick-grid .item.sel::after {
+    content: '✓';
+    position: absolute;
+    top: 7px; right: 8px;
+    width: 17px; height: 17px;
+    border-radius: 50%;
+    background: var(--orange);
+    color: #fff;
+    font-size: 10px;
+    font-weight: 800;
+    display: grid;
+    place-items: center;
+  }
+
+  .wheel-box {
+    display: grid;
+    place-items: center;
+    padding: 6px 0 14px;
+  }
+  .wheel-holder { position: relative; width: 246px; height: 246px; }
+  .wheel-holder svg { width: 100%; height: 100%; display: block; }
+  #wheel-rotor { transform-origin: 50% 50%; }
+  .wheel-center {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    pointer-events: none;
+    text-align: center;
+  }
+  .wheel-center b {
+    display: block;
     font-size: 30px;
+    font-weight: 800;
+    letter-spacing: -1px;
+    font-variant-numeric: tabular-nums;
   }
+  .wheel-center span {
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    color: var(--ink-3);
+  }
+  .wheel-center.win b { color: var(--uncommon); }
+  .wheel-center.lose b { color: var(--mythic); }
+
+  .mult-row { display: flex; gap: 6px; margin-bottom: 14px; }
+  .mult {
+    flex: 1;
+    background: var(--surface-2);
+    border: 1px solid var(--line);
+    border-radius: 9px;
+    padding: 9px 4px;
+    font-size: 12px;
+    font-weight: 800;
+    color: var(--ink-2);
+    cursor: pointer;
+    transition: .15s ease;
+  }
+  .mult:hover { border-color: var(--line-strong); }
+  .mult.active {
+    background: var(--orange);
+    border-color: var(--orange);
+    color: #fff;
+  }
+
+  .kv {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 0;
+    font-size: 12.5px;
+    border-bottom: 1px dashed var(--line);
+  }
+  .kv:last-of-type { border-bottom: 0; }
+  .kv span { color: var(--ink-2); }
+  .kv b { font-weight: 800; font-variant-numeric: tabular-nums; }
+
+  .target-preview {
+    display: flex;
+    align-items: center;
+    gap: 11px;
+    background: var(--surface-2);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 10px;
+    margin-bottom: 14px;
+  }
+  .target-preview .tp-art {
+    width: 74px; height: 46px;
+    flex: 0 0 74px;
+    border-radius: 8px;
+    background: var(--surface);
+    display: grid;
+    place-items: center;
+    border: 1px solid var(--line);
+  }
+  .target-preview .tp-art svg { width: 92%; height: 82%; }
+  .target-preview .tp-name { font-size: 12.5px; font-weight: 800; line-height: 1.25; }
+  .target-preview .tp-val { font-size: 11.5px; color: var(--ink-2); margin-top: 2px; font-variant-numeric: tabular-nums; }
+
+  .toast-host {
+    position: fixed;
+    left: 50%;
+    bottom: 26px;
+    transform: translateX(-50%);
+    z-index: 200;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    align-items: center;
+    pointer-events: none;
+  }
+  .toast {
+    background: var(--ink);
+    color: #fff;
+    border-radius: 11px;
+    padding: 10px 18px;
+    font-size: 12.5px;
+    font-weight: 700;
+    box-shadow: var(--shadow-lg);
+    animation: toast-in .25s ease, toast-out .3s ease 2.2s forwards;
+  }
+  .toast.good { background: #2f7a41; }
+  .toast.bad { background: #b93232; }
+  @keyframes toast-in { from { opacity: 0; transform: translateY(12px); } }
+  @keyframes toast-out { to { opacity: 0; transform: translateY(-8px); } }
 </style>
 </head>
 <body>
-<canvas id="game-canvas"></canvas>
 
-<div id="shop-overlay">
-  <div class="topbar">
-    <h1>CASE CHASE</h1>
-    <div class="topbar-right">
-      <button class="reset-btn" id="reset-save-btn">Reset Save</button>
-      <div class="coins">🪙 <span id="coin-total">0</span></div>
+<header>
+  <div class="header-inner">
+    <div class="brand">
+      <div class="brand-mark">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M3 8l9-4 9 4v8l-9 4-9-4z"/><path d="M3 8l9 4 9-4"/><path d="M12 12v8"/>
+        </svg>
+      </div>
+      <div>
+        <h1>Case Chase</h1>
+        <span>Open · Collect · Upgrade</span>
+      </div>
     </div>
+
+    <div class="balance" id="balance">
+      <b id="balance-value">0</b><i>coins</i>
+    </div>
+
+    <button class="icon-btn" id="mute-btn" title="Toggle sound" aria-label="Toggle sound">
+      <svg id="mute-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/>
+      </svg>
+    </button>
+
+    <button class="icon-btn" id="reset-btn" title="Reset progress" aria-label="Reset progress">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/>
+      </svg>
+    </button>
   </div>
 
-  <div class="tabs">
-    <button class="tab-btn active" data-view="cases">Cases</button>
-    <button class="tab-btn" data-view="inventory">Inventory</button>
-    <button class="tab-btn" data-view="upgrader">Upgrader</button>
-  </div>
+  <nav class="tabs">
+    <button class="tab active" data-tab="cases">Cases</button>
+    <button class="tab" data-tab="inventory">Inventory <span class="pill" id="inv-count">0</span></button>
+    <button class="tab" data-tab="upgrader">Upgrader</button>
+  </nav>
+</header>
 
-  <div class="view" id="view-cases">
+<main>
+  <!-- ============ CASES ============ -->
+  <section class="panel active" id="panel-cases">
+    <div class="section-head">
+      <div>
+        <h2>Cases</h2>
+        <p>Pick a crate, spin the reel, keep what you pull.</p>
+      </div>
+      <div class="toolbar" style="margin:0">
+        <span style="font-size:12px;font-weight:700;color:var(--ink-3)">OPEN</span>
+        <button class="mult" data-count="1" style="flex:0 0 auto;min-width:44px">x1</button>
+        <button class="mult" data-count="3" style="flex:0 0 auto;min-width:44px">x3</button>
+        <button class="mult" data-count="5" style="flex:0 0 auto;min-width:44px">x5</button>
+      </div>
+    </div>
     <div class="case-grid" id="case-grid"></div>
-  </div>
+  </section>
 
-  <div class="view hidden" id="view-inventory">
-    <div class="inventory-summary">
-      <div>Items: <span id="inv-count">0</span></div>
-      <div>Total Value: 🪙 <span class="val-total" id="inv-total">0</span></div>
-      <button class="contents-btn sell-all-btn" id="sell-all-btn">Sell All</button>
-    </div>
-    <div class="inventory-grid" id="inventory-grid"></div>
-  </div>
-
-  <div class="view hidden" id="view-upgrader">
-    <div class="upgrader-panel">
-      <div class="upgrader-col">
-        <div class="upgrader-label">Select items to stake</div>
-        <div class="upgrader-inventory" id="upgrader-inventory"></div>
+  <!-- ============ INVENTORY ============ -->
+  <section class="panel" id="panel-inventory">
+    <div class="section-head">
+      <div>
+        <h2>Inventory</h2>
+        <p>Everything you've pulled. Sell for coins or feed it to the upgrader.</p>
       </div>
-      <div class="upgrader-controls">
-        <div class="stake-value">Stake: <span id="stake-total">🪙 0</span></div>
-        <div class="multiplier-selector" id="multiplier-selector">
-          <button class="mult-btn" data-mult="2">2x</button>
-          <button class="mult-btn active" data-mult="3">3x</button>
-          <button class="mult-btn" data-mult="5">5x</button>
-          <button class="mult-btn" data-mult="10">10x</button>
+    </div>
+
+    <div class="stat-row">
+      <div class="stat"><i>Items held</i><b id="stat-items">0</b></div>
+      <div class="stat"><i>Inventory value</i><b id="stat-value">0</b></div>
+      <div class="stat"><i>Cases opened</i><b id="stat-opened">0</b></div>
+      <div class="stat"><i>Best pull</i><b id="stat-best">—</b></div>
+    </div>
+
+    <div class="toolbar">
+      <select class="control" id="inv-sort">
+        <option value="value-desc">Value: high to low</option>
+        <option value="value-asc">Value: low to high</option>
+        <option value="newest">Newest first</option>
+        <option value="name">Name A–Z</option>
+      </select>
+      <select class="control" id="inv-filter">
+        <option value="all">All rarities</option>
+        <option value="common">Common</option>
+        <option value="uncommon">Uncommon</option>
+        <option value="rare">Rare</option>
+        <option value="epic">Epic</option>
+        <option value="legendary">Legendary</option>
+        <option value="mythic">Mythic</option>
+      </select>
+      <button class="btn btn-ghost btn-sm" id="sell-filtered">Sell shown</button>
+    </div>
+
+    <div id="inv-body"></div>
+  </section>
+
+  <!-- ============ UPGRADER ============ -->
+  <section class="panel" id="panel-upgrader">
+    <div class="section-head">
+      <div>
+        <h2>Upgrader</h2>
+        <p>Stake items, pick a multiplier, spin the wheel. Land in the orange and trade up.</p>
+      </div>
+    </div>
+
+    <div class="up-layout">
+      <div class="card">
+        <h4>Your stake</h4>
+        <p class="hint" id="stake-hint">Select one or more items to put on the line.</p>
+        <div id="stake-body"></div>
+      </div>
+
+      <div class="card">
+        <h4>Wheel</h4>
+        <p class="hint">Bigger multiplier, thinner slice.</p>
+
+        <div class="wheel-box">
+          <div class="wheel-holder">
+            <svg viewBox="0 0 240 240">
+              <g id="wheel-rotor">
+                <circle cx="120" cy="120" r="104" fill="none" stroke="#ece7dd" stroke-width="26"/>
+                <path id="wheel-arc" fill="none" stroke="#f26a1b" stroke-width="26"
+                      stroke-linecap="butt" d=""/>
+              </g>
+              <circle cx="120" cy="120" r="86" fill="#fff" stroke="#e7e2d9" stroke-width="1"/>
+              <polygon points="120,26 112,8 128,8" fill="#1e1c19"/>
+            </svg>
+            <div class="wheel-center" id="wheel-center">
+              <b id="wheel-pct">—</b>
+              <span id="wheel-label">win chance</span>
+            </div>
+          </div>
         </div>
-        <div class="target-value">Target: <span id="target-total">🪙 0</span></div>
-        <div class="chance-display">Win Chance: <span id="chance-display">0%</span></div>
-        <button class="open-btn" id="upgrade-btn" disabled>Upgrade</button>
+
+        <div class="mult-row" id="mult-row">
+          <button class="mult" data-mult="1.5">1.5x</button>
+          <button class="mult active" data-mult="2">2x</button>
+          <button class="mult" data-mult="5">5x</button>
+          <button class="mult" data-mult="10">10x</button>
+        </div>
+
+        <div id="target-slot"></div>
+
+        <div class="kv"><span>Stake value</span><b id="up-stake">0</b></div>
+        <div class="kv"><span>Target value</span><b id="up-target">0</b></div>
+        <div class="kv"><span>Win chance</span><b id="up-chance">0%</b></div>
+
+        <button class="btn btn-primary" id="spin-btn" style="width:100%;margin-top:14px" disabled>Select items to spin</button>
       </div>
     </div>
+  </section>
+</main>
 
-    <div class="wheel-wrap hidden" id="upgrade-wheel-wrap">
-      <div class="wheel-pointer"></div>
-      <div class="wheel" id="upgrade-wheel"></div>
-      <div class="wheel-hub"></div>
+<!-- Opening overlay -->
+<div class="overlay" id="open-overlay">
+  <div class="sheet">
+    <div class="sheet-head">
+      <div>
+        <h3 id="open-title">Opening…</h3>
+        <p id="open-sub"></p>
+      </div>
+      <button class="link-btn" id="skip-btn">Skip</button>
+    </div>
+    <div id="reels"></div>
+    <div id="open-results" style="display:none">
+      <div class="result-grid" id="result-grid"></div>
+      <div class="sheet-actions">
+        <div class="payout" id="open-payout"></div>
+        <button class="btn btn-ghost" id="sell-pulls">Sell all pulls</button>
+        <button class="btn btn-primary" id="keep-pulls">Keep in inventory</button>
+      </div>
     </div>
   </div>
 </div>
 
-<!-- Opening modal -->
-<div class="modal-backdrop hidden" id="open-modal">
-  <div class="modal">
-    <div class="modal-header">
-      <h2 id="open-case-name">Case Name</h2>
-      <div class="round-indicator" id="round-indicator"></div>
+<!-- Case contents overlay -->
+<div class="overlay" id="contents-overlay">
+  <div class="sheet">
+    <div class="sheet-head">
+      <div>
+        <h3 id="contents-title">Contents</h3>
+        <p id="contents-sub"></p>
+      </div>
+      <button class="link-btn" id="contents-close">Close</button>
     </div>
-
-    <div class="reel-viewport">
-      <div class="reel-track" id="reel-track"></div>
-    </div>
-
-    <div class="results-tray" id="results-tray"></div>
-
-    <div class="result-box hidden" id="result-box">
-      <div class="item-name" id="result-name"></div>
-      <div class="item-val" id="result-val"></div>
-    </div>
-
-    <div class="modal-actions">
-      <button class="btn-primary hidden" id="collect-btn">Collect</button>
-    </div>
+    <div class="inv-grid" id="contents-grid"></div>
   </div>
 </div>
 
-<!-- Contents preview modal -->
-<div class="modal-backdrop hidden" id="contents-modal">
-  <div class="modal">
-    <h2 id="contents-case-name">Case Contents</h2>
-    <div class="contents-list" id="contents-list"></div>
-    <div class="modal-actions">
-      <button class="btn-secondary" id="contents-close-btn">Close</button>
-    </div>
-  </div>
-</div>
-
+<div class="toast-host" id="toasts"></div>
 <script>
-  /* ---------------------------------------------------------------
-   * Canvas base
-   * ------------------------------------------------------------- */
-  const canvas = document.getElementById('game-canvas');
-  const ctx = canvas.getContext('2d');
+(function () {
+  'use strict';
 
-  function resizeCanvas() {
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
-  }
-  window.addEventListener('resize', resizeCanvas);
-  resizeCanvas();
+  /* =========================================================
+     Item artwork — procedural weapon silhouettes
+     ========================================================= */
 
-  function gameLoop() {
-    ctx.fillStyle = '#000';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-    requestAnimationFrame(gameLoop);
-  }
-  requestAnimationFrame(gameLoop);
-
-  /* ---------------------------------------------------------------
-   * Case / item data (placeholder art = emoji icons, no image assets)
-   * ------------------------------------------------------------- */
-  const RARITIES_3 = ['common', 'uncommon', 'rare'];
-  const RARITIES_6 = ['common', 'uncommon', 'rare', 'epic', 'legendary', 'mythic'];
-
-  const RARITY_LABEL = {
-    common: 'Common',
-    uncommon: 'Uncommon',
-    rare: 'Rare',
-    epic: 'Epic',
-    legendary: 'Legendary',
-    mythic: 'Mythic',
+  const SHAPES = {
+    rifle: '<rect x="26" y="14" width="50" height="14" rx="3"/>' +
+           '<polygon points="4,13 26,17 26,29 4,33"/>' +
+           '<rect x="74" y="18" width="40" height="6" rx="2"/>' +
+           '<rect x="36" y="9" width="26" height="5" rx="2"/>' +
+           '<polygon points="34,28 46,28 42,44 30,44"/>' +
+           '<polygon points="50,28 64,28 62,45 48,45"/>',
+    sniper: '<rect x="18" y="16" width="58" height="12" rx="3"/>' +
+            '<rect x="76" y="19" width="42" height="5" rx="2"/>' +
+            '<polygon points="2,14 18,18 18,30 2,34"/>' +
+            '<rect x="40" y="6" width="30" height="8" rx="4"/>' +
+            '<polygon points="28,28 40,28 36,44 24,44"/>',
+    smg: '<rect x="30" y="15" width="40" height="13" rx="3"/>' +
+         '<rect x="70" y="19" width="22" height="5" rx="2"/>' +
+         '<polygon points="12,17 30,18 30,26 12,25"/>' +
+         '<polygon points="36,28 48,28 46,44 34,44"/>' +
+         '<rect x="54" y="28" width="9" height="15" rx="2"/>',
+    pistol: '<rect x="42" y="13" width="52" height="11" rx="2"/>' +
+            '<rect x="50" y="24" width="24" height="5" rx="2"/>' +
+            '<polygon points="52,24 74,24 68,45 48,45"/>',
+    knife: '<polygon points="34,13 94,19 100,25 34,31"/>' +
+           '<rect x="6" y="17" width="30" height="11" rx="5"/>',
+    gloves: '<rect x="30" y="16" width="52" height="26" rx="9"/>' +
+            '<rect x="34" y="8" width="11" height="13" rx="5"/>' +
+            '<rect x="47" y="5" width="11" height="16" rx="5"/>' +
+            '<rect x="60" y="7" width="11" height="14" rx="5"/>' +
+            '<rect x="73" y="11" width="11" height="11" rx="5"/>' +
+            '<rect x="20" y="23" width="13" height="15" rx="6"/>'
   };
+
+  function hashString(str) {
+    let h = 2166136261;
+    for (let i = 0; i < str.length; i++) {
+      h ^= str.charCodeAt(i);
+      h = Math.imul(h, 16777619);
+    }
+    return h >>> 0;
+  }
+
+  let artUid = 0;
+
+  // Deterministic "skin" for an item: gradient + camo shards clipped to the silhouette.
+  function itemArt(item) {
+    const seed = hashString(item.name);
+    const rnd = (n) => ((seed >> (n * 3)) & 255) / 255;
+    const hueA = Math.floor(rnd(0) * 360);
+    const hueB = (hueA + 40 + Math.floor(rnd(1) * 160)) % 360;
+    const sat = 45 + Math.floor(rnd(2) * 40);
+    const id = 'a' + (artUid++);
+    const shape = SHAPES[item.kind] || SHAPES.rifle;
+
+    let shards = '';
+    for (let i = 0; i < 4; i++) {
+      const x = rnd(i + 3) * 120;
+      const w = 14 + rnd(i + 4) * 34;
+      const skew = -18 + rnd(i + 5) * 36;
+      shards += '<polygon points="' + x + ',0 ' + (x + w) + ',0 ' +
+                (x + w + skew) + ',48 ' + (x + skew) + ',48" fill="hsl(' +
+                ((hueB + i * 28) % 360) + ',' + sat + '%,' +
+                (38 + i * 11) + '%)" opacity="' + (0.2 + i * 0.12).toFixed(2) + '"/>';
+    }
+
+    return '<svg viewBox="0 0 120 48" xmlns="http://www.w3.org/2000/svg">' +
+      '<defs>' +
+        '<linearGradient id="g' + id + '" x1="0" y1="0" x2="1" y2="1">' +
+          '<stop offset="0%" stop-color="hsl(' + hueA + ',' + sat + '%,58%)"/>' +
+          '<stop offset="100%" stop-color="hsl(' + hueB + ',' + sat + '%,34%)"/>' +
+        '</linearGradient>' +
+        '<clipPath id="c' + id + '">' + shape + '</clipPath>' +
+      '</defs>' +
+      '<g clip-path="url(#c' + id + ')">' +
+        '<rect x="0" y="0" width="120" height="48" fill="url(#g' + id + ')"/>' +
+        shards +
+      '</g>' +
+      '<g fill="none" stroke="rgba(25,20,14,.45)" stroke-width="1.2">' + shape + '</g>' +
+    '</svg>';
+  }
+
+  function caseArt(accent) {
+    return '<svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">' +
+      '<defs><linearGradient id="cg' + (artUid++) + '"></linearGradient></defs>' +
+      '<path d="M60 14 L104 34 L104 84 L60 106 L16 84 L16 34 Z" fill="rgba(255,255,255,.92)" ' +
+        'stroke="' + accent + '" stroke-width="3" stroke-linejoin="round"/>' +
+      '<path d="M16 34 L60 54 L104 34" fill="none" stroke="' + accent + '" stroke-width="3" stroke-linejoin="round"/>' +
+      '<path d="M60 54 L60 106" fill="none" stroke="' + accent + '" stroke-width="3"/>' +
+      '<rect x="49" y="55" width="22" height="18" rx="4" fill="' + accent + '"/>' +
+      '<circle cx="60" cy="64" r="3.4" fill="#fff"/>' +
+    '</svg>';
+  }
+
+  /* =========================================================
+     Case + item data
+     ========================================================= */
+
+  const RARITIES = ['common', 'uncommon', 'rare', 'epic', 'legendary', 'mythic'];
+  const RARITY_COLOR = {
+    common: '#9aa3ad', uncommon: '#3f9a52', rare: '#2f7fd6',
+    epic: '#8b46d6', legendary: '#e08a12', mythic: '#d63b3b'
+  };
+
+  // odds are tuned so every paid case returns ~93% of its price on average
+  const ODDS = {
+    t1: { common: .62, uncommon: .24, rare: .10, epic: .03, legendary: .009, mythic: .001 },
+    t2: { common: .58, uncommon: .25, rare: .11, epic: .045, legendary: .013, mythic: .002 },
+    t3: { common: .54, uncommon: .26, rare: .125, epic: .055, legendary: .017, mythic: .003 },
+    t4: { common: .50, uncommon: .27, rare: .14, epic: .065, legendary: .021, mythic: .004 },
+    t5: { common: .46, uncommon: .28, rare: .155, epic: .075, legendary: .025, mythic: .005 },
+    t6: { common: .42, uncommon: .29, rare: .17, epic: .085, legendary: .029, mythic: .006 }
+  };
+
+  function I(name, kind, rarity, value) { return { name, kind, rarity, value }; }
 
   const CASES = [
     {
-      id: 'standard',
-      name: 'Standard Case',
-      icon: '📦',
-      price: 0,
-      rarityOrder: RARITIES_3,
-      odds: { common: 0.70, uncommon: 0.25, rare: 0.05 },
-      items: {
-        common: [
-          { name: 'Scuffed Badge', icon: '🔘', value: 1 },
-          { name: 'Rusty Coin', icon: '🪙', value: 1 },
-          { name: 'Worn Token', icon: '🎫', value: 2 },
-        ],
-        uncommon: [
-          { name: 'Polished Badge', icon: '🥉', value: 3 },
-          { name: 'Silver Token', icon: '🎟️', value: 4 },
-        ],
-        rare: [
-          { name: 'Golden Badge', icon: '🥇', value: 8 },
-        ],
-      },
+      id: 'scrap', name: 'Scrap Tin', sub: 'Free pull, every time', price: 0,
+      accent: '#8d9199', odds: ODDS.t1,
+      items: [
+        I('P-22 | Duct Tape', 'pistol', 'common', 4),
+        I('SP-5 | Rust Bucket', 'smg', 'common', 5),
+        I('AR-12 | Primer Grey', 'rifle', 'common', 6),
+        I('Field Gloves | Workshop', 'gloves', 'uncommon', 10),
+        I('LR-800 | Sandbag', 'sniper', 'uncommon', 12),
+        I('KR-74 | Copper Tape', 'rifle', 'rare', 24),
+        I('HX-45 | Oil Slick', 'pistol', 'rare', 28),
+        I('Bowie Knife | Scrapyard', 'knife', 'epic', 66),
+        I('SP-5 | Hazard Stripe', 'smg', 'epic', 74),
+        I('AR-12 | Junkyard King', 'rifle', 'legendary', 230),
+        I('Talon Knife | Last Resort', 'knife', 'mythic', 800)
+      ]
     },
     {
-      id: 'premium',
-      name: 'Premium Case',
-      icon: '🗃️',
-      price: 500,
-      rarityOrder: RARITIES_6,
-      odds: { common: 0.50, uncommon: 0.25, rare: 0.15, epic: 0.07, legendary: 0.025, mythic: 0.005 },
-      items: {
-        common: [
-          { name: 'Scrap Metal', icon: '🔩', value: 10 },
-          { name: 'Tin Charm', icon: '🧷', value: 15 },
-        ],
-        uncommon: [
-          { name: 'Bronze Relic', icon: '🏺', value: 40 },
-          { name: 'Jade Charm', icon: '📿', value: 55 },
-        ],
-        rare: [
-          { name: 'Sapphire Shard', icon: '🔷', value: 150 },
-          { name: 'Ruby Fragment', icon: '🔺', value: 180 },
-        ],
-        epic: [
-          { name: 'Amethyst Core', icon: '🔮', value: 600 },
-        ],
-        legendary: [
-          { name: "Phoenix Feather", icon: '🪶', value: 2000 },
-        ],
-        mythic: [
-          { name: "Dragon's Eye", icon: '🐉', value: 10000 },
-        ],
-      },
+      id: 'starter', name: 'Starter Crate', sub: 'Entry level, honest odds', price: 25,
+      accent: '#f26a1b', odds: ODDS.t1,
+      items: [
+        I('P-22 | Sandstorm', 'pistol', 'common', 7),
+        I('SP-5 | Field Drab', 'smg', 'common', 8),
+        I('AR-12 | Chalkline', 'rifle', 'common', 9),
+        I('HX-45 | Clay Wash', 'pistol', 'uncommon', 18),
+        I('Field Gloves | Canvas', 'gloves', 'uncommon', 20),
+        I('LR-800 | Iron Sight', 'sniper', 'rare', 44),
+        I('KR-74 | Bramble', 'rifle', 'rare', 50),
+        I('M9 Carbine | Emberline', 'rifle', 'epic', 115),
+        I('Bowie Knife | Riverstone', 'knife', 'epic', 133),
+        I('AWS-7 | First Light', 'sniper', 'legendary', 414),
+        I('Karver Knife | Molten Core', 'knife', 'mythic', 1550)
+      ]
     },
+    {
+      id: 'urban', name: 'Urban Cache', sub: 'Street finishes and spray work', price: 110,
+      accent: '#3f9a52', odds: ODDS.t2,
+      items: [
+        I('SP-5 | Sidewalk', 'smg', 'common', 26),
+        I('P-22 | Meter Grey', 'pistol', 'common', 30),
+        I('AR-12 | Transit Tape', 'rifle', 'common', 34),
+        I('MK Vector | Fire Escape', 'smg', 'uncommon', 62),
+        I('Wrap Gloves | Cross Town', 'gloves', 'uncommon', 72),
+        I('KR-74 | Overpass', 'rifle', 'rare', 154),
+        I('HX-45 | Night Shift', 'pistol', 'rare', 178),
+        I('LR-800 | Rooftop', 'sniper', 'epic', 412),
+        I('M9 Carbine | Block Party', 'rifle', 'epic', 474),
+        I('Bowie Knife | Chain Link', 'knife', 'legendary', 1477),
+        I('Talon Knife | City Lights', 'knife', 'mythic', 5544)
+      ]
+    },
+    {
+      id: 'neon', name: 'Neon Vault', sub: 'Glow finishes, sharper odds', price: 420,
+      accent: '#2f7fd6', odds: ODDS.t3,
+      items: [
+        I('P-22 | Coolant', 'pistol', 'common', 84),
+        I('SP-5 | Signal Blue', 'smg', 'common', 96),
+        I('AR-12 | Vapor Trail', 'rifle', 'common', 108),
+        I('MK Vector | Arcade', 'smg', 'uncommon', 201),
+        I('Wrap Gloves | Circuitry', 'gloves', 'uncommon', 231),
+        I('KR-74 | Laser Grid', 'rifle', 'rare', 502),
+        I('AWS-7 | Cathode', 'sniper', 'rare', 578),
+        I('M9 Carbine | Hyperdrive', 'rifle', 'epic', 1340),
+        I('HX-45 | Synth Wave', 'pistol', 'epic', 1542),
+        I('Karver Knife | Voltage', 'knife', 'legendary', 4805),
+        I('Talon Knife | Nightfall Neon', 'knife', 'mythic', 18018)
+      ]
+    },
+    {
+      id: 'obsidian', name: 'Obsidian Reserve', sub: 'Dark lacquer, heavy hitters', price: 1250,
+      accent: '#4a4a55', odds: ODDS.t4,
+      items: [
+        I('SP-5 | Basalt', 'smg', 'common', 219),
+        I('P-22 | Ashfall', 'pistol', 'common', 249),
+        I('AR-12 | Charcoal Weave', 'rifle', 'common', 279),
+        I('LR-800 | Slate Cut', 'sniper', 'uncommon', 521),
+        I('Field Gloves | Soot', 'gloves', 'uncommon', 599),
+        I('KR-74 | Black Glass', 'rifle', 'rare', 1302),
+        I('MK Vector | Tar Pit', 'smg', 'rare', 1498),
+        I('AWS-7 | Eclipse', 'sniper', 'epic', 3473),
+        I('M9 Carbine | Magma Vein', 'rifle', 'epic', 3995),
+        I('Bowie Knife | Volcanic Glass', 'knife', 'legendary', 12450),
+        I('Karver Knife | Event Horizon', 'knife', 'mythic', 46625)
+      ]
+    },
+    {
+      id: 'prism', name: 'Prism Elite', sub: 'Refractive coats, elite pool', price: 3800,
+      accent: '#8b46d6', odds: ODDS.t5,
+      items: [
+        I('P-22 | Spectrum', 'pistol', 'common', 589),
+        I('SP-5 | Facet', 'smg', 'common', 669),
+        I('AR-12 | Prism Wrap', 'rifle', 'common', 749),
+        I('Wrap Gloves | Opal Cut', 'gloves', 'uncommon', 1403),
+        I('MK Vector | Refraction', 'smg', 'uncommon', 1615),
+        I('AWS-7 | Lightfall', 'sniper', 'rare', 3506),
+        I('HX-45 | Iridium', 'pistol', 'rare', 4034),
+        I('KR-74 | Diamond Dust', 'rifle', 'epic', 9347),
+        I('M9 Carbine | Crown Glass', 'rifle', 'epic', 10755),
+        I('Talon Knife | Aurora Cut', 'knife', 'legendary', 33516),
+        I('Karver Knife | Pure Spectrum', 'knife', 'mythic', 125780)
+      ]
+    },
+    {
+      id: 'apex', name: 'Apex Chroma', sub: 'Top shelf. Best odds in the shop.', price: 11000,
+      accent: '#d63b3b', odds: ODDS.t6,
+      items: [
+        I('SP-5 | Titan Grey', 'smg', 'common', 1529),
+        I('AR-12 | Apex Wrap', 'rifle', 'common', 1738),
+        I('P-22 | Chromeworks', 'pistol', 'common', 1947),
+        I('Field Gloves | Summit', 'gloves', 'uncommon', 3642),
+        I('LR-800 | Long Shadow', 'sniper', 'uncommon', 4190),
+        I('MK Vector | Redline Apex', 'smg', 'rare', 9105),
+        I('KR-74 | Solar Flare', 'rifle', 'rare', 10475),
+        I('AWS-7 | Kill Confirmed', 'sniper', 'epic', 24276),
+        I('M9 Carbine | Chroma Burst', 'rifle', 'epic', 27930),
+        I('Bowie Knife | Gold Standard', 'knife', 'legendary', 87010),
+        I('Talon Knife | Apex Predator', 'knife', 'mythic', 326700)
+      ]
+    }
   ];
 
-  /* ---------------------------------------------------------------
-   * State + save / load
-   * ------------------------------------------------------------- */
+  const ALL_ITEMS = CASES.reduce((acc, c) => acc.concat(c.items), []);
+
+  /* =========================================================
+     State
+     ========================================================= */
+
   const SAVE_KEY = 'case-chase-save-v1';
+  const START_COINS = 500;
 
   const state = {
-    coins: 1000,
+    coins: START_COINS,
     inventory: [],
+    opened: 0,
+    best: null,
+    muted: false,
+    uid: 1
   };
 
-  let idCounter = 0;
-  function makeId() {
-    idCounter += 1;
-    return `item-${Date.now()}-${idCounter}`;
-  }
-
-  function saveGame() {
+  function save() {
     try {
       localStorage.setItem(SAVE_KEY, JSON.stringify({
-        coins: state.coins,
-        inventory: state.inventory,
+        coins: state.coins, inventory: state.inventory,
+        opened: state.opened, best: state.best, muted: state.muted, uid: state.uid
       }));
-    } catch (e) {
-      // storage unavailable (private mode, disabled, etc.) - fail silently
-    }
+    } catch (e) { /* storage unavailable — play on without persistence */ }
   }
 
-  function loadGame() {
+  function load() {
     try {
       const raw = localStorage.getItem(SAVE_KEY);
       if (!raw) return;
-      const saved = JSON.parse(raw);
-      if (typeof saved.coins === 'number') state.coins = saved.coins;
-      if (Array.isArray(saved.inventory)) state.inventory = saved.inventory;
-    } catch (e) {
-      // corrupt save - ignore and keep defaults
+      const d = JSON.parse(raw);
+      if (typeof d.coins === 'number') state.coins = d.coins;
+      if (Array.isArray(d.inventory)) state.inventory = d.inventory;
+      if (typeof d.opened === 'number') state.opened = d.opened;
+      if (d.best) state.best = d.best;
+      state.muted = !!d.muted;
+      state.uid = d.uid || (state.inventory.length + 1);
+    } catch (e) { /* corrupt save — start clean */ }
+  }
+
+  const fmt = (n) => Math.round(n).toLocaleString('en-US');
+
+  function addItem(item) {
+    const copy = { uid: state.uid++, name: item.name, kind: item.kind, rarity: item.rarity, value: item.value };
+    state.inventory.push(copy);
+    return copy;
+  }
+
+  /* =========================================================
+     Small helpers
+     ========================================================= */
+
+  const $ = (sel) => document.querySelector(sel);
+  const $$ = (sel) => Array.prototype.slice.call(document.querySelectorAll(sel));
+
+  function toast(msg, kind) {
+    const host = $('#toasts');
+    const el = document.createElement('div');
+    el.className = 'toast' + (kind ? ' ' + kind : '');
+    el.textContent = msg;
+    host.appendChild(el);
+    setTimeout(() => el.remove(), 2600);
+  }
+
+  let audioCtx = null;
+  function beep(freq, dur, vol) {
+    if (state.muted) return;
+    try {
+      if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = 'square';
+      osc.frequency.value = freq;
+      gain.gain.setValueAtTime(vol, audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + dur);
+      osc.connect(gain).connect(audioCtx.destination);
+      osc.start();
+      osc.stop(audioCtx.currentTime + dur);
+    } catch (e) { /* audio blocked — silent is fine */ }
+  }
+  const tick = () => beep(880, 0.03, 0.04);
+  const fanfare = (r) => {
+    const base = { common: 320, uncommon: 400, rare: 500, epic: 620, legendary: 760, mythic: 900 }[r] || 400;
+    beep(base, 0.12, 0.08);
+    setTimeout(() => beep(base * 1.5, 0.18, 0.07), 110);
+  };
+
+  function rollRarity(odds) {
+    let roll = Math.random(), acc = 0;
+    for (let i = 0; i < RARITIES.length; i++) {
+      acc += odds[RARITIES[i]] || 0;
+      if (roll < acc) return RARITIES[i];
     }
+    return 'common';
   }
 
-  function valueToRarity(value) {
-    if (value < 10) return 'common';
-    if (value < 50) return 'uncommon';
-    if (value < 200) return 'rare';
-    if (value < 1000) return 'epic';
-    if (value < 5000) return 'legendary';
-    return 'mythic';
+  function rollItem(box) {
+    const rarity = rollRarity(box.odds);
+    const pool = box.items.filter((it) => it.rarity === rarity);
+    const source = pool.length ? pool : box.items;
+    return source[Math.floor(Math.random() * source.length)];
   }
 
-  const MAX_QTY = 3;
-  const caseQty = {};
-  CASES.forEach(c => { caseQty[c.id] = 1; });
-
-  function updateCoinDisplay() {
-    document.getElementById('coin-total').textContent = state.coins.toLocaleString();
+  function itemMarkup(item, extra) {
+    return '<div class="item ' + (extra || '') + '" style="--rc:' + RARITY_COLOR[item.rarity] + '">' +
+      '<div class="item-art">' + itemArt(item) + '</div>' +
+      '<div class="item-name" title="' + item.name + '">' + item.name + '</div>' +
+      '<div class="item-meta">' +
+        '<span class="item-rarity">' + item.rarity + '</span>' +
+        '<span class="item-value">' + fmt(item.value) + '</span>' +
+      '</div>' +
+    '</div>';
   }
 
-  /* ---------------------------------------------------------------
-   * Tabs
-   * ------------------------------------------------------------- */
-  function switchView(name) {
-    document.querySelectorAll('.view').forEach(v => v.classList.add('hidden'));
-    document.getElementById(`view-${name}`).classList.remove('hidden');
-    document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.view === name));
+  /* =========================================================
+     Chrome: balance, tabs
+     ========================================================= */
+
+  function renderBalance() {
+    $('#balance-value').textContent = fmt(state.coins);
+    $('#inv-count').textContent = state.inventory.length;
+    const bal = $('#balance');
+    bal.classList.remove('bump');
+    void bal.offsetWidth;
+    bal.classList.add('bump');
+  }
+
+  function setTab(name) {
+    $$('.tab').forEach((t) => t.classList.toggle('active', t.dataset.tab === name));
+    $$('.panel').forEach((p) => p.classList.toggle('active', p.id === 'panel-' + name));
     if (name === 'inventory') renderInventory();
     if (name === 'upgrader') renderUpgrader();
   }
 
-  document.querySelectorAll('.tab-btn').forEach(btn => {
-    btn.addEventListener('click', () => switchView(btn.dataset.view));
-  });
+  /* =========================================================
+     Cases tab
+     ========================================================= */
 
-  document.getElementById('reset-save-btn').addEventListener('click', () => {
-    if (!confirm('Reset all progress? This clears your coins and inventory.')) return;
-    state.coins = 1000;
-    state.inventory = [];
-    selectedUpgradeIds.clear();
-    saveGame();
-    updateCoinDisplay();
-    renderInventory();
-    renderUpgrader();
-  });
+  let openCount = 1;
 
-  /* ---------------------------------------------------------------
-   * Render shop
-   * ------------------------------------------------------------- */
-  const caseGrid = document.getElementById('case-grid');
+  function renderCases() {
+    $('#case-grid').innerHTML = CASES.map((box, i) => {
+      const bars = RARITIES.map((r) =>
+        '<span style="flex:' + ((box.odds[r] || 0) * 1000) + ';background:' + RARITY_COLOR[r] + '"></span>'
+      ).join('');
+      const top = box.items.reduce((a, b) => (b.value > a.value ? b : a), box.items[0]);
+      return '<article class="case-card">' +
+        '<div class="case-art" style="background:linear-gradient(140deg,' +
+          box.accent + '18,' + box.accent + '05)">' + caseArt(box.accent) + '</div>' +
+        '<div class="case-name">' + box.name + '</div>' +
+        '<div class="case-sub">' + box.sub + '</div>' +
+        '<div class="odds-bar">' + bars + '</div>' +
+        '<div class="case-sub" style="margin-bottom:12px">Top drop · ' + top.name + ' (' + fmt(top.value) + ')</div>' +
+        '<div class="case-foot">' +
+          '<span class="case-price' + (box.price === 0 ? ' free' : '') + '">' +
+            (box.price === 0 ? 'FREE' : fmt(box.price)) + '</span>' +
+          '<button class="link-btn" data-contents="' + i + '">Contents</button>' +
+          '<button class="btn btn-primary btn-sm" data-open="' + i + '">Open</button>' +
+        '</div>' +
+      '</article>';
+    }).join('');
 
-  function openBtnLabel(c) {
-    const qty = caseQty[c.id];
-    const totalCost = c.price * qty;
-    const costPart = totalCost === 0 ? 'FREE' : `🪙 ${totalCost.toLocaleString()}`;
-    return `Open ${qty > 1 ? `×${qty} — ` : ''}${costPart}`;
+    $$('#case-grid [data-open]').forEach((btn) => {
+      btn.addEventListener('click', () => startOpening(CASES[+btn.dataset.open]));
+    });
+    $$('#case-grid [data-contents]').forEach((btn) => {
+      btn.addEventListener('click', () => showContents(CASES[+btn.dataset.contents]));
+    });
+    refreshCaseButtons();
   }
 
-  function renderShop() {
-    caseGrid.innerHTML = '';
-    CASES.forEach(c => {
-      const card = document.createElement('div');
-      card.className = 'case-card';
-
-      const rarityChips = c.rarityOrder
-        .map(r => `<span class="chip ${r}">${RARITY_LABEL[r]}</span>`)
-        .join('');
-
-      const priceHtml = c.price === 0
-        ? `<div class="price free">FREE</div>`
-        : `<div class="price">🪙 ${c.price.toLocaleString()}</div>`;
-
-      const qtyBtns = Array.from({ length: MAX_QTY }, (_, i) => i + 1)
-        .map(n => `<button class="qty-btn${n === caseQty[c.id] ? ' active' : ''}" data-case="${c.id}" data-qty="${n}">${n}</button>`)
-        .join('');
-
-      card.innerHTML = `
-        <div class="case-art">${c.icon}</div>
-        <h2>${c.name}</h2>
-        <div class="rarities">${rarityChips}</div>
-        ${priceHtml}
-        <div class="qty-selector">${qtyBtns}</div>
-        <button class="open-btn" data-case="${c.id}">${openBtnLabel(c)}</button>
-        <button class="contents-btn" data-contents="${c.id}">View Contents</button>
-      `;
-      caseGrid.appendChild(card);
-    });
-
-    caseGrid.querySelectorAll('.open-btn').forEach(btn => {
-      btn.addEventListener('click', () => tryOpenCase(btn.dataset.case));
-    });
-    caseGrid.querySelectorAll('.contents-btn').forEach(btn => {
-      btn.addEventListener('click', () => showContents(btn.dataset.contents));
-    });
-    caseGrid.querySelectorAll('.qty-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        caseQty[btn.dataset.case] = Number(btn.dataset.qty);
-        renderShop();
-      });
+  function refreshCaseButtons() {
+    $$('#case-grid [data-open]').forEach((btn) => {
+      const box = CASES[+btn.dataset.open];
+      const cost = box.price * openCount;
+      btn.disabled = state.coins < cost;
+      btn.textContent = openCount > 1 ? 'Open x' + openCount : 'Open';
+      btn.title = cost > 0 ? 'Costs ' + fmt(cost) + ' coins' : 'Free';
     });
   }
 
-  /* ---------------------------------------------------------------
-   * Contents modal
-   * ------------------------------------------------------------- */
-  const contentsModal = document.getElementById('contents-modal');
-  document.getElementById('contents-close-btn').addEventListener('click', () => {
-    contentsModal.classList.add('hidden');
-  });
-
-  function showContents(caseId) {
-    const c = CASES.find(x => x.id === caseId);
-    document.getElementById('contents-case-name').textContent = `${c.name} — Contents`;
-    const list = document.getElementById('contents-list');
-    list.innerHTML = '';
-
-    c.rarityOrder.forEach(r => {
-      c.items[r].forEach(item => {
-        const el = document.createElement('div');
-        el.className = `reel-item rar-${r}`;
-        el.innerHTML = `
-          <div>${item.icon}</div>
-          <div class="val">🪙 ${item.value.toLocaleString()}</div>
-        `;
-        list.appendChild(el);
-      });
-    });
-
-    contentsModal.classList.remove('hidden');
+  function showContents(box) {
+    $('#contents-title').textContent = box.name;
+    $('#contents-sub').textContent = RARITIES.map((r) =>
+      r.charAt(0).toUpperCase() + r.slice(1) + ' ' + ((box.odds[r] || 0) * 100).toFixed(1) + '%'
+    ).join('  ·  ');
+    $('#contents-grid').innerHTML = box.items
+      .slice()
+      .sort((a, b) => b.value - a.value)
+      .map((it) => itemMarkup(it))
+      .join('');
+    $('#contents-overlay').classList.add('open');
   }
 
-  /* ---------------------------------------------------------------
-   * Weighted random pick
-   * ------------------------------------------------------------- */
-  function pickRarity(c) {
-    const roll = Math.random();
-    let cumulative = 0;
-    for (const r of c.rarityOrder) {
-      cumulative += c.odds[r];
-      if (roll <= cumulative) return r;
-    }
-    return c.rarityOrder[c.rarityOrder.length - 1];
-  }
+  /* =========================================================
+     Opening animation
+     ========================================================= */
 
-  function pickItem(c, rarity) {
-    const pool = c.items[rarity];
-    return pool[Math.floor(Math.random() * pool.length)];
-  }
+  const TILE = 116, GAP = 10, PITCH = TILE + GAP;
+  const STRIP_LEN = 70, WIN_INDEX = 58;
+  const SPIN_MS = 5200;
 
-  /* ---------------------------------------------------------------
-   * Case opening (CS:GO-style spinning reel, sequential rounds)
-   * ------------------------------------------------------------- */
-  const openModal = document.getElementById('open-modal');
-  const reelTrack = document.getElementById('reel-track');
-  const resultBox = document.getElementById('result-box');
-  const collectBtn = document.getElementById('collect-btn');
-  const resultsTray = document.getElementById('results-tray');
-  const roundIndicator = document.getElementById('round-indicator');
+  let opening = null; // { winners, reels, finished, box }
 
-  const SLOT_WIDTH = 130 + 16; // width + margins
-  const REEL_LENGTH = 60;
-  const WINNING_INDEX = 50;
-  const PAUSE_BETWEEN_ROUNDS = 900;
-
-  let opening = false;
-  let currentCase = null;
-  let pendingReward = null;
-  let roundResults = [];
-  let roundsTotal = 1;
-  let roundIndex = 0;
-
-  function buildItemEl(rarity, item, className) {
-    const el = document.createElement('div');
-    el.className = `${className} rar-${rarity}`;
-    el.innerHTML = `
-      <div>${item.icon}</div>
-      <div class="val">🪙 ${item.value.toLocaleString()}</div>
-    `;
-    return el;
-  }
-
-  function tryOpenCase(caseId) {
+  function startOpening(box) {
     if (opening) return;
-    const c = CASES.find(x => x.id === caseId);
-    const qty = caseQty[c.id];
-    const totalCost = c.price * qty;
-    if (state.coins < totalCost) {
-      flashInsufficientFunds();
-      return;
-    }
+    const cost = box.price * openCount;
+    if (state.coins < cost) { toast('Not enough coins', 'bad'); return; }
 
-    state.coins -= totalCost;
-    updateCoinDisplay();
-    saveGame();
+    state.coins -= cost;
+    state.opened += openCount;
+    renderBalance();
+    refreshCaseButtons();
 
-    currentCase = c;
-    opening = true;
-    roundResults = [];
-    roundsTotal = qty;
-    roundIndex = 0;
+    const winners = [];
+    for (let i = 0; i < openCount; i++) winners.push(rollItem(box));
 
-    document.getElementById('open-case-name').textContent = c.name;
-    roundIndicator.textContent = qty > 1 ? `1 / ${qty}` : '';
-    resultsTray.innerHTML = '';
-    resultBox.classList.add('hidden');
-    collectBtn.classList.add('hidden');
-    openModal.classList.remove('hidden');
+    opening = { winners, box, reels: [], finished: 0, settled: false };
 
-    playRound();
-  }
+    $('#open-title').textContent = box.name;
+    $('#open-sub').textContent = openCount > 1
+      ? 'Opening ' + openCount + ' cases · ' + (cost === 0 ? 'free' : fmt(cost) + ' coins')
+      : (cost === 0 ? 'Free pull' : fmt(cost) + ' coins');
+    $('#open-results').style.display = 'none';
+    $('#skip-btn').style.display = '';
+    $('#reels').innerHTML = '';
+    $('#open-overlay').classList.add('open');
 
-  function playRound() {
-    const c = currentCase;
+    winners.forEach((winner, idx) => {
+      const wrap = document.createElement('div');
+      wrap.className = 'reel-wrap';
+      wrap.innerHTML = '<div class="marker"></div><div class="reel-track"></div>';
+      $('#reels').appendChild(wrap);
 
-    // Determine the real outcome up front.
-    const winRarity = pickRarity(c);
-    const winItem = pickItem(c, winRarity);
-    pendingReward = { rarity: winRarity, item: winItem };
-
-    // Build a randomized reel, forcing the winning item at WINNING_INDEX.
-    reelTrack.innerHTML = '';
-    reelTrack.style.transition = 'none';
-    reelTrack.style.transform = 'translateX(0px)';
-
-    for (let i = 0; i < REEL_LENGTH; i++) {
-      let rarity, item;
-      if (i === WINNING_INDEX) {
-        rarity = winRarity;
-        item = winItem;
-      } else {
-        rarity = pickRarity(c);
-        item = pickItem(c, rarity);
+      const track = wrap.querySelector('.reel-track');
+      let html = '';
+      for (let i = 0; i < STRIP_LEN; i++) {
+        const it = i === WIN_INDEX ? winner : rollItem(box);
+        html += itemMarkup(it, i === WIN_INDEX ? 'win' : '');
       }
-      reelTrack.appendChild(buildItemEl(rarity, item, 'reel-item'));
-    }
+      track.innerHTML = html;
 
-    // Force reflow so the transition below actually animates from 0.
-    // eslint-disable-next-line no-unused-expressions
-    reelTrack.offsetHeight;
+      const viewport = wrap.clientWidth;
+      const jitter = (Math.random() - 0.5) * (TILE - 30);
+      const target = WIN_INDEX * PITCH + TILE / 2 - viewport / 2 + jitter;
 
-    const viewportWidth = reelTrack.parentElement.clientWidth;
-    const jitter = (Math.random() - 0.5) * (SLOT_WIDTH * 0.7);
-    const targetCenter = WINNING_INDEX * SLOT_WIDTH + SLOT_WIDTH / 2;
-    const finalX = -(targetCenter - viewportWidth / 2) + jitter;
+      track.style.transform = 'translateX(0px)';
+      opening.reels.push({ wrap, track, target, winner });
 
-    requestAnimationFrame(() => {
-      reelTrack.style.transition = 'transform 6.2s cubic-bezier(0.12, 0.79, 0.24, 1)';
-      reelTrack.style.transform = `translateX(${finalX}px)`;
+      // stagger multi-case reels so they land one after another
+      requestAnimationFrame(() => requestAnimationFrame(() => {
+        track.style.transition = 'transform ' + (SPIN_MS + idx * 420) + 'ms cubic-bezier(.08,.62,.12,1)';
+        track.style.transform = 'translateX(' + (-target) + 'px)';
+      }));
     });
 
-    setTimeout(() => {
-      onRoundLanded();
-    }, 6400);
+    runTicker();
+    opening.reels.forEach((reel, idx) => {
+      reel.track.addEventListener('transitionend', function handler(e) {
+        if (e.propertyName !== 'transform') return;
+        reel.track.removeEventListener('transitionend', handler);
+        settleReel(idx);
+      });
+    });
   }
 
-  function onRoundLanded() {
-    const { rarity, item } = pendingReward;
-    roundResults.push(pendingReward);
-    roundIndex++;
+  function settleReel(idx) {
+    const reel = opening && opening.reels[idx];
+    if (!reel || reel.done) return;
+    reel.done = true;
+    reel.wrap.classList.add('done');
+    fanfare(reel.winner.rarity);
+    opening.finished++;
+    if (opening.finished >= opening.reels.length) finishOpening();
+  }
 
-    document.getElementById('result-name').innerHTML =
-      `<span class="chip ${rarity}">${RARITY_LABEL[rarity]}</span> ${item.name}`;
-    document.getElementById('result-val').textContent = `🪙 ${item.value.toLocaleString()}`;
-    resultBox.classList.remove('hidden');
-    resultsTray.appendChild(buildItemEl(rarity, item, 'tray-item'));
-
-    if (roundIndex < roundsTotal) {
-      roundIndicator.textContent = `${roundIndex + 1} / ${roundsTotal}`;
-      setTimeout(() => {
-        resultBox.classList.add('hidden');
-        playRound();
-      }, PAUSE_BETWEEN_ROUNDS);
-    } else {
-      finishOpening();
+  // Plays a click as each tile crosses the centre marker.
+  function runTicker() {
+    let last = -1;
+    function frame() {
+      if (!opening || opening.settled) return;
+      const reel = opening.reels[0];
+      if (reel && !reel.done) {
+        const raw = getComputedStyle(reel.track).transform;
+        if (raw && raw !== 'none') {
+          try {
+            const m = new DOMMatrixReadOnly(raw);
+            const idx = Math.floor((-m.m41 + reel.wrap.clientWidth / 2) / PITCH);
+            if (idx !== last) { last = idx; tick(); }
+          } catch (e) { /* mid-transition parse hiccup — skip this frame */ }
+        }
+      }
+      requestAnimationFrame(frame);
     }
+    requestAnimationFrame(frame);
+  }
+
+  function skipOpening() {
+    if (!opening) return;
+    opening.reels.forEach((reel, idx) => {
+      if (reel.done) return;
+      reel.track.style.transition = 'none';
+      reel.track.style.transform = 'translateX(' + (-reel.target) + 'px)';
+      settleReel(idx);
+    });
   }
 
   function finishOpening() {
-    if (roundsTotal > 1) {
-      const total = roundResults.reduce((sum, r) => sum + r.item.value, 0);
-      document.getElementById('result-name').textContent = `${roundsTotal} items collected`;
-      document.getElementById('result-val').textContent = `Total 🪙 ${total.toLocaleString()}`;
-    }
-    roundIndicator.textContent = '';
-    collectBtn.classList.remove('hidden');
-  }
+    if (!opening || opening.settled) return;
+    opening.settled = true;
+    $('#skip-btn').style.display = 'none';
 
-  collectBtn.addEventListener('click', () => {
-    roundResults.forEach(r => {
-      state.inventory.push({
-        id: makeId(),
-        caseId: currentCase.id,
-        rarity: r.rarity,
-        name: r.item.name,
-        icon: r.item.icon,
-        value: r.item.value,
-      });
+    const winners = opening.winners;
+    const total = winners.reduce((sum, it) => sum + it.value, 0);
+    const spent = opening.box.price * winners.length;
+
+    winners.forEach((it) => {
+      if (!state.best || it.value > state.best.value) {
+        state.best = { name: it.name, value: it.value, rarity: it.rarity };
+      }
     });
-    saveGame();
 
-    opening = false;
-    pendingReward = null;
-    roundResults = [];
-    openModal.classList.add('hidden');
-  });
+    $('#result-grid').innerHTML = winners
+      .map((it, i) => itemMarkup(it).replace('class="item ', 'style="animation-delay:' + (i * 70) + 'ms" class="item '))
+      .join('');
 
-  function flashInsufficientFunds() {
-    const coinsEl = document.querySelector('.coins');
-    coinsEl.style.color = '#ff5555';
-    coinsEl.style.transition = 'color 0.15s ease';
-    setTimeout(() => { coinsEl.style.color = ''; }, 400);
+    const diff = total - spent;
+    const cls = diff >= 0 ? 'up' : 'down';
+    $('#open-payout').innerHTML = 'Pulled <b>' + fmt(total) + '</b> from <b>' + fmt(spent) + '</b> · ' +
+      '<b class="' + cls + '">' + (diff >= 0 ? '+' : '') + fmt(diff) + '</b>';
+    $('#sell-pulls').textContent = 'Sell all for ' + fmt(total);
+    $('#open-results').style.display = '';
+    save();
   }
 
-  /* ---------------------------------------------------------------
-   * Inventory
-   * ------------------------------------------------------------- */
-  function sellItem(id) {
-    const idx = state.inventory.findIndex(i => i.id === id);
-    if (idx === -1) return;
-    const [item] = state.inventory.splice(idx, 1);
-    state.coins += item.value;
-    updateCoinDisplay();
-    saveGame();
+  function closeOpening(sellAll) {
+    if (!opening || !opening.settled) return;
+    if (sellAll) {
+      const total = opening.winners.reduce((sum, it) => sum + it.value, 0);
+      state.coins += total;
+      toast('Sold ' + opening.winners.length + ' item' + (opening.winners.length > 1 ? 's' : '') +
+            ' for ' + fmt(total), 'good');
+    } else {
+      opening.winners.forEach(addItem);
+      toast('Added to inventory');
+    }
+    opening = null;
+    $('#open-overlay').classList.remove('open');
+    $('#reels').innerHTML = '';
+    renderBalance();
+    refreshCaseButtons();
     renderInventory();
+    save();
   }
 
-  document.getElementById('sell-all-btn').addEventListener('click', () => {
-    if (state.inventory.length === 0) return;
-    const total = state.inventory.reduce((sum, i) => sum + i.value, 0);
-    state.coins += total;
-    state.inventory = [];
-    updateCoinDisplay();
-    saveGame();
-    renderInventory();
-  });
+  /* =========================================================
+     Inventory tab
+     ========================================================= */
+
+  function sortedInventory() {
+    const filter = $('#inv-filter').value;
+    const sort = $('#inv-sort').value;
+    let list = state.inventory.slice();
+    if (filter !== 'all') list = list.filter((it) => it.rarity === filter);
+    if (sort === 'value-desc') list.sort((a, b) => b.value - a.value);
+    else if (sort === 'value-asc') list.sort((a, b) => a.value - b.value);
+    else if (sort === 'newest') list.sort((a, b) => b.uid - a.uid);
+    else list.sort((a, b) => a.name.localeCompare(b.name));
+    return list;
+  }
 
   function renderInventory() {
-    const grid = document.getElementById('inventory-grid');
-    document.getElementById('inv-count').textContent = state.inventory.length;
-    const total = state.inventory.reduce((sum, i) => sum + i.value, 0);
-    document.getElementById('inv-total').textContent = total.toLocaleString();
+    const total = state.inventory.reduce((s, it) => s + it.value, 0);
+    $('#stat-items').textContent = fmt(state.inventory.length);
+    $('#stat-value').textContent = fmt(total);
+    $('#stat-opened').textContent = fmt(state.opened);
+    $('#stat-best').textContent = state.best ? fmt(state.best.value) : '—';
+    $('#stat-best').title = state.best ? state.best.name : '';
 
-    grid.innerHTML = '';
-    if (state.inventory.length === 0) {
-      grid.innerHTML = '<div class="empty-state">No items yet</div>';
+    const list = sortedInventory();
+    const body = $('#inv-body');
+
+    if (!list.length) {
+      body.innerHTML = '<div class="empty"><h3>Nothing here yet</h3>' +
+        '<p>' + (state.inventory.length ? 'No items match this filter.' : 'Open a case to start your collection.') +
+        '</p></div>';
+      $('#sell-filtered').disabled = true;
       return;
     }
 
-    state.inventory.slice().reverse().forEach(item => {
-      const el = document.createElement('div');
-      el.className = `inv-item rar-${item.rarity}`;
-      el.innerHTML = `
-        <div class="inv-icon">${item.icon}</div>
-        <div class="inv-name">${item.name}</div>
-        <div class="val">🪙 ${item.value.toLocaleString()}</div>
-        <button class="sell-btn" data-id="${item.id}">Sell</button>
-      `;
-      grid.appendChild(el);
-    });
+    $('#sell-filtered').disabled = false;
+    $('#sell-filtered').textContent = 'Sell shown (' + fmt(list.reduce((s, it) => s + it.value, 0)) + ')';
+    body.innerHTML = '<div class="inv-grid">' + list.map((it) =>
+      itemMarkup(it).replace('</div></div>',
+        '</div><button class="sell" data-sell="' + it.uid + '">Sell ' + fmt(it.value) + '</button></div>')
+    ).join('') + '</div>';
 
-    grid.querySelectorAll('.sell-btn').forEach(btn => {
-      btn.addEventListener('click', () => sellItem(btn.dataset.id));
+    $$('#inv-body [data-sell]').forEach((btn) => {
+      btn.addEventListener('click', () => sellItems([+btn.dataset.sell]));
     });
   }
 
-  /* ---------------------------------------------------------------
-   * Upgrader (CS-style upgrade wheel/bar)
-   * ------------------------------------------------------------- */
-  const selectedUpgradeIds = new Set();
-  let currentMultiplier = 3;
-  let upgrading = false;
-
-  document.querySelectorAll('.mult-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      currentMultiplier = Number(btn.dataset.mult);
-      document.querySelectorAll('.mult-btn').forEach(b => b.classList.toggle('active', b === btn));
-      updateUpgraderTotals();
+  function sellItems(uids) {
+    const set = new Set(uids);
+    let gained = 0;
+    state.inventory = state.inventory.filter((it) => {
+      if (!set.has(it.uid)) return true;
+      gained += it.value;
+      return false;
     });
-  });
+    state.coins += gained;
+    toast('Sold for ' + fmt(gained), 'good');
+    renderBalance();
+    renderInventory();
+    refreshCaseButtons();
+    save();
+  }
+
+  /* =========================================================
+     Upgrader
+     ========================================================= */
+
+  const HOUSE_EDGE = 0.93;
+  const MAX_CHANCE = 0.90;
+  const MIN_CHANCE = 0.01;
+
+  const upgrade = { selected: new Set(), mult: 2, target: null, chance: 0,
+                    spinning: false, rotation: 0, result: null };
+
+  function stakeValue() {
+    return state.inventory
+      .filter((it) => upgrade.selected.has(it.uid))
+      .reduce((s, it) => s + it.value, 0);
+  }
+
+  // Nearest real item strictly above the stake — the multiplier shown is the
+  // one we can actually honour with a drop that exists.
+  function pickTarget(stake, mult) {
+    const wanted = stake * mult;
+    const candidates = ALL_ITEMS.filter((it) => it.value > stake * 1.05);
+    if (!candidates.length) return null;
+    return candidates.reduce((best, it) =>
+      Math.abs(it.value - wanted) < Math.abs(best.value - wanted) ? it : best, candidates[0]);
+  }
+
+  function describeArc(pct) {
+    if (pct <= 0) return '';
+    const r = 104, cx = 120, cy = 120;
+    const angle = Math.min(pct, 0.9999) * Math.PI * 2;
+    const x1 = cx, y1 = cy - r;
+    const x2 = cx + r * Math.sin(angle);
+    const y2 = cy - r * Math.cos(angle);
+    const large = angle > Math.PI ? 1 : 0;
+    return 'M ' + x1 + ' ' + y1 + ' A ' + r + ' ' + r + ' 0 ' + large + ' 1 ' + x2 + ' ' + y2;
+  }
 
   function renderUpgrader() {
-    const list = document.getElementById('upgrader-inventory');
-    list.innerHTML = '';
+    // drop selections for items that are gone
+    const alive = new Set(state.inventory.map((it) => it.uid));
+    upgrade.selected.forEach((uid) => { if (!alive.has(uid)) upgrade.selected.delete(uid); });
 
-    if (state.inventory.length === 0) {
-      list.innerHTML = '<div class="empty-state">No items to upgrade</div>';
+    const body = $('#stake-body');
+    if (!state.inventory.length) {
+      body.innerHTML = '<div class="empty"><h3>No items to stake</h3>' +
+        '<p>Open a case first, then bring the drops here.</p></div>';
     } else {
-      state.inventory.slice().reverse().forEach(item => {
-        const el = document.createElement('div');
-        el.className = `inv-item rar-${item.rarity} selectable${selectedUpgradeIds.has(item.id) ? ' selected' : ''}`;
-        el.innerHTML = `
-          <div class="inv-icon">${item.icon}</div>
-          <div class="inv-name">${item.name}</div>
-          <div class="val">🪙 ${item.value.toLocaleString()}</div>
-        `;
+      const list = state.inventory.slice().sort((a, b) => b.value - a.value);
+      body.innerHTML = '<div class="pick-grid">' + list.map((it) =>
+        itemMarkup(it, upgrade.selected.has(it.uid) ? 'sel' : '')
+          .replace('class="item ', 'data-pick="' + it.uid + '" class="item ')
+      ).join('') + '</div>';
+
+      $$('#stake-body [data-pick]').forEach((el) => {
         el.addEventListener('click', () => {
-          if (upgrading) return;
-          if (selectedUpgradeIds.has(item.id)) {
-            selectedUpgradeIds.delete(item.id);
-          } else {
-            selectedUpgradeIds.add(item.id);
-          }
+          if (upgrade.spinning) return;
+          upgrade.result = null;
+          const uid = +el.dataset.pick;
+          if (upgrade.selected.has(uid)) upgrade.selected.delete(uid);
+          else upgrade.selected.add(uid);
           renderUpgrader();
         });
-        list.appendChild(el);
       });
     }
 
-    updateUpgraderTotals();
+    const count = upgrade.selected.size;
+    $('#stake-hint').textContent = count
+      ? count + ' item' + (count > 1 ? 's' : '') + ' staked · worth ' + fmt(stakeValue())
+      : 'Select one or more items to put on the line.';
+
+    updateWheel();
   }
 
-  function getStakeTotal() {
-    return state.inventory
-      .filter(i => selectedUpgradeIds.has(i.id))
-      .reduce((sum, i) => sum + i.value, 0);
+  function updateWheel() {
+    const stake = stakeValue();
+    const target = stake > 0 ? pickTarget(stake, upgrade.mult) : null;
+    upgrade.target = target;
+
+    const chance = target
+      ? Math.max(MIN_CHANCE, Math.min(MAX_CHANCE, (stake / target.value) * HOUSE_EDGE))
+      : 0;
+    upgrade.chance = chance;
+
+    $('#wheel-arc').setAttribute('d', describeArc(chance));
+    $('#up-stake').textContent = fmt(stake);
+    $('#up-target').textContent = target ? fmt(target.value) : '—';
+    $('#up-chance').textContent = target ? (chance * 100).toFixed(1) + '%' : '—';
+
+    const center = $('#wheel-center');
+    if (!upgrade.spinning && !upgrade.result) {
+      center.className = 'wheel-center';
+      $('#wheel-pct').textContent = target ? Math.round(chance * 100) + '%' : '—';
+      $('#wheel-label').textContent = 'win chance';
+    }
+
+    $('#target-slot').innerHTML = target
+      ? '<div class="target-preview">' +
+          '<div class="tp-art">' + itemArt(target) + '</div>' +
+          '<div><div class="tp-name">' + target.name + '</div>' +
+            '<div class="tp-val">' + fmt(target.value) + ' coins · ' +
+              (target.value / stake).toFixed(2) + 'x your stake</div></div>' +
+        '</div>'
+      : '';
+
+    const btn = $('#spin-btn');
+    if (upgrade.spinning) {
+      btn.disabled = true;
+      btn.textContent = 'Spinning…';
+    } else if (!stake) {
+      btn.disabled = true;
+      btn.textContent = 'Select items to spin';
+    } else if (!target) {
+      btn.disabled = true;
+      btn.textContent = 'No higher-value target left';
+    } else {
+      btn.disabled = false;
+      btn.textContent = 'Spin for ' + target.name.split(' | ')[1];
+    }
   }
 
-  function updateUpgraderTotals() {
-    const stakeTotal = getStakeTotal();
-    const targetTotal = Math.round(stakeTotal * currentMultiplier);
-    const chance = stakeTotal > 0 ? Math.min(95, 100 / currentMultiplier) : 0;
+  function spin() {
+    if (upgrade.spinning || !upgrade.target || !upgrade.selected.size) return;
+    const target = upgrade.target;
+    const chance = upgrade.chance;
+    const staked = Array.from(upgrade.selected);
+    const won = Math.random() < chance;
 
-    document.getElementById('stake-total').textContent = `🪙 ${stakeTotal.toLocaleString()}`;
-    document.getElementById('target-total').textContent = `🪙 ${targetTotal.toLocaleString()}`;
-    document.getElementById('chance-display').textContent = `${chance.toFixed(1)}%`;
-    document.getElementById('upgrade-btn').disabled = stakeTotal <= 0 || upgrading;
-  }
+    upgrade.spinning = true;
+    updateWheel();
 
-  document.getElementById('upgrade-btn').addEventListener('click', runUpgrade);
+    // Pointer sits at the top; land it inside the orange arc on a win.
+    const pad = 0.012;
+    const landing = won
+      ? (pad + Math.random() * Math.max(chance - pad * 2, 0.001)) * 360
+      : ((chance + pad) + Math.random() * Math.max(1 - chance - pad * 2, 0.001)) * 360;
 
-  function runUpgrade() {
-    if (upgrading) return;
-    const stakeTotal = getStakeTotal();
-    if (stakeTotal <= 0) return;
+    upgrade.rotation += 360 * 6 + (360 - landing) - (upgrade.rotation % 360);
+    const rotor = $('#wheel-rotor');
+    rotor.style.transition = 'transform 4600ms cubic-bezier(.1,.62,.12,1)';
+    rotor.style.transform = 'rotate(' + upgrade.rotation + 'deg)';
 
-    const targetTotal = Math.round(stakeTotal * currentMultiplier);
-    const chance = Math.min(95, 100 / currentMultiplier);
+    const center = $('#wheel-center');
+    $('#wheel-pct').textContent = '…';
+    $('#wheel-label').textContent = 'spinning';
 
-    // Consume the staked items immediately - they're at risk during the spin.
-    state.inventory = state.inventory.filter(i => !selectedUpgradeIds.has(i.id));
-    selectedUpgradeIds.clear();
-    saveGame();
-    renderInventory();
-    renderUpgrader();
-
-    upgrading = true;
-    document.getElementById('upgrade-btn').disabled = true;
-
-    const wheelWrap = document.getElementById('upgrade-wheel-wrap');
-    const wheel = document.getElementById('upgrade-wheel');
-
-    wheel.classList.remove('outcome-win', 'outcome-lose');
-    wheel.style.background = `conic-gradient(from 0deg, #4caf50 0% ${chance}%, #3d1414 ${chance}% 100%)`;
-    wheelWrap.classList.remove('hidden');
-
-    wheel.style.transition = 'none';
-    wheel.style.transform = 'rotate(0deg)';
-    // Force reflow so the transition below actually animates from 0.
-    // eslint-disable-next-line no-unused-expressions
-    wheel.offsetHeight;
-
-    const win = Math.random() * 100 < chance;
-    const landing = win
-      ? Math.random() * chance
-      : chance + Math.random() * (100 - chance);
-
-    // The wheel's 0% mark sits under the fixed top pointer and fills
-    // clockwise, so spinning clockwise by (360 - landingAngle) brings the
-    // landing point back around to the pointer.
-    const landingAngle = (landing / 100) * 360;
-    const spins = 6;
-    const finalRotation = spins * 360 + ((360 - landingAngle) % 360);
-
-    requestAnimationFrame(() => {
-      wheel.style.transition = 'transform 4s cubic-bezier(0.12, 0.79, 0.24, 1)';
-      wheel.style.transform = `rotate(${finalRotation}deg)`;
-    });
+    let ticks = 0;
+    const tickTimer = setInterval(() => {
+      tick();
+      if (++ticks > 44) clearInterval(tickTimer);
+    }, 95);
 
     setTimeout(() => {
-      if (win) {
-        const prize = {
-          id: makeId(),
-          caseId: 'upgrade',
-          rarity: valueToRarity(targetTotal),
-          name: 'Upgraded Prize',
-          icon: '💠',
-          value: targetTotal,
-        };
-        state.inventory.push(prize);
-        wheel.classList.add('outcome-win');
+      clearInterval(tickTimer);
+      upgrade.spinning = false;
+
+      const set = new Set(staked);
+      state.inventory = state.inventory.filter((it) => !set.has(it.uid));
+      upgrade.selected.clear();
+
+      if (won) {
+        addItem(target);
+        center.className = 'wheel-center win';
+        $('#wheel-pct').textContent = 'WIN';
+        $('#wheel-label').textContent = target.name;
+        fanfare(target.rarity);
+        toast('Upgraded into ' + target.name, 'good');
       } else {
-        wheel.classList.add('outcome-lose');
+        center.className = 'wheel-center lose';
+        $('#wheel-pct').textContent = 'LOST';
+        $('#wheel-label').textContent = staked.length + ' item' + (staked.length > 1 ? 's' : '') + ' gone';
+        beep(180, 0.3, 0.06);
+        toast('Wheel missed — stake lost', 'bad');
       }
 
-      saveGame();
-      renderInventory();
+      upgrade.result = { won: won };
+      renderBalance();
+      refreshCaseButtons();
+      save();
       renderUpgrader();
-      upgrading = false;
-    }, 4200);
+    }, 4700);
   }
 
-  /* ---------------------------------------------------------------
-   * Init
-   * ------------------------------------------------------------- */
-  loadGame();
-  updateCoinDisplay();
-  renderShop();
+  /* =========================================================
+     Wiring
+     ========================================================= */
+
+  function resetAll() {
+    if (!confirm('Reset all progress? Your coins and inventory will be wiped.')) return;
+    state.coins = START_COINS;
+    state.inventory = [];
+    state.opened = 0;
+    state.best = null;
+    state.uid = 1;
+    upgrade.selected.clear();
+    save();
+    renderBalance();
+    refreshCaseButtons();
+    renderInventory();
+    renderUpgrader();
+    toast('Progress reset');
+  }
+
+  function updateMuteIcon() {
+    $('#mute-icon').innerHTML = state.muted
+      ? '<polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="22" y1="9" x2="16" y2="15"/><line x1="16" y1="9" x2="22" y2="15"/>'
+      : '<polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/>';
+  }
+
+  function init() {
+    load();
+
+    $$('.tab').forEach((t) => t.addEventListener('click', () => setTab(t.dataset.tab)));
+
+    $$('[data-count]').forEach((btn) => {
+      btn.classList.toggle('active', +btn.dataset.count === openCount);
+      btn.addEventListener('click', () => {
+        openCount = +btn.dataset.count;
+        $$('[data-count]').forEach((b) => b.classList.toggle('active', b === btn));
+        refreshCaseButtons();
+      });
+    });
+
+    $$('#mult-row .mult').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        if (upgrade.spinning) return;
+        upgrade.result = null;
+        upgrade.mult = parseFloat(btn.dataset.mult);
+        $$('#mult-row .mult').forEach((b) => b.classList.toggle('active', b === btn));
+        updateWheel();
+      });
+    });
+
+    $('#skip-btn').addEventListener('click', skipOpening);
+    $('#keep-pulls').addEventListener('click', () => closeOpening(false));
+    $('#sell-pulls').addEventListener('click', () => closeOpening(true));
+    $('#contents-close').addEventListener('click', () => $('#contents-overlay').classList.remove('open'));
+    $('#contents-overlay').addEventListener('click', (e) => {
+      if (e.target.id === 'contents-overlay') $('#contents-overlay').classList.remove('open');
+    });
+
+    $('#inv-sort').addEventListener('change', renderInventory);
+    $('#inv-filter').addEventListener('change', renderInventory);
+    $('#sell-filtered').addEventListener('click', () => {
+      const list = sortedInventory();
+      if (!list.length) return;
+      if (list.length > 1 && !confirm('Sell ' + list.length + ' items for ' +
+          fmt(list.reduce((s, it) => s + it.value, 0)) + ' coins?')) return;
+      sellItems(list.map((it) => it.uid));
+    });
+
+    $('#spin-btn').addEventListener('click', spin);
+    $('#reset-btn').addEventListener('click', resetAll);
+    $('#mute-btn').addEventListener('click', () => {
+      state.muted = !state.muted;
+      updateMuteIcon();
+      save();
+      toast(state.muted ? 'Sound off' : 'Sound on');
+    });
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key !== 'Escape') return;
+      $('#contents-overlay').classList.remove('open');
+      if (opening && opening.settled) closeOpening(false);
+    });
+
+    updateMuteIcon();
+    renderCases();
+    renderBalance();
+    renderInventory();
+    renderUpgrader();
+  }
+
+  init();
+})();
 </script>
 </body>
 </html>
