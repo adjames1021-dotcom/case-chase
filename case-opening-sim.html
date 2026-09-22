@@ -681,6 +681,71 @@
   }
   .inv-grid .item:hover .open-crate { opacity: 1; transform: none; }
 
+  /* ---------- Username gate ---------- */
+  .name-gate { position: fixed; inset: 0; z-index: 290; display: none; place-items: center; text-align: center; padding: 20px;
+    background: radial-gradient(900px 520px at 60% 30%, rgba(132,160,190,.2), transparent 64%),
+                radial-gradient(circle at 50% 42%, rgba(242,106,27,.12), transparent 50%),
+                linear-gradient(180deg, #1a222c, #0b0f14); }
+  .name-gate.open { display: grid; }
+  .name-gate h2 { margin: 0 0 20px; font-family: var(--cond); font-size: 28px; font-weight: 700; letter-spacing: 6px; text-transform: uppercase; }
+  .name-gate input { width: min(300px, 80vw); text-align: center; font-size: 18px; font-weight: 700; padding: 12px; cursor: text; }
+  .name-err { min-height: 18px; margin: 10px 0 14px; font-size: 12.5px; color: var(--mythic); }
+  #name-go { min-width: 168px; padding: 12px 24px; font-size: 14px; }
+
+  .whoami { font-family: var(--cond); font-size: 14px; font-weight: 700; letter-spacing: 1px; color: var(--ink); }
+  .whoami i { font-style: normal; font-weight: 400; color: var(--ink-3); margin-left: 1px; }
+
+  /* ---------- Leaderboard ---------- */
+  .lb { padding: 0; overflow: hidden; }
+  .lb-row { display: grid; align-items: center; gap: 12px; padding: 9px 18px; border-bottom: 1px solid var(--line);
+    grid-template-columns: 40px minmax(150px, 1.3fr) 110px minmax(190px, 1.7fr) 80px 90px 76px; }
+  .lb-row:last-child { border-bottom: 0; }
+  .lb-head { padding: 12px 18px; font-family: var(--cond); font-size: 10.5px; font-weight: 700; letter-spacing: 1.4px;
+    text-transform: uppercase; color: var(--ink-3); background: rgba(0,0,0,.18); }
+  .lb-head .r { text-align: right; }
+  .lb-rank { font-family: var(--cond); font-size: 19px; font-weight: 700; color: var(--ink-3); text-align: center; }
+  .lb-row.top1 .lb-rank { color: var(--gold); }
+  .lb-row.top2 .lb-rank { color: #c9d2dc; }
+  .lb-row.top3 .lb-rank { color: #cd8a52; }
+  .lb-row.me { background: linear-gradient(90deg, rgba(242,106,27,.15), transparent 72%); box-shadow: inset 3px 0 0 var(--orange); }
+  .lb-player { display: flex; align-items: center; gap: 10px; min-width: 0; }
+  .lb-player > span:last-child { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .lb-av { width: 32px; height: 32px; flex: 0 0 32px; display: grid; place-items: center;
+    font-family: var(--cond); font-size: 15px; font-weight: 700; color: #fff; background: hsl(var(--h), 42%, 36%);
+    clip-path: polygon(6px 0, 100% 0, 100% calc(100% - 6px), calc(100% - 6px) 100%, 0 100%, 0 6px); }
+  .lb-player b { font-size: 13.5px; }
+  .lb-player i { font-style: normal; font-size: 11px; color: var(--ink-3); margin-left: 2px; }
+  .lb-player em { font-style: normal; margin-left: 8px; padding: 1px 6px; background: var(--orange); color: #fff;
+    font-family: var(--cond); font-size: 9.5px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; }
+  .lb-num { text-align: right; font-weight: 700; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+  .lb[data-sort="value"] [data-k="value"], .lb[data-sort="best"] [data-k="best"],
+  .lb[data-sort="opened"] [data-k="opened"], .lb[data-sort="played"] [data-k="played"] { color: #fff; }
+  .lb-best { display: flex; align-items: center; gap: 10px; min-width: 0; color: var(--ink-2); }
+  .lb-best > span:last-child { min-width: 0; }
+  .lb-thumb { width: 66px; height: 32px; flex: 0 0 66px; display: grid; place-items: center; border-bottom: 2px solid var(--rc);
+    background: radial-gradient(ellipse at 50% 100%, color-mix(in srgb, var(--rc) 45%, transparent), transparent 75%); }
+  .lb-thumb svg, .lb-thumb img { width: 100%; height: 100%; object-fit: contain; }
+  .lb-best b { display: block; font-size: 12px; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .lb-best i { font-style: normal; font-size: 11px; font-weight: 700; }
+  .lb-when { text-align: right; font-size: 11px; color: var(--ink-3); }
+  .lb-note { margin: 10px 2px 0; font-size: 11.5px; color: var(--ink-3); }
+  #share-out .code-out { margin: 0 0 14px; }
+  @media (max-width: 1000px) {
+    .lb-row { grid-template-columns: 34px minmax(0, 1fr) 90px minmax(0, 1.2fr); }
+    .lb-row > :nth-child(n+5) { display: none; }
+  }
+  @media (max-width: 760px) {
+    .whoami { display: none; }
+    .lb-row { grid-template-columns: 28px minmax(0, 1fr) 86px; padding: 9px 12px; }
+    .lb-row > :nth-child(4) { display: none; }
+  }
+
+  .update-box { margin-top: 13px; padding: 11px 13px; font-size: 12.5px; color: var(--ink-2);
+    border-left: 3px solid var(--rare); background: rgba(75,105,255,.1); }
+  .update-box b { display: block; margin-bottom: 3px; font-family: var(--cond); font-size: 12px;
+    letter-spacing: 1.4px; text-transform: uppercase; color: #fff; }
+  .splash-ver { margin-top: 18px; font-family: var(--cond); font-size: 10.5px; letter-spacing: 2px; color: var(--ink-3); }
+
   .toast-host {
     position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%);
     z-index: 200; display: flex; flex-direction: column; gap: 8px; align-items: center; pointer-events: none;
@@ -855,9 +920,24 @@
     <div class="splash-bar"><i id="splash-fill"></i></div>
     <div class="splash-status" id="splash-status">Loading</div>
     <button class="btn btn-primary" id="splash-enter" disabled>Enter</button>
+    <div class="splash-ver" id="splash-ver"></div>
   </div>
 </div>
 
+
+<div class="name-gate" id="name-gate">
+  <div class="splash-inner">
+    <div class="splash-mark">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M3 8l9-4 9 4v8l-9 4-9-4z"/><path d="M3 8l9 4 9-4"/><path d="M12 12v8"/>
+      </svg>
+    </div>
+    <h2>Pick a username</h2>
+    <input class="control" id="name-in" maxlength="16" autocomplete="off" spellcheck="false" placeholder="username">
+    <div class="name-err" id="name-err"></div>
+    <button class="btn btn-primary" id="name-go">Play</button>
+  </div>
+</div>
 
 <div class="scene" aria-hidden="true"></div>
 
@@ -873,6 +953,7 @@
       <button class="tab" data-tab="upgrader" title="Upgrader"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="M12 16V8"/><path d="M8.5 11.5L12 8l3.5 3.5"/></svg><span>Upgrader</span></button>
       <button class="tab" data-tab="trade" title="Trade"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h14"/><path d="M15 4.5L18.5 8 15 11.5"/><path d="M20 16H6"/><path d="M9 12.5L5.5 16 9 19.5"/></svg><span>Trade</span></button>
       <button class="tab" data-tab="battles" title="Battles"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4l8.5 8.5"/><path d="M4 5.5L5.5 4"/><path d="M11 15l-2 2 -2.5-.5 -1.5 2L3.5 17l2-1.5L5 13l2-2"/><path d="M19 4l-8.5 8.5"/><path d="M20 5.5L18.5 4"/><path d="M13 15l2 2 2.5-.5 1.5 2 1.5-1.5-2-1.5.5-2.5-2-2"/></svg><span>Battles</span></button>
+      <button class="tab" data-tab="leaderboard" title="Leaderboard"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 4h8v5a4 4 0 0 1-8 0z"/><path d="M8 6H5v1a3.5 3.5 0 0 0 3.2 3.5"/><path d="M16 6h3v1a3.5 3.5 0 0 1-3.2 3.5"/><path d="M12 13v3.5"/><path d="M8.5 20.5h7"/><path d="M9.5 16.5h5v4h-5z"/></svg><span>Ranks</span></button>
   </nav>
   <div class="rail-foot">
     <button class="icon-btn" id="admin-btn" title="Admin" aria-label="Admin">
@@ -898,6 +979,7 @@
     <h1>Case Opening Sim</h1>
     <small id="topbar-sub">Cases</small>
   </div>
+  <div class="whoami" id="whoami"></div>
   <div class="balance" id="balance"><b id="balance-value">0</b><i>coins</i></div>
 </header>
 
@@ -1152,6 +1234,28 @@
         <div id="gift-log"></div>
       </div>
     </div>
+  </section>
+
+  <section class="panel" id="panel-leaderboard">
+    <div class="section-head">
+      <div><h2>Leaderboard</h2></div>
+      <div class="toolbar" id="lb-sort" style="margin:0">
+        <button class="chip active" data-sort="value">Inventory</button>
+        <button class="chip" data-sort="best">Best drop</button>
+        <button class="chip" data-sort="opened">Cases</button>
+        <button class="chip" data-sort="played">Time</button>
+        <button class="btn btn-ghost btn-sm" id="share-stats">Share stats</button>
+      </div>
+    </div>
+    <div id="share-out"></div>
+    <div class="card lb" id="lb" data-sort="value">
+      <div class="lb-row lb-head">
+        <div>#</div><div>Player</div><div class="r" data-k="value">Inventory</div><div data-k="best">Best drop</div>
+        <div class="r" data-k="opened">Cases</div><div class="r" data-k="played">Time</div><div class="r">Updated</div>
+      </div>
+      <div id="lb-body"></div>
+    </div>
+    <p class="lb-note">Updates when you trade.</p>
   </section>
 </main>
 
@@ -2748,7 +2852,8 @@
 
   const state = {
     coins: START_COINS, inventory: [], opened: 0, best: null, muted: false, uid: 1,
-    redeemed: [], outbox: []
+    redeemed: [], outbox: [],
+    profile: null, played: 0, board: {}
   };
 
   function save() {
@@ -2756,7 +2861,8 @@
       localStorage.setItem(SAVE_KEY, JSON.stringify({
         coins: state.coins, inventory: state.inventory, opened: state.opened,
         best: state.best, muted: state.muted, uid: state.uid,
-        redeemed: state.redeemed, outbox: state.outbox
+        redeemed: state.redeemed, outbox: state.outbox,
+        profile: state.profile, played: Math.floor(state.played), board: state.board
       }));
     } catch (e) { /* storage unavailable — play on without persistence */ }
   }
@@ -2774,6 +2880,9 @@
       state.uid = d.uid || (state.inventory.length + 1);
       if (Array.isArray(d.redeemed)) state.redeemed = d.redeemed;
       if (Array.isArray(d.outbox)) state.outbox = d.outbox;
+      if (d.profile && d.profile.id && d.profile.d) state.profile = d.profile;
+      if (typeof d.played === 'number') state.played = d.played;
+      if (d.board && typeof d.board === 'object') state.board = d.board;
     } catch (e) { /* corrupt save — start clean */ }
   }
 
@@ -2920,6 +3029,7 @@
     if (name === 'trade') renderTrade();
     if (name === 'battles') renderBattleSetup();
     if (name === 'admin') renderAdmin();
+    if (name === 'leaderboard') renderLeaderboard();
   }
 
   /* =========================================================
@@ -3494,6 +3604,19 @@
      appears in this file. The public key below can verify a signature but
      cannot make one, so reading the source does not let anyone mint gifts. */
 
+  /* Every code records mv, the game version that made it. A game older than
+     that tells the player to update instead of rejecting the code, and it
+     checks before trusting anything else in the code, so a future format can
+     change freely behind the same prefix. Rules for future versions: bump
+     GAME_VERSION on every release that changes what codes carry, and give a
+     changed format a new prefix rather than altering an existing one. An
+     unknown prefix is treated as a newer game's code. */
+  const GAME_VERSION = 1;
+  const KNOWN_CODE = /^(GIFT|TRD2|TRD3|SYNC)\./;
+  const LOOKS_LIKE_CODE = /^[A-Z][A-Z0-9]{1,11}\.[A-Za-z0-9_-]{8,}/;
+  const NEEDS_UPDATE = { error: 'This code is from a newer version. Update your game to use it.', update: true };
+  const tooNew = (payload) => !!payload && Number(payload.mv) > GAME_VERSION;
+
   const ADMIN_PUBLIC_KEY = { kty: 'EC', crv: 'P-256',
     x: 'FlmySf715vkyc4vayPgbDNLuTV4r0ewWrdDQIN-sDfk',
     y: 'Sx2xiZcEaH71oDjHa2bYR9eNGFJoSaUy8Is_qu_tRIE' };
@@ -3569,33 +3692,42 @@
     return out;
   }
 
-  async function tradeTag(body) {
-    return b64u((await sha256(utf8.encode(TRADE_SALT + '|v2|' + body))).slice(0, 12));
+  // TRD3 trade codes and SYNC stats codes also carry signed leaderboard
+  // entries: the sender's own, plus a few players the sender knows about.
+  const CODE_VER = { TRD2: 'v2', TRD3: 'v3', SYNC: 'sync' };
+
+  async function tradeTag(body, ver) {
+    return b64u((await sha256(utf8.encode(TRADE_SALT + '|' + (ver || 'v2') + '|' + body))).slice(0, 12));
   }
 
-  async function makeTradeCode(items) {
-    const tuples = items.map(itemTuple);
-    if (!tuples.length || tuples.some((t) => !t)) return null;
-    const json = JSON.stringify({ i: tuples, n: randomId() });
+  async function makeTradeCode(items, statsOnly) {
+    const tuples = statsOnly ? [] : items.map(itemTuple);
+    if (!statsOnly && (!tuples.length || tuples.some((t) => !t))) return null;
+    const me = await mySnapshot(statsOnly ? 0 : items.reduce((sum, it) => sum + it.value, 0));
+    if (statsOnly && !me) return null;
+    const prefix = statsOnly ? 'SYNC' : 'TRD3';
+    const json = JSON.stringify({ mv: GAME_VERSION, i: tuples, n: randomId(), b: (me ? [me] : []).concat(gossipEntries()) });
     const body = b64u(scramble(utf8.encode(json), await tradeKeystream()));
-    return 'TRD2.' + body + '.' + (await tradeTag(body));
+    return prefix + '.' + body + '.' + (await tradeTag(body, CODE_VER[prefix]));
   }
 
   async function parseTradeV2(code) {
     const parts = code.split('.');
-    if (parts.length !== 3) return { error: 'Invalid code' };
-    if ((await tradeTag(parts[1])) !== parts[2]) {
-      return { error: 'Invalid code' };
-    }
-    let payload;
+    if (parts.length !== 3 || !CODE_VER[parts[0]]) return { error: 'Invalid code' };
+    const statsOnly = parts[0] === 'SYNC';
+    let payload = null;
     try { payload = JSON.parse(unutf8.decode(scramble(unb64u(parts[1]), await tradeKeystream()))); }
-    catch (e) { return { error: 'Invalid code' }; }
-    if (!payload || !Array.isArray(payload.i) || !payload.i.length || payload.i.length > 50) {
+    catch (e) { payload = null; }
+    if (tooNew(payload)) return NEEDS_UPDATE;
+    if ((await tradeTag(parts[1], CODE_VER[parts[0]])) !== parts[2]) return { error: 'Invalid code' };
+    if (!payload || !Array.isArray(payload.i) || payload.i.length > 50 || (!statsOnly && !payload.i.length)) {
       return { error: 'Invalid code' };
     }
     const items = payload.i.map(tupleToItem);
     if (items.some((it) => !it)) return { error: 'Invalid code' };
-    return { type: 'trade', items: items, code: code };
+    const board = await verifiedEntries(payload.b);
+    if (statsOnly && !board.length) return { error: 'Invalid code' };
+    return { type: statsOnly ? 'stats' : 'trade', items: items, board: board, code: code };
   }
 
   /* ---------- admin gift codes ---------- */
@@ -3610,8 +3742,10 @@
   }
 
   async function makeGiftCode(signKey, spec) {
+    const me = await mySnapshot();
     const payload = {
-      t: 'gift', v: 1,
+      b: (me ? [me] : []).concat(gossipEntries(GIFT_GOSSIP)),
+      t: 'gift', v: 1, mv: GAME_VERSION,
       c: Math.max(0, Math.floor(spec.coins || 0)),
       i: spec.items.map(itemTuple),
       m: String(spec.message || '').slice(0, 120),
@@ -3628,6 +3762,9 @@
   async function parseGift(code) {
     const parts = code.split('.');
     if (parts.length !== 3) return { error: 'Invalid gift code' };
+    let peek = null;
+    try { peek = JSON.parse(unutf8.decode(unb64u(parts[1]))); } catch (e) { peek = null; }
+    if (tooNew(peek)) return NEEDS_UPDATE;
     let genuine = false;
     try {
       genuine = await crypto.subtle.verify(SIGN, await adminVerifyKey(), unb64u(parts[2]), utf8.encode(parts[1]));
@@ -3646,7 +3783,8 @@
     const items = p.i.map(tupleToItem);
     if (items.some((it) => !it)) return { error: 'Invalid gift code' };
     if (!p.c && !items.length) return { error: 'Invalid gift code' };
-    return { type: 'gift', coins: p.c, items: items, message: String(p.m || ''),
+    const board = await verifiedEntries(p.b, GIFT_GOSSIP);
+    return { type: 'gift', coins: p.c, items: items, message: String(p.m || ''), board: board,
              code: 'gift:' + p.id, issued: p.ts, expires: p.x };
   }
 
@@ -3654,7 +3792,8 @@
     const clean = String(raw || '').trim().replace(/\s+/g, '');
     if (!clean) return { error: 'Enter a code' };
     if (clean.indexOf('GIFT.') === 0) return parseGift(clean);
-    if (clean.indexOf('TRD2.') === 0) return parseTradeV2(clean);
+    if (/^(TRD2|TRD3|SYNC)\./.test(clean)) return parseTradeV2(clean);
+    if (!KNOWN_CODE.test(clean) && LOOKS_LIKE_CODE.test(clean)) return NEEDS_UPDATE;
     if (clean.indexOf('TRD1-') === 0) {
       const legacy = parseCode(clean);
       return legacy.error ? legacy : { type: 'trade', items: legacy.items, code: legacy.code };
@@ -3666,6 +3805,111 @@
      The admin key is the private half of the signing pair. It unlocks the
      admin panel and signs gift codes. Unlocking proves the key by signing a
      probe and checking it against the public key above. */
+
+  /* ---------- players and the leaderboard ----------
+     Each player gets their own ECDSA key when they pick a username. Their
+     stats snapshot is signed with it and rides along in trade codes, and
+     the player id is derived from the public key. So an entry can only be
+     updated by the player it belongs to, and nobody can take over someone
+     else's id or name tag. What a player reports about themselves still
+     comes from their own save. */
+
+  const NAME_RE = /^[A-Za-z0-9_-]{3,16}$/;
+  const BOARD_CAP = 200;
+  const GOSSIP = 3;         // players passed along in a trade code, besides the sender
+  const GIFT_GOSSIP = 6;    // gifts go to many people, so they carry more
+  let profileKey = null;
+  const pubKeys = {};
+
+  const invValue = () => state.inventory.reduce((sum, it) => sum + it.value, 0);
+  const tagOf = (id) => (hashString(String(id || '')) >>> 0).toString(36).padStart(4, '0').slice(-4);
+
+  async function idForKey(x, y) {
+    return b64u((await sha256(utf8.encode(x + '.' + y))).slice(0, 8));
+  }
+
+  async function createProfile(name) {
+    const pair = await crypto.subtle.generateKey(ECDSA, true, ['sign', 'verify']);
+    const jwk = await crypto.subtle.exportKey('jwk', pair.privateKey);
+    state.profile = {
+      name: name, id: await idForKey(jwk.x, jwk.y),
+      x: jwk.x, y: jwk.y, d: jwk.d, since: Math.floor(Date.now() / 1000)
+    };
+    profileKey = pair.privateKey;
+    save();
+  }
+
+  async function loadProfileKey() {
+    const p = state.profile;
+    if (!p) return;
+    try {
+      profileKey = await crypto.subtle.importKey('jwk',
+        { kty: 'EC', crv: 'P-256', x: p.x, y: p.y, d: p.d, ext: true }, ECDSA, false, ['sign']);
+    } catch (e) { profileKey = null; }
+  }
+
+  // [time played (s), cases opened, best drop value, best drop item, inventory value]
+  function myStats() {
+    const idx = state.best && ITEM_INDEX[state.best.name] != null ? ITEM_INDEX[state.best.name] : -1;
+    return [Math.floor(state.played || 0), state.opened | 0,
+            state.best ? Math.round(state.best.value) : 0, idx, Math.round(invValue())];
+  }
+
+  const entryBody = (e) => JSON.stringify([e.n, e.i, e.t, e.s, e.k]);
+
+  // leaving: value of items about to be sent, so the snapshot matches what the sender keeps.
+  async function mySnapshot(leaving) {
+    if (!state.profile || !profileKey) return null;
+    const p = state.profile;
+    const stats = myStats();
+    stats[4] = Math.max(0, stats[4] - Math.round(leaving || 0));
+    const e = { n: p.name, i: p.id, t: Math.floor(Date.now() / 1000), s: stats, k: [p.x, p.y] };
+    e.g = b64u(new Uint8Array(await crypto.subtle.sign(SIGN, profileKey, utf8.encode(entryBody(e)))));
+    return e;
+  }
+
+  async function verifyEntry(e) {
+    try {
+      if (!e || typeof e !== 'object' || !NAME_RE.test(e.n) || typeof e.i !== 'string') return false;
+      if (!Number.isInteger(e.t) || e.t > Date.now() / 1000 + 86400) return false;
+      if (!Array.isArray(e.s) || e.s.length !== 5) return false;
+      if (e.s.some((v, i) => !Number.isInteger(v) || v < (i === 3 ? -1 : 0) || v > 1e13)) return false;
+      if (e.s[3] >= ALL_ITEMS.length) return false;
+      if (!Array.isArray(e.k) || e.k.length !== 2 || !e.k.every((v) => /^[A-Za-z0-9_-]{43}$/.test(v))) return false;
+      if ((await idForKey(e.k[0], e.k[1])) !== e.i) return false;
+      if (!pubKeys[e.i]) {
+        pubKeys[e.i] = await crypto.subtle.importKey('jwk',
+          { kty: 'EC', crv: 'P-256', x: e.k[0], y: e.k[1], ext: true }, ECDSA, false, ['verify']);
+      }
+      return await crypto.subtle.verify(SIGN, pubKeys[e.i], unb64u(e.g), utf8.encode(entryBody(e)));
+    } catch (err) { return false; }
+  }
+
+  async function verifiedEntries(list, max) {
+    if (!Array.isArray(list)) return [];
+    const out = [];
+    for (const e of list.slice(0, (max || GOSSIP) + 1)) if (await verifyEntry(e)) out.push(e);
+    return out;
+  }
+
+  // Keep the newest signed snapshot for each player.
+  function mergeBoard(entries) {
+    let changed = 0;
+    (entries || []).forEach((e) => {
+      if (state.profile && e.i === state.profile.id) return;
+      const cur = state.board[e.i];
+      if (!cur || e.t > cur.t) { state.board[e.i] = e; changed++; }
+    });
+    const ids = Object.keys(state.board);
+    if (ids.length > BOARD_CAP) {
+      ids.sort((a, b) => state.board[a].t - state.board[b].t)
+         .slice(0, ids.length - BOARD_CAP).forEach((id) => { delete state.board[id]; });
+    }
+    return changed;
+  }
+
+  const gossipEntries = (n) => Object.keys(state.board).map((id) => state.board[id])
+    .sort((a, b) => b.s[4] - a.s[4]).slice(0, n || GOSSIP);
 
   const ADMIN_SESSION = 'case-opening-sim-admin';
 
@@ -3907,7 +4151,9 @@
     const res = await parseAnyCode(raw);
 
     if (res.error) {
-      host.innerHTML = '<div class="err-box">' + res.error + '</div>';
+      host.innerHTML = res.update
+        ? '<div class="update-box"><b>Update needed</b>' + res.error + '</div>'
+        : '<div class="err-box">' + res.error + '</div>';
       return;
     }
     if (isRedeemed(res.code)) {
@@ -3919,6 +4165,14 @@
     if (res.type === 'gift') {
       host.innerHTML = '<div class="ok-box">Gift found</div>';
       openGift(res, false);
+      return;
+    }
+
+    if (res.type === 'stats') {
+      const n = mergeBoard(res.board);
+      save();
+      host.innerHTML = '<div class="ok-box">' + (n ? 'Leaderboard updated' : 'Already up to date') + '</div>';
+      if (n) { SFX.blip(); renderLeaderboard(); }
       return;
     }
 
@@ -3944,17 +4198,15 @@
       return;
     }
 
-    res.items.forEach((it) => {
-      const made = addItem(it);
-      if (!state.best || made.value > state.best.value) {
-        state.best = { name: made.name, value: made.value, rarity: made.rarity };
-      }
-    });
+    // Received items are not drops, so they don't touch the best-drop record.
+    res.items.forEach((it) => addItem(it));
     markRedeemed(res.code);
+    const updated = mergeBoard(res.board);
     trade.incoming = null;
 
     $('#code-in').value = '';
-    $('#code-preview').innerHTML = '<div class="ok-box">Added to inventory</div>';
+    $('#code-preview').innerHTML = '<div class="ok-box">Added to inventory' +
+      (updated ? ' · leaderboard updated' : '') + '</div>';
     SFX.win(res.items.reduce((best, it) =>
       RARITIES.indexOf(it.rarity) > RARITIES.indexOf(best) ? it.rarity : best, 'common'));
     toast('Received ' + res.items.length + ' item' + (res.items.length > 1 ? 's' : ''), 'good');
@@ -4201,17 +4453,14 @@
     if (res.expires && Date.now() / 1000 > res.expires) { toast('This gift has expired', 'bad'); closeGift(); return; }
 
     state.coins += res.coins;
-    res.items.forEach((it) => {
-      const made = addItem(it);
-      if (!state.best || made.value > state.best.value) {
-        state.best = { name: made.name, value: made.value, rarity: made.rarity };
-      }
-    });
+    res.items.forEach((it) => addItem(it));
     markRedeemed(res.code);
+    const boardUpdated = mergeBoard(res.board);
     save();
 
     $('#code-in').value = '';
-    $('#code-preview').innerHTML = '<div class="ok-box">Claimed</div>';
+    $('#code-preview').innerHTML = '<div class="ok-box">Claimed' + (boardUpdated ? ' · leaderboard updated' : '') + '</div>';
+    if (boardUpdated) renderLeaderboard();
     SFX.coin();
     toast('Gift claimed', 'good');
     closeGift();
@@ -4270,6 +4519,116 @@
     cancelAnimationFrame(confetti.raf);
     const cv = $('#confetti');
     if (cv && cv.getContext) cv.getContext('2d').clearRect(0, 0, cv.width, cv.height);
+  }
+
+  /* =========================================================
+     Leaderboard
+     ========================================================= */
+
+  const lb = { sort: 'value' };
+  const SORT_COL = { played: 0, opened: 1, best: 2, value: 4 };
+
+  function fmtTime(sec) {
+    sec = Math.floor(sec || 0);
+    const h = Math.floor(sec / 3600), m = Math.floor(sec % 3600 / 60);
+    return h ? h + 'h ' + m + 'm' : m ? m + 'm' : sec + 's';
+  }
+
+  function ago(ts) {
+    const d = Math.max(0, Date.now() / 1000 - ts);
+    if (d < 60) return 'now';
+    if (d < 3600) return Math.floor(d / 60) + 'm ago';
+    if (d < 86400) return Math.floor(d / 3600) + 'h ago';
+    return Math.floor(d / 86400) + 'd ago';
+  }
+
+  function renderLeaderboard() {
+    const host = $('#lb-body');
+    if (!host) return;
+    const rows = Object.keys(state.board).map((id) => ({ e: state.board[id], me: false }));
+    if (state.profile) {
+      rows.push({ me: true, e: { n: state.profile.name, i: state.profile.id, t: Math.floor(Date.now() / 1000), s: myStats() } });
+    }
+    const col = SORT_COL[lb.sort];
+    rows.sort((a, b) => (b.e.s[col] - a.e.s[col]) || a.e.n.localeCompare(b.e.n));
+    $('#lb').dataset.sort = lb.sort;
+    $$('#lb-sort .chip').forEach((c) => c.classList.toggle('active', c.dataset.sort === lb.sort));
+
+    if (!rows.length) { host.innerHTML = '<div class="empty"><h3>No players yet</h3></div>'; return; }
+    host.innerHTML = rows.map((r, i) => {
+      const e = r.e;
+      const best = e.s[3] >= 0 ? ALL_ITEMS[e.s[3]] : null;
+      return '<div class="lb-row' + (r.me ? ' me' : '') + (i < 3 ? ' top' + (i + 1) : '') + '">' +
+        '<div class="lb-rank">' + (i + 1) + '</div>' +
+        '<div class="lb-player"><span class="lb-av" style="--h:' + (hashString(e.i) % 360) + '">' +
+          escHtml(e.n.charAt(0).toUpperCase()) + '</span><span><b>' + escHtml(e.n) + '</b><i>#' +
+          escHtml(tagOf(e.i)) + '</i>' + (r.me ? '<em>You</em>' : '') + '</span></div>' +
+        '<div class="lb-num" data-k="value">' + fmt(e.s[4]) + '</div>' +
+        '<div class="lb-best" data-k="best">' + (best
+          ? '<span class="lb-thumb" style="--rc:' + RARITY_COLOR[best.rarity] + '">' + artFor(best) + '</span>' +
+            '<span><b>' + escHtml(best.name) + '</b><i>' + fmt(e.s[2]) + '</i></span>'
+          : '<span>—</span>') + '</div>' +
+        '<div class="lb-num" data-k="opened">' + fmt(e.s[1]) + '</div>' +
+        '<div class="lb-num" data-k="played">' + fmtTime(e.s[0]) + '</div>' +
+        '<div class="lb-when">' + (r.me ? 'live' : ago(e.t)) + '</div>' +
+      '</div>';
+    }).join('');
+  }
+
+  async function shareStats() {
+    let code = null;
+    try { code = await makeTradeCode([], true); } catch (e) { code = null; }
+    if (!code) { toast('Couldn\'t create code', 'bad'); return; }
+    $('#share-out').innerHTML = '<div class="code-out"><code>' + code + '</code>' +
+      '<div class="code-actions"><button class="btn btn-primary btn-sm" id="share-copy">Copy</button>' +
+      '<span class="hint" style="margin:0;align-self:center">Redeem it in Trade.</span></div></div>';
+    $('#share-copy').addEventListener('click', function () { copyText(code, this); });
+    SFX.blip();
+  }
+
+  /* ---------- username ---------- */
+
+  function renderWhoami() {
+    const el = $('#whoami');
+    if (el) el.innerHTML = state.profile
+      ? escHtml(state.profile.name) + '<i>#' + escHtml(tagOf(state.profile.id)) + '</i>' : '';
+  }
+
+  function showNameGate() {
+    $('#name-gate').classList.add('open');
+    setTimeout(() => $('#name-in').focus(), 80);
+  }
+
+  async function submitName() {
+    const name = $('#name-in').value.trim();
+    const err = $('#name-err');
+    if (!NAME_RE.test(name)) { err.textContent = '3-16 characters: letters, numbers, _ or -'; SFX.lose(); return; }
+    const go = $('#name-go');
+    go.disabled = true;
+    try { await createProfile(name); }
+    catch (e) { err.textContent = 'Couldn\'t create profile'; go.disabled = false; return; }
+    $('#name-gate').classList.remove('open');
+    renderWhoami();
+    renderLeaderboard();
+    SFX.win('rare');
+    toast('Welcome, ' + name, 'good');
+  }
+
+  // Counts time while the tab is visible and a profile exists.
+  function startPlayClock() {
+    let last = Date.now(), ticks = 0;
+    setInterval(() => {
+      const now = Date.now();
+      if (state.profile && document.visibilityState === 'visible') {
+        state.played = (state.played || 0) + Math.min(30, (now - last) / 1000);
+      }
+      last = now;
+      if (++ticks % 6 === 0) {
+        save();
+        if ($('#panel-leaderboard').classList.contains('active')) renderLeaderboard();
+      }
+    }, 5000);
+    window.addEventListener('pagehide', save);
   }
 
   /* =========================================================
@@ -4490,6 +4849,7 @@
     state.uid = 1;
     state.redeemed = [];
     state.outbox = [];
+    state.played = 0;
     trade.selected.clear();
     upgrade.selected.clear();
     upgrade.result = null;
@@ -4515,6 +4875,8 @@
      ========================================================= */
 
   function runSplash() {
+    const ver = $('#splash-ver');
+    if (ver) ver.textContent = 'v' + GAME_VERSION;
     const splash = $('#splash');
     const fill = $('#splash-fill');
     const status = $('#splash-status');
@@ -4548,6 +4910,7 @@
       SFX.blip();
       splash.classList.add('gone');
       setTimeout(() => splash.remove(), 600);
+      if (!state.profile) showNameGate();
     }
 
     enter.addEventListener('click', dismiss);
@@ -4564,6 +4927,9 @@
   function init() {
     ART.ensureDefs();
     load();
+    loadProfileKey();
+    renderWhoami();
+    startPlayClock();
     SFX.setMuted(state.muted);
 
     $$('.tab').forEach((t) => t.addEventListener('click', () => { SFX.blip(); setTab(t.dataset.tab); }));
@@ -4633,6 +4999,12 @@
     });
     $('#bt-start').addEventListener('click', startBattle);
     $('#admin-btn').addEventListener('click', () => { SFX.blip(); setTab('admin'); });
+    $$('#lb-sort .chip').forEach((c) => c.addEventListener('click', () => {
+      lb.sort = c.dataset.sort; SFX.blip(); renderLeaderboard();
+    }));
+    $('#share-stats').addEventListener('click', shareStats);
+    $('#name-go').addEventListener('click', submitName);
+    $('#name-in').addEventListener('keydown', (e) => { if (e.key === 'Enter') submitName(); });
     $('#admin-unlock').addEventListener('click', () => unlockAdmin($('#admin-key-in').value, false));
     $('#admin-key-in').addEventListener('keydown', (e) => { if (e.key === 'Enter') unlockAdmin(e.target.value, false); });
     $('#admin-lock').addEventListener('click', lockAdmin);
