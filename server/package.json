@@ -1,10 +1,10 @@
 {
-  "name": "case-sim-leaderboard",
+  "name": "case-sim-server",
   "private": true,
   "scripts": {
     "dev": "wrangler dev",
-    "db:init": "wrangler d1 execute case-sim-leaderboard --remote --file schema.sql",
-    "db:init:local": "wrangler d1 execute case-sim-leaderboard --local --file schema.sql",
+    "db:init": "wrangler d1 execute case-sim --remote --file schema.sql",
+    "db:init:local": "wrangler d1 execute case-sim --local --file schema.sql",
     "deploy": "wrangler deploy"
   },
   "devDependencies": {

@@ -730,6 +730,64 @@
   .lb-when { text-align: right; font-size: 11px; color: var(--ink-3); }
   .lb-note { margin: 10px 2px 0; font-size: 11.5px; color: var(--ink-3); }
   #share-out .code-out { margin: 0 0 14px; }
+
+  /* ---------- Online ---------- */
+  .net { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 9px; vertical-align: 1px;
+    background: var(--ink-3); }
+  .net.online { background: var(--good); box-shadow: 0 0 8px var(--good); }
+  .net.connecting { background: var(--gold); }
+  .net.offline, .net.banned { background: var(--mythic); }
+  .seg { display: inline-flex; gap: 4px; margin-right: 12px; }
+  .lb-act { margin-left: 8px; padding: 2px 8px; font-family: var(--cond); font-size: 10.5px; font-weight: 700; letter-spacing: 1px;
+    text-transform: uppercase; color: var(--ink-2); background: transparent; border: 1px solid var(--line-strong); cursor: pointer; }
+  .lb-act:hover { color: #fff; border-color: var(--orange); background: var(--orange); }
+  .lb-act.bad:hover { border-color: var(--mythic); background: var(--mythic); }
+  .to-search { width: 100%; margin: 8px 0 10px; }
+  .to-results { display: flex; flex-wrap: wrap; gap: 6px; }
+  .to-pl { display: inline-flex; align-items: center; gap: 7px; padding: 7px 11px; font-size: 13px; font-weight: 700;
+    color: var(--ink); background: rgba(0,0,0,.18); border: 1px solid var(--line); cursor: pointer; }
+  .to-pl:hover { border-color: var(--orange); }
+  .to-pl i { font-style: normal; font-weight: 400; font-size: 11px; color: var(--ink-3); }
+  .to-pl .net { margin: 0; }
+  .to-partner { display: flex; align-items: center; gap: 12px; margin: 16px 0 12px; font-size: 14px; }
+  .to-partner i { font-style: normal; color: var(--ink-3); font-size: 12px; }
+  .to-sides { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+  .to-sides .pick-grid { max-height: 380px; overflow-y: auto; margin-top: 8px; padding: 2px; }
+  .to-sides .field { margin-top: 10px; }
+  .to-foot { display: flex; gap: 12px; align-items: end; margin-top: 14px; flex-wrap: wrap; }
+  .to-foot .field { flex: 1; margin: 0; min-width: 200px; }
+  .offer { border: 1px solid var(--line); padding: 12px 14px; margin-top: 10px; background: rgba(0,0,0,.16); }
+  .offer-head { display: flex; gap: 10px; align-items: center; font-size: 13px; flex-wrap: wrap; }
+  .offer-head .when { margin-left: auto; font-size: 11px; color: var(--ink-3); }
+  .st { font-family: var(--cond); font-size: 10.5px; font-weight: 700; letter-spacing: 1.2px; text-transform: uppercase;
+    padding: 1px 7px; background: var(--surface-3); color: var(--ink-2); }
+  .st.pending { background: var(--orange); color: #fff; }
+  .st.accepted { background: var(--good); color: #0b1a10; }
+  .offer-sides { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 10px; }
+  .minis { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; align-items: center; }
+  .mini { width: 72px; height: 44px; display: grid; place-items: center; border-bottom: 2px solid var(--rc);
+    background: radial-gradient(ellipse at 50% 100%, color-mix(in srgb, var(--rc) 45%, transparent), transparent 75%); }
+  .mini svg, .mini img { width: 100%; height: 100%; object-fit: contain; }
+  .coins-tag { font-weight: 800; font-size: 12.5px; color: var(--gold); }
+  .offer-msg { margin-top: 8px; font-size: 12.5px; color: var(--ink-2); font-style: italic; }
+  .offer-act { display: flex; gap: 8px; margin-top: 12px; }
+  .online-note { padding: 18px; font-size: 13px; color: var(--ink-2); }
+  .lobby { display: grid; grid-template-columns: 84px minmax(0, 1fr) auto auto; gap: 14px; align-items: center;
+    padding: 10px 14px; border-bottom: 1px solid var(--line); }
+  .lobby:last-child { border-bottom: 0; }
+  .lobby b { display: block; font-size: 13.5px; }
+  .lobby span { font-size: 12px; color: var(--ink-2); }
+  .lobby .cost { font-weight: 800; color: var(--gold); text-align: right; }
+  .seats { display: flex; gap: 8px; flex-wrap: wrap; margin: 14px 0; }
+  .seat { padding: 10px 14px; min-width: 130px; border: 1px solid var(--line-strong); font-weight: 700; font-size: 13px; }
+  .seat.you { border-color: var(--orange); color: var(--orange); }
+  .seat.open { border-style: dashed; color: var(--ink-3); font-weight: 400; }
+  .lobby-card .row { display: flex; gap: 8px; }
+  @media (max-width: 760px) {
+    .to-sides, .offer-sides { grid-template-columns: 1fr; }
+    .lobby { grid-template-columns: 60px minmax(0, 1fr) auto; }
+    .lobby .cost { display: none; }
+  }
   @media (max-width: 1000px) {
     .lb-row { grid-template-columns: 34px minmax(0, 1fr) 90px minmax(0, 1.2fr); }
     .lb-row > :nth-child(n+5) { display: none; }
@@ -951,7 +1009,7 @@
       <button class="tab active" data-tab="cases" title="Cases"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8l9-4 9 4v8l-9 4-9-4z"/><path d="M3 8l9 4 9-4"/><path d="M12 12v8"/></svg><span>Cases</span></button>
       <button class="tab" data-tab="inventory" title="Inventory"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="3.5" width="7" height="7" rx="1"/><rect x="13.5" y="3.5" width="7" height="7" rx="1"/><rect x="3.5" y="13.5" width="7" height="7" rx="1"/><rect x="13.5" y="13.5" width="7" height="7" rx="1"/></svg><span>Inventory</span><i class="pill" id="inv-count">0</i></button>
       <button class="tab" data-tab="upgrader" title="Upgrader"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="M12 16V8"/><path d="M8.5 11.5L12 8l3.5 3.5"/></svg><span>Upgrader</span></button>
-      <button class="tab" data-tab="trade" title="Trade"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h14"/><path d="M15 4.5L18.5 8 15 11.5"/><path d="M20 16H6"/><path d="M9 12.5L5.5 16 9 19.5"/></svg><span>Trade</span></button>
+      <button class="tab" data-tab="trade" title="Trade"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h14"/><path d="M15 4.5L18.5 8 15 11.5"/><path d="M20 16H6"/><path d="M9 12.5L5.5 16 9 19.5"/></svg><span>Trade</span><i class="pill" id="trade-count" style="display:none">0</i></button>
       <button class="tab" data-tab="battles" title="Battles"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4l8.5 8.5"/><path d="M4 5.5L5.5 4"/><path d="M11 15l-2 2 -2.5-.5 -1.5 2L3.5 17l2-1.5L5 13l2-2"/><path d="M19 4l-8.5 8.5"/><path d="M20 5.5L18.5 4"/><path d="M13 15l2 2 2.5-.5 1.5 2 1.5-1.5-2-1.5.5-2.5-2-2"/></svg><span>Battles</span></button>
       <button class="tab" data-tab="leaderboard" title="Leaderboard"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 4h8v5a4 4 0 0 1-8 0z"/><path d="M8 6H5v1a3.5 3.5 0 0 0 3.2 3.5"/><path d="M16 6h3v1a3.5 3.5 0 0 1-3.2 3.5"/><path d="M12 13v3.5"/><path d="M8.5 20.5h7"/><path d="M9.5 16.5h5v4h-5z"/></svg><span>Ranks</span></button>
   </nav>
@@ -979,7 +1037,7 @@
     <h1>Case Opening Sim</h1>
     <small id="topbar-sub">Cases</small>
   </div>
-  <div class="whoami" id="whoami"></div>
+  <div class="whoami"><span class="net" id="net" style="display:none"></span><span id="whoami"></span></div>
   <div class="balance" id="balance"><b id="balance-value">0</b><i>coins</i></div>
 </header>
 
@@ -1097,8 +1155,26 @@
       <div>
         <h2>Trade</h2>
       </div>
+      <div class="toolbar" id="trade-src" style="margin:0;display:none">
+        <button class="chip active" data-src="online">Online</button>
+        <button class="chip" data-src="codes">Codes</button>
+      </div>
     </div>
 
+    <div id="trade-online" style="display:none">
+      <div class="card">
+        <h4>Offers</h4>
+        <div id="to-offers"></div>
+      </div>
+      <div class="card" style="margin-top:18px">
+        <h4>New offer</h4>
+        <input class="control to-search" id="to-search" placeholder="Find a player" autocomplete="off" spellcheck="false">
+        <div id="to-results" class="to-results"></div>
+        <div id="to-builder"></div>
+      </div>
+    </div>
+
+    <div id="trade-codes">
     <div class="up-layout trade-layout">
       <div class="card">
         <h4>Send</h4>
@@ -1123,12 +1199,17 @@
       <h4>Sent codes</h4>
       <div id="outbox"></div>
     </div>
+    </div>
   </section>
 
   <section class="panel" id="panel-battles">
     <div class="section-head">
       <div>
         <h2>Case Battles</h2>
+      </div>
+      <div class="toolbar" id="bt-src" style="margin:0;display:none">
+        <button class="chip active" data-src="online">Online</button>
+        <button class="chip" data-src="solo">Vs bots</button>
       </div>
     </div>
 
@@ -1170,6 +1251,7 @@
       <button class="btn btn-primary" id="bt-start" style="width:100%;margin-top:13px">Start battle</button>
     </div>
 
+    <div id="bt-online" style="display:none"></div>
     <div id="battle-view" style="display:none"></div>
   </section>
 
@@ -1233,6 +1315,16 @@
         <h4>Gifts created</h4>
         <div id="gift-log"></div>
       </div>
+
+      <div class="card" id="mod-card" style="margin-top:18px;display:none">
+        <h4>Moderation</h4>
+        <p class="hint">Ban a player from the online leaderboard, trades and battles. The Ban button on the leaderboard does the same.</p>
+        <div class="admin-unlock">
+          <input class="control" id="mod-id" placeholder="Player id" autocomplete="off" spellcheck="false">
+          <button class="btn btn-ghost" id="mod-ban">Ban</button>
+          <button class="btn btn-ghost" id="mod-unban">Unban</button>
+        </div>
+      </div>
     </div>
   </section>
 
@@ -1240,6 +1332,10 @@
     <div class="section-head">
       <div><h2>Leaderboard</h2></div>
       <div class="toolbar" id="lb-sort" style="margin:0">
+        <span class="seg" id="lb-src" style="display:none">
+          <button class="chip active" data-src="global">Global</button>
+          <button class="chip" data-src="codes">From codes</button>
+        </span>
         <button class="chip active" data-sort="value">Inventory</button>
         <button class="chip" data-sort="best">Best drop</button>
         <button class="chip" data-sort="opened">Cases</button>
@@ -1255,7 +1351,7 @@
       </div>
       <div id="lb-body"></div>
     </div>
-    <p class="lb-note">Updates when you trade.</p>
+    <p class="lb-note" id="lb-note">Updates when you trade.</p>
   </section>
 </main>
 
@@ -2853,7 +2949,7 @@
   const state = {
     coins: START_COINS, inventory: [], opened: 0, best: null, muted: false, uid: 1,
     redeemed: [], outbox: [],
-    profile: null, played: 0, board: {}
+    profile: null, played: 0, board: {}, online: null
   };
 
   function save() {
@@ -2862,9 +2958,11 @@
         coins: state.coins, inventory: state.inventory, opened: state.opened,
         best: state.best, muted: state.muted, uid: state.uid,
         redeemed: state.redeemed, outbox: state.outbox,
-        profile: state.profile, played: Math.floor(state.played), board: state.board
+        profile: state.profile, played: Math.floor(state.played), board: state.board,
+        online: state.online
       }));
     } catch (e) { /* storage unavailable — play on without persistence */ }
+    try { online.changed(); } catch (e) { /* not started yet */ }
   }
 
   function load() {
@@ -2883,6 +2981,7 @@
       if (d.profile && d.profile.id && d.profile.d) state.profile = d.profile;
       if (typeof d.played === 'number') state.played = d.played;
       if (d.board && typeof d.board === 'object') state.board = d.board;
+      if (d.online && typeof d.online === 'object') state.online = d.online;
     } catch (e) { /* corrupt save — start clean */ }
   }
 
@@ -2892,8 +2991,10 @@
      Rolling drops
      ========================================================= */
 
-  function rollWear() {
-    let roll = Math.random(), acc = 0;
+  // Each roll takes an optional random source. Online battles pass a seeded
+  // one, so every player's game rolls exactly the same items.
+  function rollWear(rng) {
+    let roll = (rng || Math.random)(), acc = 0;
     for (let i = 0; i < WEARS.length; i++) {
       acc += WEARS[i].p;
       if (roll < acc) return WEARS[i];
@@ -2901,8 +3002,8 @@
     return WEARS[2];
   }
 
-  function rollRarity(odds) {
-    let roll = Math.random(), acc = 0;
+  function rollRarity(odds, rng) {
+    let roll = (rng || Math.random)(), acc = 0;
     for (let i = 0; i < RARITIES.length; i++) {
       acc += odds[RARITIES[i]] || 0;
       if (roll < acc) return RARITIES[i];
@@ -2911,18 +3012,19 @@
   }
 
   // Turns a drop-table entry into a concrete, uniquely-rolled item.
-  function instantiate(base) {
+  function instantiate(base, rng) {
+    rng = rng || Math.random;
     const it = {
       name: base.name, kind: base.kind, rarity: base.rarity,
       base: base.value, value: base.value
     };
     if (!NO_WEAR[base.kind]) {
-      const w = rollWear();
+      const w = rollWear(rng);
       it.wear = w.key;
-      it.float = +(w.lo + Math.random() * (w.hi - w.lo)).toFixed(4);
+      it.float = +(w.lo + rng() * (w.hi - w.lo)).toFixed(4);
       it.value *= w.mult;
     }
-    if (!NO_TRACKER[base.kind] && Math.random() < TRACKER_CHANCE) {
+    if (!NO_TRACKER[base.kind] && rng() < TRACKER_CHANCE) {
       it.tracker = true;
       it.value *= TRACKER_MULT;
     }
@@ -2930,11 +3032,24 @@
     return it;
   }
 
-  function rollItem(box) {
-    const rarity = rollRarity(box.odds);
+  function rollItem(box, rng) {
+    rng = rng || Math.random;
+    const rarity = rollRarity(box.odds, rng);
     const pool = box.items.filter((it) => it.rarity === rarity);
     const source = pool.length ? pool : box.items;
-    return instantiate(source[Math.floor(Math.random() * source.length)]);
+    return instantiate(source[Math.floor(rng() * source.length)], rng);
+  }
+
+  // Small seeded generator (mulberry32).
+  function seededRng(seed) {
+    let a = seed >>> 0;
+    return function () {
+      a = (a + 0x6D2B79F5) >>> 0;
+      let t = a;
+      t = Math.imul(t ^ (t >>> 15), t | 1);
+      t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
   }
 
   function addItem(item) {
@@ -3591,7 +3706,7 @@
   const b36 = (n) => Math.round(n).toString(36);
   const un36 = (v) => parseInt(v, 36);
 
-  const trade = { selected: new Set(), pending: null, incoming: null };
+  const trade = { selected: new Set(), pending: null, incoming: null, src: 'online' };
 
   /* ---------- code plumbing ----------
      Three formats are understood:
@@ -4002,6 +4117,13 @@
   /* ---------- Send ---------- */
 
   function renderTrade() {
+    const net = online.enabled() && trade.src !== 'codes';
+    $('#trade-src').style.display = online.enabled() ? '' : 'none';
+    $$('#trade-src .chip').forEach((c) => c.classList.toggle('active', c.dataset.src === (net ? 'online' : 'codes')));
+    $('#trade-online').style.display = net ? '' : 'none';
+    $('#trade-codes').style.display = net ? 'none' : '';
+    if (net) { online.renderTradeOnline(); return; }
+
     const alive = new Set(state.inventory.map((it) => it.uid));
     trade.selected.forEach((uid) => { if (!alive.has(uid)) trade.selected.delete(uid); });
 
@@ -4525,7 +4647,7 @@
      Leaderboard
      ========================================================= */
 
-  const lb = { sort: 'value' };
+  const lb = { sort: 'value', src: 'global' };
   const SORT_COL = { played: 0, opened: 1, best: 2, value: 4 };
 
   function fmtTime(sec) {
@@ -4542,37 +4664,45 @@
     return Math.floor(d / 86400) + 'd ago';
   }
 
+  // e: { n name, i id, t updated, s stats }. actions: extra buttons after the name.
+  function boardRow(e, i, me, actions) {
+    const best = e.s[3] >= 0 ? ALL_ITEMS[e.s[3]] : null;
+    return '<div class="lb-row' + (me ? ' me' : '') + (i < 3 ? ' top' + (i + 1) : '') + '">' +
+      '<div class="lb-rank">' + (i + 1) + '</div>' +
+      '<div class="lb-player"><span class="lb-av" style="--h:' + (hashString(e.i) % 360) + '">' +
+        escHtml(e.n.charAt(0).toUpperCase()) + '</span><span title="' + escAttr(e.i) + '"><b>' + escHtml(e.n) + '</b><i>#' +
+        escHtml(tagOf(e.i)) + '</i>' + (me ? '<em>You</em>' : '') + (actions || '') + '</span></div>' +
+      '<div class="lb-num" data-k="value">' + fmt(e.s[4]) + '</div>' +
+      '<div class="lb-best" data-k="best">' + (best
+        ? '<span class="lb-thumb" style="--rc:' + RARITY_COLOR[best.rarity] + '">' + artFor(best) + '</span>' +
+          '<span><b>' + escHtml(best.name) + '</b><i>' + fmt(e.s[2]) + '</i></span>'
+        : '<span>—</span>') + '</div>' +
+      '<div class="lb-num" data-k="opened">' + fmt(e.s[1]) + '</div>' +
+      '<div class="lb-num" data-k="played">' + fmtTime(e.s[0]) + '</div>' +
+      '<div class="lb-when">' + (me ? 'live' : ago(e.t)) + '</div>' +
+    '</div>';
+  }
+
   function renderLeaderboard() {
     const host = $('#lb-body');
     if (!host) return;
+    $('#lb').dataset.sort = lb.sort;
+    $$('#lb-sort [data-sort]').forEach((c) => c.classList.toggle('active', c.dataset.sort === lb.sort));
+    const global = online.enabled() && lb.src !== 'codes';
+    $('#lb-src').style.display = online.enabled() ? '' : 'none';
+    $$('#lb-src .chip').forEach((c) => c.classList.toggle('active', c.dataset.src === (global ? 'global' : 'codes')));
+    $('#lb-note').textContent = global ? 'Everyone playing online.' : 'Updates when you trade codes.';
+    if (global) { online.renderBoard(host); return; }
+
     const rows = Object.keys(state.board).map((id) => ({ e: state.board[id], me: false }));
     if (state.profile) {
       rows.push({ me: true, e: { n: state.profile.name, i: state.profile.id, t: Math.floor(Date.now() / 1000), s: myStats() } });
     }
     const col = SORT_COL[lb.sort];
     rows.sort((a, b) => (b.e.s[col] - a.e.s[col]) || a.e.n.localeCompare(b.e.n));
-    $('#lb').dataset.sort = lb.sort;
-    $$('#lb-sort .chip').forEach((c) => c.classList.toggle('active', c.dataset.sort === lb.sort));
 
     if (!rows.length) { host.innerHTML = '<div class="empty"><h3>No players yet</h3></div>'; return; }
-    host.innerHTML = rows.map((r, i) => {
-      const e = r.e;
-      const best = e.s[3] >= 0 ? ALL_ITEMS[e.s[3]] : null;
-      return '<div class="lb-row' + (r.me ? ' me' : '') + (i < 3 ? ' top' + (i + 1) : '') + '">' +
-        '<div class="lb-rank">' + (i + 1) + '</div>' +
-        '<div class="lb-player"><span class="lb-av" style="--h:' + (hashString(e.i) % 360) + '">' +
-          escHtml(e.n.charAt(0).toUpperCase()) + '</span><span><b>' + escHtml(e.n) + '</b><i>#' +
-          escHtml(tagOf(e.i)) + '</i>' + (r.me ? '<em>You</em>' : '') + '</span></div>' +
-        '<div class="lb-num" data-k="value">' + fmt(e.s[4]) + '</div>' +
-        '<div class="lb-best" data-k="best">' + (best
-          ? '<span class="lb-thumb" style="--rc:' + RARITY_COLOR[best.rarity] + '">' + artFor(best) + '</span>' +
-            '<span><b>' + escHtml(best.name) + '</b><i>' + fmt(e.s[2]) + '</i></span>'
-          : '<span>—</span>') + '</div>' +
-        '<div class="lb-num" data-k="opened">' + fmt(e.s[1]) + '</div>' +
-        '<div class="lb-num" data-k="played">' + fmtTime(e.s[0]) + '</div>' +
-        '<div class="lb-when">' + (r.me ? 'live' : ago(e.t)) + '</div>' +
-      '</div>';
-    }).join('');
+    host.innerHTML = rows.map((r, i) => boardRow(r.e, i, r.me)).join('');
   }
 
   async function shareStats() {
@@ -4590,8 +4720,9 @@
 
   function renderWhoami() {
     const el = $('#whoami');
+    const id = state.online && state.online.id && online.enabled() ? state.online.id : state.profile && state.profile.id;
     if (el) el.innerHTML = state.profile
-      ? escHtml(state.profile.name) + '<i>#' + escHtml(tagOf(state.profile.id)) + '</i>' : '';
+      ? escHtml(state.profile.name) + '<i>#' + escHtml(tagOf(id)) + '</i>' : '';
   }
 
   function showNameGate() {
@@ -4612,6 +4743,7 @@
     renderLeaderboard();
     SFX.win('rare');
     toast('Welcome, ' + name, 'good');
+    online.start();
   }
 
   // Counts time while the tab is visible and a profile exists.
@@ -4643,7 +4775,7 @@
   const BOT_NAMES = ['Rival A', 'Rival B', 'Rival C'];
 
   const battle = {
-    caseIndex: 1, rounds: 3, players: 2, mode: 'high',
+    caseIndex: 1, rounds: 3, players: 2, mode: 'high', src: 'online',
     running: false, live: null
   };
 
@@ -4664,14 +4796,56 @@
     $('#bt-cost').textContent = cost === 0 ? 'FREE' : fmt(cost);
     $('#bt-pool').textContent = fmt(battle.rounds * battle.players);
 
+    const net = online.enabled() && battle.src !== 'solo';
+    $('#bt-src').style.display = online.enabled() ? '' : 'none';
+    $$('#bt-src .chip').forEach((c) => c.classList.toggle('active', c.dataset.src === (net ? 'online' : 'solo')));
+    if (!battle.live) {
+      const seated = net && online.battleBusy();
+      $('#battle-setup').style.display = seated ? 'none' : '';
+      $('#bt-online').style.display = net ? '' : 'none';
+      if (net) online.renderBattles();
+    }
+
     const btn = $('#bt-start');
     const broke = state.coins < cost;
-    btn.disabled = broke || battle.running;
-    btn.textContent = broke ? 'Not enough coins' : 'Start battle';
+    btn.disabled = broke || battle.running || online.battleBusy();
+    btn.textContent = broke ? 'Not enough coins' : online.battleBusy() ? 'You are in a battle'
+      : net ? 'Create lobby' : 'Start battle';
+  }
+
+  // Rolls a whole battle up front: every pull, every total and the winner.
+  // Seats roll in order round by round, so the same rng always gives the
+  // same battle.
+  function computeBattle(box, rounds, seats, mode, rng) {
+    rng = rng || Math.random;
+    const pulls = [];
+    for (let s = 0; s < seats; s++) pulls.push([]);
+    for (let r = 0; r < rounds; r++) {
+      for (let s = 0; s < seats; s++) pulls[s].push(rollItem(box, rng));
+    }
+    const totals = pulls.map((list) => list.reduce((sum, it) => sum + it.value, 0));
+    const best = mode === 'low' ? Math.min.apply(null, totals) : Math.max.apply(null, totals);
+    const tied = [];
+    totals.forEach((t, i) => { if (t === best) tied.push(i); });
+    return { pulls: pulls, totals: totals, winner: tied[Math.floor(rng() * tied.length)] };
+  }
+
+  // opts: { box, rounds, mode, seats: [{ name, you }], plan, online }
+  function beginBattle(opts) {
+    battle.live = {
+      box: opts.box, rounds: opts.rounds, mode: opts.mode, plan: opts.plan, online: opts.online || null,
+      players: opts.seats.map((seat) => ({ name: seat.name, you: !!seat.you, pulls: [], total: 0 })),
+      round: 0
+    };
+    battle.running = true;
+    $('#battle-setup').style.display = 'none';
+    $('#bt-online').style.display = 'none';
+    $('#battle-view').style.display = '';
+    drawBattle();
   }
 
   function startBattle() {
-    if (battle.running) return;
+    if (battle.running || online.battleBusy()) return;
     const box = CASES[battle.caseIndex];
     const cost = battleCost();
     if (state.coins < cost) { toast('Not enough coins', 'bad'); return; }
@@ -4682,21 +4856,12 @@
     renderBalance();
     refreshCaseButtons();
 
-    const players = [];
+    const seats = [];
     for (let i = 0; i < battle.players; i++) {
-      players.push({
-        name: i === 0 ? 'You' : BOT_NAMES[i - 1],
-        you: i === 0,
-        pulls: [],
-        total: 0
-      });
+      seats.push({ name: i === 0 ? 'You' : BOT_NAMES[i - 1], you: i === 0 });
     }
-    battle.live = { box: box, players: players, round: 0 };
-    battle.running = true;
-
-    $('#battle-setup').style.display = 'none';
-    $('#battle-view').style.display = '';
-    drawBattle();
+    const plan = computeBattle(box, battle.rounds, seats.length, battle.mode);
+    beginBattle({ box: box, rounds: battle.rounds, mode: battle.mode, seats: seats, plan: plan });
     SFX.whoosh();
     setTimeout(runRound, 500);
   }
@@ -4709,10 +4874,10 @@
     let html =
       '<div class="battle-head">' +
         '<h3>' + live.box.name + '</h3>' +
-        '<div class="rnd">' + (finished
-          ? 'Finished · ' + battle.rounds + ' round' + (battle.rounds > 1 ? 's' : '')
-          : 'Round ' + Math.min(live.round + 1, battle.rounds) + ' of ' + battle.rounds) +
-          ' · ' + (battle.mode === 'high' ? 'Highest total wins' : 'Lowest total wins') + '</div>' +
+        '<div class="rnd" id="bt-rnd">' + (finished
+          ? 'Finished · ' + live.rounds + ' round' + (live.rounds > 1 ? 's' : '')
+          : 'Round ' + Math.min(live.round + 1, live.rounds) + ' of ' + live.rounds) +
+          ' · ' + (live.mode === 'high' ? 'Highest total wins' : 'Lowest total wins') + '</div>' +
       '</div>' +
       '<div class="battle-grid" style="grid-template-columns:repeat(' + cols + ',1fr)">';
 
@@ -4720,10 +4885,10 @@
       const cls = 'bt-col' + (pl.you ? ' you' : '') +
         (finished ? (pl.won ? ' winner' : ' loser') : '');
       html += '<div class="' + cls + '">' +
-        '<div class="bt-name"><span>' + pl.name + '</span>' +
+        '<div class="bt-name"><span>' + escHtml(pl.name) + '</span>' +
           '<span class="bt-total" id="bt-total-' + pi + '">' + fmt(pl.total) + '</span></div>' +
         '<div class="bt-slots">';
-      for (let r = 0; r < battle.rounds; r++) {
+      for (let r = 0; r < live.rounds; r++) {
         const pulled = pl.pulls[r];
         html += '<div class="bt-slot' + (pulled ? '' : ' pending') + '" id="bt-slot-' + pi + '-' + r + '">' +
           (pulled ? itemMarkup(pulled) : '') + '</div>';
@@ -4739,11 +4904,14 @@
     const live = battle.live;
     if (!live) return;
     const r = live.round;
-    if (r >= battle.rounds) return endBattle();
+    if (r >= live.rounds) return endBattle();
+    const rnd = $('#bt-rnd');
+    if (rnd) rnd.textContent = 'Round ' + (r + 1) + ' of ' + live.rounds + ' · ' +
+      (live.mode === 'high' ? 'Highest total wins' : 'Lowest total wins');
 
     let pending = live.players.length;
     live.players.forEach((pl, pi) => {
-      const finalItem = rollItem(live.box);
+      const finalItem = live.plan.pulls[pi][r];
       const slot = $('#bt-slot-' + pi + '-' + r);
       if (!slot) { pending--; return; }
       slot.classList.remove('pending');
@@ -4752,7 +4920,7 @@
       const dur = 1500 + pi * 160;
       const started = Date.now();
       const timer = setInterval(() => {
-        if (!battle.live) { clearInterval(timer); return; }
+        if (battle.live !== live) { clearInterval(timer); return; }
         if (Date.now() - started >= dur) {
           clearInterval(timer);
           slot.classList.remove('spin');
@@ -4767,7 +4935,7 @@
 
           if (--pending === 0) {
             live.round++;
-            setTimeout(live.round >= battle.rounds ? endBattle : runRound, 700);
+            setTimeout(live.round >= live.rounds ? endBattle : runRound, 700);
           }
           return;
         }
@@ -4777,45 +4945,57 @@
     });
   }
 
-  function endBattle() {
-    const live = battle.live;
-    if (!live) return;
-    battle.running = false;
+  // Time a battle's reels take to play, used to skip ahead after a reload.
+  const battleDuration = (rounds, seats) => 500 + rounds * (1500 + (seats - 1) * 160 + 700);
 
-    // Best total takes the table; an exact tie is broken at random.
-    const best = live.players.reduce((acc, pl) =>
-      battle.mode === 'high' ? Math.max(acc, pl.total) : Math.min(acc, pl.total),
-      battle.mode === 'high' ? -Infinity : Infinity);
-    const tied = live.players.filter((pl) => pl.total === best);
-    const winner = tied[Math.floor(Math.random() * tied.length)];
-    live.players.forEach((pl) => { pl.won = (pl === winner); });
-
-    const pool = live.players.reduce((acc, pl) => acc.concat(pl.pulls), []);
-    const poolValue = pool.reduce((sum, it) => sum + it.value, 0);
-    const youWon = winner.you;
-
-    if (youWon) {
+  // Hands the winner the table. Online battles pass through here once per
+  // battle id, guarded by the online ledger.
+  function payBattle(live) {
+    const pool = live.plan.pulls.reduce((acc, list) => acc.concat(list), []);
+    const winner = live.players[live.plan.winner];
+    if (winner.you) {
       pool.forEach((it) => {
         const made = addItem(it);
         if (!state.best || made.value > state.best.value) {
           state.best = { name: made.name, value: made.value, rarity: made.rarity };
         }
       });
-      SFX.win('mythic');
-    } else {
-      SFX.lose();
     }
+    return { pool: pool, winner: winner };
+  }
+
+  function endBattle() {
+    const live = battle.live;
+    if (!live || live.ended) return;
+    live.ended = true;
+    battle.running = false;
+
+    live.players.forEach((pl, pi) => {
+      pl.pulls = live.plan.pulls[pi].slice();
+      pl.total = live.plan.totals[pi];
+      pl.won = pi === live.plan.winner;
+    });
+
+    let result;
+    if (live.online) result = online.finishBattle(live);
+    else result = payBattle(live);
+    const pool = result.pool, winner = result.winner;
+    const poolValue = pool.reduce((sum, it) => sum + it.value, 0);
+    const youWon = winner.you;
+    const you = live.players.find((pl) => pl.you) || live.players[0];
+
+    if (youWon) SFX.win('mythic');
+    else SFX.lose();
 
     drawBattle(true);
 
-    const cost = battleCost();
     const banner = document.createElement('div');
     banner.className = 'bt-banner ' + (youWon ? 'won' : 'lost');
     banner.innerHTML =
-      '<h3>' + (youWon ? 'You win' : winner.name + ' wins') + '</h3>' +
+      '<h3>' + (youWon ? 'You win' : escHtml(winner.name) + ' wins') + '</h3>' +
       '<p>' + (youWon
         ? pool.length + ' items · ' + fmt(poolValue) + ' coins'
-        : winner.name + ' ' + fmt(winner.total) + ' · You ' + fmt(live.players[0].total)) +
+        : escHtml(winner.name) + ' ' + fmt(winner.total) + ' · You ' + fmt(you.total)) +
       '</p>' +
       '<button class="btn btn-primary" id="bt-again">New battle</button>';
     $('#battle-view').appendChild(banner);
@@ -4832,9 +5012,883 @@
     battle.running = false;
     $('#battle-view').style.display = 'none';
     $('#battle-view').innerHTML = '';
-    $('#battle-setup').style.display = '';
     renderBattleSetup();
   }
+
+  /* =========================================================
+     Online play
+
+     Point SERVER_URL at your deployed server (server/README.md walks through
+     it) to turn on the global leaderboard, direct trades and battles against
+     other players. Left empty, the game stays offline and trades by code.
+
+     The server keeps a trade inbox and battle lobbies; each game still rolls
+     its own cases and keeps its own inventory. Items offered in a trade leave
+     your inventory when you send the offer and come back if it's declined or
+     cancelled. A small ledger of finished trades and battles stops anything
+     being applied twice.
+     ========================================================= */
+
+  const SERVER_URL = '';
+
+  const online = (function () {
+    const base = String(SERVER_URL || '').replace(/\/+$/, '');
+    const enabled = () => !!base;
+    const LEDGER = 400;
+    const ONLINE_WINDOW = 300;            // s since last seen that still counts as online
+
+    let status = 'off';                   // off | connecting | online | offline | banned
+    let registering = null;
+    let lastPush = '', lastPushAt = 0, pushTimer = null;
+    let skew = 0;                         // server clock minus ours, ms
+    let lobbyTimer = null, lastLobbies = 0, lastTrades = 0, searchTimer = null;
+    const board = { sort: null, at: 0, list: null, loading: false };
+    const ui = {
+      trades: [], results: [], partner: null, partnerInv: [],
+      give: new Set(), want: new Set(), giveCoins: 0, wantCoins: 0, message: '',
+      lobbies: [], lobby: null, busy: false
+    };
+
+    function data() {
+      if (!state.online) state.online = {};
+      const d = state.online;
+      if (!Array.isArray(d.done)) d.done = [];
+      if (!d.escrow || typeof d.escrow !== 'object') d.escrow = {};
+      if (!d.accepting || typeof d.accepting !== 'object') d.accepting = {};
+      return d;
+    }
+
+    const isDone = (key) => data().done.indexOf(key) !== -1;
+    function markDone(key) {
+      const d = data();
+      d.done.push(key);
+      if (d.done.length > LEDGER) d.done = d.done.slice(-LEDGER);
+    }
+
+    const signedIn = () => enabled() && !!data().token && status !== 'banned';
+    const myId = () => data().id;
+    const isOnline = (p, now) => (now || Date.now() / 1000) - (p.last_seen || 0) < ONLINE_WINDOW;
+
+    function setStatus(next) {
+      status = next;
+      const el = $('#net');
+      if (!el) return;
+      el.style.display = enabled() ? '' : 'none';
+      el.className = 'net ' + status;
+      el.title = { off: 'Offline', connecting: 'Connecting', online: 'Online',
+                   offline: 'Can\'t reach the server', banned: 'Banned from online play' }[status];
+    }
+
+    async function api(method, path, body, keepalive) {
+      const d = data();
+      const headers = {};
+      if (body) headers['Content-Type'] = 'application/json';
+      if (d.token) headers.Authorization = 'Bearer ' + d.token;
+      let res;
+      try {
+        res = await fetch(base + path, {
+          method: method, headers: headers, keepalive: !!keepalive, cache: 'no-store',
+          body: body ? JSON.stringify(body) : undefined
+        });
+      } catch (e) {
+        setStatus('offline');
+        const err = new Error('Can\'t reach the server');
+        err.status = 0;
+        throw err;
+      }
+      let out = {};
+      try { out = await res.json(); } catch (e) { out = {}; }
+      if (res.status === 403 && out.error === 'banned') setStatus('banned');
+      else if (res.status === 401 && d.token) {
+        // The server no longer knows this token (its database was reset): sign up again.
+        d.token = null; d.id = null; save();
+        setStatus('connecting');
+        setTimeout(ensureRegistered, 500);
+      } else if (status !== 'banned') setStatus(d.token ? 'online' : status);
+      if (!res.ok) {
+        const err = new Error(out.error ? out.error.charAt(0).toUpperCase() + out.error.slice(1) : 'Server error');
+        err.status = res.status;
+        throw err;
+      }
+      return out;
+    }
+
+    function ensureRegistered() {
+      if (!enabled() || !state.profile) return Promise.resolve(false);
+      const d = data();
+      if (d.token) return Promise.resolve(true);
+      if (registering) return registering;
+      setStatus('connecting');
+      registering = api('POST', '/api/register', { name: state.profile.name })
+        .then((r) => {
+          d.id = r.id; d.token = r.token;
+          save(); setStatus('online'); renderWhoami();
+          pushStats(true);
+          return true;
+        })
+        .catch(() => false)
+        .then((ok) => { registering = null; return ok; });
+      return registering;
+    }
+
+    /* ---------- items on the wire: [uid, table index, wear, float x10000, tracker] ---------- */
+
+    function tuple(it) {
+      const t = itemTuple(it);
+      return t ? [it.uid].concat(t) : null;
+    }
+    const fromTuple = (t) => Array.isArray(t) && t.length === 5 ? tupleToItem(t.slice(1)) : null;
+    const sameTuple = (a, b) => !!a && !!b && a.length === b.length && a.every((v, i) => v === b[i]);
+
+    function receive(bundle) {
+      (bundle.items || []).forEach((t) => { const it = fromTuple(t); if (it) addItem(it); });
+      state.coins += bundle.coins || 0;
+    }
+
+    function restore(hold) {
+      if (!hold) return;
+      (hold.items || []).forEach((it) => state.inventory.push(it));
+      state.coins += hold.coins || 0;
+    }
+
+    function take(items, coins) {
+      const uids = new Set(items.map((it) => it.uid));
+      state.inventory = state.inventory.filter((it) => !uids.has(it.uid));
+      state.coins -= coins;
+    }
+
+    function refreshAll() {
+      save();
+      renderBalance();
+      refreshCaseButtons();
+      renderInventory();
+      if ($('#panel-trade').classList.contains('active')) renderTrade();
+      if ($('#panel-battles').classList.contains('active')) renderBattleSetup();
+    }
+
+    /* ---------- stats ---------- */
+
+    async function pushStats(force, keepalive) {
+      if (!signedIn()) return;
+      const s = myStats();
+      const inv = state.inventory.slice().sort((a, b) => b.value - a.value).slice(0, 500).map(tuple).filter(Boolean);
+      const sig = JSON.stringify([s[1], s[2], s[3], s[4], inv.length, state.uid]);
+      if (!force && sig === lastPush && Date.now() - lastPushAt < 5 * 60000) return;
+      try {
+        await api('POST', '/api/stats', {
+          played: s[0], opened: s[1], best_value: s[2], best_item: s[3], inv_value: s[4], inventory: inv
+        }, keepalive);
+        lastPush = sig; lastPushAt = Date.now();
+      } catch (e) {
+        if (e.status === 429) { lastPushAt = Date.now(); changed(); }
+      }
+    }
+
+    // Called on every save. Pushes stats soon after, at most once per 10 seconds
+    // (the server's limit); pushStats skips the call if nothing changed.
+    function changed(delay) {
+      if (!signedIn() || pushTimer) return;
+      const wait = Math.max(delay || 2000, 10500 - (Date.now() - lastPushAt));
+      pushTimer = setTimeout(() => { pushTimer = null; pushStats(false); }, wait);
+    }
+
+    /* ---------- leaderboard ---------- */
+
+    function renderBoard(host) {
+      const stale = board.sort !== lb.sort || Date.now() - board.at > 30000;
+      if (stale && !board.loading) {
+        board.loading = true;
+        const sort = lb.sort;
+        api('GET', '/api/leaderboard?sort=' + sort + '&limit=100')
+          .then((r) => { board.list = r.players; board.sort = sort; board.at = Date.now(); })
+          .catch(() => { board.at = Date.now(); if (board.sort !== sort) board.list = null; board.sort = sort; })
+          .then(() => {
+            board.loading = false;
+            if ($('#panel-leaderboard').classList.contains('active')) renderLeaderboard();
+          });
+      }
+      if (!board.list || board.sort !== lb.sort) {
+        host.innerHTML = '<div class="empty"><h3>' + (board.loading ? 'Loading' : status === 'offline'
+          ? 'Can\'t reach the server' : 'No players yet') + '</h3></div>';
+        return;
+      }
+      const col = SORT_COL[lb.sort];
+      const rows = board.list.map((p) => {
+        const me = p.id === myId();
+        return { me: me, p: p, e: { n: p.name, i: p.id, t: p.stats_at,
+          s: me ? myStats() : [p.played, p.opened, p.best_value, p.best_item, p.inv_value] } };
+      });
+      rows.sort((a, b) => b.e.s[col] - a.e.s[col]);
+      if (!rows.length) { host.innerHTML = '<div class="empty"><h3>No players yet</h3></div>'; return; }
+      host.innerHTML = rows.map((r, i) => {
+        let actions = '';
+        if (!r.me && signedIn()) actions += '<button class="lb-act" data-lbtrade="' + escAttr(r.p.id) + '">Trade</button>';
+        if (!r.me && adminState.key) actions += '<button class="lb-act bad" data-lbban="' + escAttr(r.p.id) + '">Ban</button>';
+        return boardRow(r.e, i, r.me, actions);
+      }).join('');
+      $$('#lb-body [data-lbtrade]').forEach((b) => b.addEventListener('click', () => {
+        SFX.blip();
+        setTab('trade');
+        pickPartner(b.dataset.lbtrade);
+      }));
+      $$('#lb-body [data-lbban]').forEach((b) => b.addEventListener('click', () => {
+        const row = board.list.find((p) => p.id === b.dataset.lbban);
+        if (confirm('Ban ' + (row ? row.name : b.dataset.lbban) + '?')) moderate('ban', b.dataset.lbban);
+      }));
+    }
+
+    async function moderate(action, id) {
+      id = String(id || '').trim();
+      if (!adminState.key || !id) return;
+      const p = JSON.stringify({ a: action, id: id, ts: Math.floor(Date.now() / 1000) });
+      try {
+        const g = b64u(new Uint8Array(await crypto.subtle.sign(SIGN, adminState.key, utf8.encode(p))));
+        await api('POST', '/api/admin', { p: p, g: g });
+        toast(action === 'ban' ? 'Player banned' : 'Player unbanned', 'good');
+        board.at = 0;
+        if ($('#panel-leaderboard').classList.contains('active')) renderLeaderboard();
+      } catch (e) { toast(e.message, 'bad'); }
+    }
+
+    /* ---------- trades ---------- */
+
+    function settle(id) { api('POST', '/api/trades/' + id + '/settle').catch(() => {}); }
+
+    async function syncTrades() {
+      if (!signedIn()) return;
+      lastTrades = Date.now();
+      let r;
+      try { r = await api('GET', '/api/trades'); } catch (e) { return; }
+      const d = data();
+      ui.trades = r.trades || [];
+      let moved = false;
+      ui.trades.forEach((t) => {
+        const sender = t.from === d.id;
+        if (t.status === 'pending' || (sender ? t.from_settled : t.to_settled)) return;
+        if (!isDone(t.id)) {
+          if (sender) {
+            if (t.status === 'accepted') {
+              receive(t.want);
+              toast(t.to_name + ' accepted your offer', 'good');
+              SFX.win('epic');
+            } else {
+              restore(d.escrow[t.id]);
+              if (t.status === 'declined') toast(t.to_name + ' declined your offer');
+            }
+            delete d.escrow[t.id];
+          } else {
+            const hold = d.accepting[t.id];
+            if (hold && t.status === 'accepted') receive(t.give);
+            else restore(hold);
+            delete d.accepting[t.id];
+          }
+          markDone(t.id);
+          moved = true;
+        }
+        settle(t.id);
+      });
+      if (moved) { refreshAll(); changed(); }
+      renderTradeBadge();
+      if (tradeOnlineVisible()) renderOffers();
+    }
+
+    function renderTradeBadge() {
+      const n = ui.trades.filter((t) => t.status === 'pending' && t.to === myId()).length;
+      const pill = $('#trade-count');
+      pill.textContent = n;
+      pill.style.display = n ? '' : 'none';
+    }
+
+    const tradeOnlineVisible = () => $('#panel-trade').classList.contains('active') && trade.src !== 'codes' && enabled();
+
+    function minis(bundle) {
+      const items = (bundle.items || []).map(fromTuple).filter(Boolean);
+      const tiles = items.map((it) => '<span class="mini" title="' + escAttr(it.name + (it.wear ? ' · ' + WEAR_BY_KEY[it.wear].name : '') +
+        ' · ' + fmt(it.value)) + '" style="--rc:' + RARITY_COLOR[it.rarity] + '">' + artFor(it, true) + '</span>').join('');
+      const coins = bundle.coins ? '<span class="coins-tag">' + fmt(bundle.coins) + ' coins</span>' : '';
+      const worth = items.reduce((s, it) => s + it.value, 0) + (bundle.coins || 0);
+      return { html: (tiles + coins) || '<span class="hint" style="margin:0">Nothing</span>', worth: worth };
+    }
+
+    function renderOffers() {
+      const host = $('#to-offers');
+      if (!host) return;
+      const d = data();
+      if (!signedIn()) {
+        host.innerHTML = '<div class="online-note">' + (status === 'banned' ? 'This account is banned from online play.'
+          : status === 'offline' ? 'Can\'t reach the server. Code trading still works.' : 'Connecting…') + '</div>';
+        return;
+      }
+      const list = ui.trades.slice().sort((a, b) =>
+        ((b.status === 'pending') - (a.status === 'pending')) || (b.updated_at - a.updated_at)).slice(0, 25);
+      if (!list.length) { host.innerHTML = '<div class="empty" style="padding:24px"><h3>No offers yet</h3></div>'; return; }
+      host.innerHTML = list.map((t) => {
+        const sender = t.from === d.id;
+        const other = sender ? t.to_name : t.from_name;
+        const give = minis(sender ? t.give : t.want);
+        const get = minis(sender ? t.want : t.give);
+        let acts = '';
+        if (t.status === 'pending' && !sender) {
+          acts = '<button class="btn btn-primary btn-sm" data-accept="' + t.id + '">Accept</button>' +
+                 '<button class="btn btn-ghost btn-sm" data-decline="' + t.id + '">Decline</button>';
+        } else if (t.status === 'pending') {
+          acts = '<button class="btn btn-ghost btn-sm" data-cancel="' + t.id + '">Cancel offer</button>';
+        }
+        return '<div class="offer">' +
+          '<div class="offer-head"><b>' + (sender ? 'To ' : 'From ') + escHtml(other) + '</b>' +
+            '<span class="st ' + t.status + '">' + t.status + '</span><span class="when">' + ago(t.updated_at) + '</span></div>' +
+          '<div class="offer-sides">' +
+            '<div><span class="label">You give · ' + fmt(give.worth) + '</span><div class="minis">' + give.html + '</div></div>' +
+            '<div><span class="label">You get · ' + fmt(get.worth) + '</span><div class="minis">' + get.html + '</div></div>' +
+          '</div>' +
+          (t.message ? '<div class="offer-msg">“' + escHtml(t.message) + '”</div>' : '') +
+          (acts ? '<div class="offer-act">' + acts + '</div>' : '') +
+        '</div>';
+      }).join('');
+      const find = (id) => ui.trades.find((t) => t.id === id);
+      $$('#to-offers [data-accept]').forEach((b) => b.addEventListener('click', () => accept(find(b.dataset.accept))));
+      $$('#to-offers [data-decline]').forEach((b) => b.addEventListener('click', () => decline(find(b.dataset.decline))));
+      $$('#to-offers [data-cancel]').forEach((b) => b.addEventListener('click', () => cancel(find(b.dataset.cancel))));
+    }
+
+    async function accept(t) {
+      if (!t || ui.busy) return;
+      const d = data();
+      const mine = [];
+      for (const tu of t.want.items) {
+        const it = state.inventory.find((x) => x.uid === tu[0] && mine.indexOf(x) === -1 && sameTuple(tuple(x), tu));
+        if (!it) {
+          const gone = fromTuple(tu);
+          toast('You no longer have ' + (gone ? gone.name : 'an item in this trade'), 'bad');
+          return;
+        }
+        mine.push(it);
+      }
+      if (state.coins < (t.want.coins || 0)) { toast('Not enough coins', 'bad'); return; }
+
+      ui.busy = true;
+      take(mine, t.want.coins || 0);
+      d.accepting[t.id] = { items: mine, coins: t.want.coins || 0 };
+      save();
+      try {
+        await api('POST', '/api/trades/' + t.id + '/accept');
+      } catch (e) {
+        ui.busy = false;
+        if (e.status) { restore(d.accepting[t.id]); delete d.accepting[t.id]; }
+        refreshAll();
+        toast(e.status === 409 ? 'That offer was withdrawn' : e.message, 'bad');
+        syncTrades();
+        return;
+      }
+      receive(t.give);
+      delete d.accepting[t.id];
+      markDone(t.id);
+      ui.busy = false;
+      refreshAll();
+      SFX.win('epic');
+      toast('Trade complete', 'good');
+      settle(t.id);
+      changed();
+      syncTrades();
+    }
+
+    async function decline(t) {
+      if (!t) return;
+      try { await api('POST', '/api/trades/' + t.id + '/decline'); SFX.blip(); }
+      catch (e) { toast(e.message, 'bad'); }
+      syncTrades();
+    }
+
+    async function cancel(t) {
+      if (!t) return;
+      const d = data();
+      try {
+        await api('POST', '/api/trades/' + t.id + '/cancel');
+      } catch (e) { toast(e.message, 'bad'); syncTrades(); return; }
+      if (!isDone(t.id)) {
+        restore(d.escrow[t.id]);
+        delete d.escrow[t.id];
+        markDone(t.id);
+      }
+      refreshAll();
+      settle(t.id);
+      toast('Offer cancelled');
+      changed();
+      syncTrades();
+    }
+
+    /* ---------- building an offer ---------- */
+
+    function search(q) {
+      clearTimeout(searchTimer);
+      searchTimer = setTimeout(async () => {
+        try {
+          const r = await api('GET', '/api/players?q=' + encodeURIComponent(q || ''));
+          ui.results = (r.players || []).filter((p) => p.id !== myId());
+          ui.resultsAt = r.now;
+        } catch (e) { ui.results = []; }
+        renderResults();
+      }, q ? 250 : 0);
+    }
+
+    function renderResults() {
+      const host = $('#to-results');
+      if (!host) return;
+      if (!ui.results.length) {
+        host.innerHTML = '<span class="hint" style="margin:0">' + ($('#to-search').value ? 'No players found' : '') + '</span>';
+        return;
+      }
+      host.innerHTML = ui.results.map((p) =>
+        '<button class="to-pl" data-pl="' + escAttr(p.id) + '"><span class="net ' + (isOnline(p, ui.resultsAt) ? 'online' : '') +
+        '"></span>' + escHtml(p.name) + '<i>#' + escHtml(tagOf(p.id)) + ' · ' + fmt(p.inv_value) + '</i></button>').join('');
+      $$('#to-results [data-pl]').forEach((b) => b.addEventListener('click', () => { SFX.blip(); pickPartner(b.dataset.pl); }));
+    }
+
+    async function pickPartner(id) {
+      if (!signedIn() || id === myId()) return;
+      trade.src = 'online';
+      let p;
+      try { p = await api('GET', '/api/players/' + encodeURIComponent(id)); }
+      catch (e) { toast(e.message, 'bad'); return; }
+      ui.partner = { id: p.id, name: p.name, last_seen: p.last_seen, now: p.now };
+      ui.partnerInv = (p.inventory || []).map((t) => ({ t: t, item: fromTuple(t) })).filter((x) => x.item);
+      ui.give.clear(); ui.want.clear();
+      ui.giveCoins = 0; ui.wantCoins = 0; ui.message = '';
+      renderTrade();
+    }
+
+    function renderBuilder() {
+      const host = $('#to-builder');
+      if (!host) return;
+      if (!ui.partner) { host.innerHTML = ''; return; }
+      const alive = new Set(state.inventory.map((it) => it.uid));
+      ui.give.forEach((uid) => { if (!alive.has(uid)) ui.give.delete(uid); });
+      const p = ui.partner;
+
+      host.innerHTML =
+        '<div class="to-partner"><span class="net ' + (isOnline(p, p.now) ? 'online' : '') + '"></span>' +
+          '<span>Trading with <b>' + escHtml(p.name) + '</b> <i>#' + escHtml(tagOf(p.id)) + '</i></span>' +
+          '<button class="link-btn" id="to-change">Change</button></div>' +
+        '<div class="to-sides">' +
+          '<div><span class="label">You give</span><div class="pick-grid" id="to-give"></div>' +
+            '<label class="field"><span class="label">Coins you add</span>' +
+            '<input class="control" id="to-give-coins" type="number" min="0" step="1" value="' + (ui.giveCoins || '') + '" placeholder="0"></label></div>' +
+          '<div><span class="label">You get</span><div class="pick-grid" id="to-want"></div>' +
+            '<label class="field"><span class="label">Coins you ask for</span>' +
+            '<input class="control" id="to-want-coins" type="number" min="0" step="1" value="' + (ui.wantCoins || '') + '" placeholder="0"></label></div>' +
+        '</div>' +
+        '<div class="to-foot">' +
+          '<label class="field"><span class="label">Message</span>' +
+            '<input class="control" id="to-msg" maxlength="120" placeholder="Optional" value="' + escAttr(ui.message) + '"></label>' +
+          '<button class="btn btn-primary" id="to-send">Send offer</button>' +
+        '</div>' +
+        '<div id="to-sum" class="hint" style="margin:10px 0 0"></div>';
+
+      renderPickers();
+      $('#to-change').addEventListener('click', () => { ui.partner = null; SFX.blip(); renderBuilder(); $('#to-search').focus(); });
+      $('#to-give-coins').addEventListener('input', (e) => { ui.giveCoins = Math.max(0, Math.floor(+e.target.value || 0)); renderSummary(); });
+      $('#to-want-coins').addEventListener('input', (e) => { ui.wantCoins = Math.max(0, Math.floor(+e.target.value || 0)); renderSummary(); });
+      $('#to-msg').addEventListener('input', (e) => { ui.message = e.target.value; });
+      $('#to-send').addEventListener('click', sendOffer);
+    }
+
+    function renderPickers() {
+      const mine = state.inventory.slice().sort((a, b) => b.value - a.value);
+      $('#to-give').innerHTML = mine.length ? mine.map((it) =>
+        itemMarkup(it, ui.give.has(it.uid) ? 'sel' : '', true).replace('class="item ', 'data-tg="' + it.uid + '" class="item ')
+      ).join('') : '<div class="empty" style="grid-column:1/-1;padding:20px"><h3>No items</h3></div>';
+      $('#to-want').innerHTML = ui.partnerInv.length ? ui.partnerInv.map((x, i) =>
+        itemMarkup(x.item, ui.want.has(i) ? 'sel' : '', true).replace('class="item ', 'data-tw="' + i + '" class="item ')
+      ).join('') : '<div class="empty" style="grid-column:1/-1;padding:20px"><h3>No items</h3></div>';
+      $$('#to-give [data-tg]').forEach((el) => el.addEventListener('click', () => {
+        const uid = +el.dataset.tg;
+        if (ui.give.has(uid)) ui.give.delete(uid); else if (ui.give.size < 20) ui.give.add(uid);
+        el.classList.toggle('sel', ui.give.has(uid));
+        SFX.blip(); renderSummary();
+      }));
+      $$('#to-want [data-tw]').forEach((el) => el.addEventListener('click', () => {
+        const i = +el.dataset.tw;
+        if (ui.want.has(i)) ui.want.delete(i); else if (ui.want.size < 20) ui.want.add(i);
+        el.classList.toggle('sel', ui.want.has(i));
+        SFX.blip(); renderSummary();
+      }));
+      renderSummary();
+    }
+
+    function renderSummary() {
+      const give = state.inventory.filter((it) => ui.give.has(it.uid)).reduce((s, it) => s + it.value, 0) + ui.giveCoins;
+      const get = ui.partnerInv.filter((x, i) => ui.want.has(i)).reduce((s, x) => s + x.item.value, 0) + ui.wantCoins;
+      const sum = $('#to-sum');
+      if (sum) sum.textContent = 'You give ' + fmt(give) + ' · You get ' + fmt(get);
+      const btn = $('#to-send');
+      if (btn) btn.disabled = !(ui.give.size || ui.want.size || ui.giveCoins || ui.wantCoins) || ui.busy;
+    }
+
+    async function sendOffer() {
+      if (!ui.partner || ui.busy) return;
+      const d = data();
+      const items = state.inventory.filter((it) => ui.give.has(it.uid));
+      const tuples = items.map(tuple);
+      if (tuples.some((t) => !t)) { toast('One of those items can\'t be traded', 'bad'); return; }
+      const coins = ui.giveCoins, wantCoins = ui.wantCoins;
+      if (coins > state.coins) { toast('Not enough coins', 'bad'); return; }
+      const want = ui.partnerInv.filter((x, i) => ui.want.has(i)).map((x) => x.t);
+      if (!items.length && !coins && !want.length && !wantCoins) return;
+
+      // Hold the items and coins now, so they can't be sold or spent while the offer is open.
+      ui.busy = true;
+      take(items, coins);
+      save();
+      let r;
+      try {
+        r = await api('POST', '/api/trades', {
+          to: ui.partner.id, give: { items: tuples, coins: coins }, want: { items: want, coins: wantCoins },
+          message: ui.message.trim()
+        });
+      } catch (e) {
+        ui.busy = false;
+        restore({ items: items, coins: coins });
+        refreshAll();
+        toast(e.message, 'bad');
+        return;
+      }
+      d.escrow[r.id] = { items: items, coins: coins };
+      ui.busy = false;
+      ui.give.clear(); ui.want.clear();
+      ui.giveCoins = 0; ui.wantCoins = 0; ui.message = '';
+      refreshAll();
+      SFX.whoosh();
+      toast('Offer sent to ' + ui.partner.name, 'good');
+      changed();
+      syncTrades();
+    }
+
+    function renderTradeOnline() {
+      renderOffers();
+      if (signedIn() && !ui.searched) { ui.searched = true; search(''); }
+      renderResults();
+      renderBuilder();
+      if (Date.now() - lastTrades > 4000) syncTrades();
+    }
+
+    /* ---------- battles ---------- */
+
+    const battleBusy = () => enabled() && !!(state.online && state.online.battle);
+    const caseById = (id) => CASES.find((c) => c.id === id && !c.locked);
+
+    function leaveSeat(refund) {
+      const d = data();
+      if (refund && d.battle) state.coins += d.battle.cost || 0;
+      d.battle = null;
+      ui.lobby = null;
+      stopLobbyWatch();
+      refreshAll();
+    }
+
+    async function createLobby() {
+      if (!signedIn()) { toast('Not connected', 'bad'); return; }
+      if (battleBusy() || battle.running) return;
+      const box = CASES[battle.caseIndex];
+      const cost = box.price * battle.rounds;
+      if (state.coins < cost) { toast('Not enough coins', 'bad'); return; }
+      const d = data();
+      state.coins -= cost;
+      d.battle = { id: null, cost: cost };
+      refreshAll();
+      try {
+        const b = await api('POST', '/api/battles', {
+          case_id: box.id, rounds: battle.rounds, max_players: battle.players, mode: battle.mode, version: GAME_VERSION
+        });
+        d.battle.id = b.id;
+        ui.lobby = b;
+        save();
+        SFX.whoosh();
+        watchLobby();
+      } catch (e) {
+        leaveSeat(true);
+        toast(e.message, 'bad');
+      }
+      renderBattleSetup();
+    }
+
+    async function joinLobby(b) {
+      if (!signedIn() || battleBusy() || battle.running || !b) return;
+      const box = caseById(b.case_id);
+      if (!box || b.version > GAME_VERSION) { toast('Update your game to join this battle', 'bad'); return; }
+      if (b.version !== GAME_VERSION) { toast('That battle is on an older version', 'bad'); return; }
+      const cost = box.price * b.rounds;
+      if (state.coins < cost) { toast('Not enough coins', 'bad'); return; }
+      const d = data();
+      state.coins -= cost;
+      d.battle = { id: b.id, cost: cost };
+      refreshAll();
+      try {
+        ui.lobby = await api('POST', '/api/battles/' + b.id + '/join', { version: GAME_VERSION });
+        SFX.whoosh();
+        onLobby(ui.lobby);
+        if (d.battle) watchLobby();
+      } catch (e) {
+        leaveSeat(true);
+        toast(e.message, 'bad');
+        loadLobbies();
+      }
+      renderBattleSetup();
+    }
+
+    async function leaveLobby() {
+      const d = data();
+      if (!d.battle || !d.battle.id) return;
+      try {
+        await api('POST', '/api/battles/' + d.battle.id + '/leave', {});
+      } catch (e) {
+        if (e.status === 0) { toast(e.message, 'bad'); return; }
+        if (/running/.test(e.message)) { pollLobby(); return; }
+      }
+      leaveSeat(true);
+      SFX.blip();
+      renderBattleSetup();
+      loadLobbies();
+    }
+
+    async function startNow() {
+      const d = data();
+      if (!d.battle || !d.battle.id) return;
+      try {
+        onLobby(await api('POST', '/api/battles/' + d.battle.id + '/start', {}));
+      } catch (e) {
+        toast(e.message, 'bad');
+        pollLobby();
+      }
+    }
+
+    function watchLobby() {
+      stopLobbyWatch();
+      lobbyTimer = setInterval(pollLobby, 1500);
+    }
+    function stopLobbyWatch() { clearInterval(lobbyTimer); lobbyTimer = null; }
+
+    async function pollLobby() {
+      const d = data();
+      if (!d.battle || !d.battle.id) { stopLobbyWatch(); return; }
+      try {
+        onLobby(await api('GET', '/api/battles/' + d.battle.id));
+      } catch (e) {
+        if (e.status === 404) { leaveSeat(true); renderBattleSetup(); }
+      }
+    }
+
+    function onLobby(b) {
+      const d = data();
+      if (!d.battle || d.battle.id !== b.id) return;
+      ui.lobby = b;
+      if (b.status === 'cancelled') {
+        leaveSeat(true);
+        toast('Battle cancelled, entry refunded');
+        renderBattleSetup();
+        return;
+      }
+      if (b.status === 'running') {
+        stopLobbyWatch();
+        playOnline(b);
+        return;
+      }
+      if (!b.players.some((p) => p.id === d.id)) {         // no longer seated
+        leaveSeat(true);
+        renderBattleSetup();
+        return;
+      }
+      if ($('#panel-battles').classList.contains('active')) renderBattles();
+    }
+
+    function playOnline(b) {
+      const d = data();
+      const box = caseById(b.case_id);
+      const mine = b.players.findIndex((p) => p.id === d.id);
+      if (!box || mine < 0) { leaveSeat(true); renderBattleSetup(); return; }
+      if (battle.live && battle.live.online && battle.live.online.id === b.id) return;
+      if (battle.running) {                                  // a solo battle is still playing; start after it
+        setTimeout(() => playOnline(b), 1000);
+        return;
+      }
+      if (!d.battle.counted) { state.opened += b.rounds; d.battle.counted = true; save(); }
+      skew = b.now_ms - Date.now();
+
+      const seats = b.players.map((p) => ({ name: p.name, you: p.id === d.id }));
+      const plan = computeBattle(box, b.rounds, seats.length, b.mode, seededRng(hashString(b.seed + '|' + b.id)));
+      const wait = (b.start_at - skew) - Date.now();
+
+      battle.src = 'online';
+      setTab('battles');
+      beginBattle({ box: box, rounds: b.rounds, mode: b.mode, seats: seats, plan: plan, online: { id: b.id } });
+      if (wait + battleDuration(b.rounds, seats.length) < 0) {  // it already played out while we were away
+        endBattle();
+        return;
+      }
+      SFX.whoosh();
+      const rnd = $('#bt-rnd');
+      const live = battle.live;
+      (function count() {
+        if (battle.live !== live) return;
+        const left = Math.ceil(((b.start_at - skew) - Date.now()) / 1000);
+        if (left > 0) {
+          if (rnd) rnd.textContent = 'Starting in ' + left + '…';
+          SFX.tick();
+          setTimeout(count, Math.min(1000, (b.start_at - skew) - Date.now() - (left - 1) * 1000));
+        } else {
+          runRound();
+        }
+      })();
+    }
+
+    // Called once when an online battle's reels finish (or on reload after it ended).
+    function finishBattle(live) {
+      const key = 'b:' + live.online.id;
+      const d = data();
+      let result;
+      if (isDone(key)) {
+        result = { pool: live.plan.pulls.reduce((acc, l) => acc.concat(l), []), winner: live.players[live.plan.winner] };
+      } else {
+        result = payBattle(live);
+        markDone(key);
+      }
+      if (d.battle && d.battle.id === live.online.id) d.battle = null;
+      ui.lobby = null;
+      save();
+      changed();
+      return result;
+    }
+
+    async function loadLobbies() {
+      if (!enabled()) return;
+      lastLobbies = Date.now();
+      try {
+        const r = await api('GET', '/api/battles');
+        ui.lobbies = r.battles || [];
+      } catch (e) { ui.lobbies = null; }
+      if ($('#panel-battles').classList.contains('active') && battle.src !== 'solo' && !battle.live) renderBattles();
+    }
+
+    function renderBattles() {
+      const host = $('#bt-online');
+      if (!host) return;
+      const d = data();
+      if (!signedIn()) {
+        host.innerHTML = '<div class="card" style="margin-top:18px"><div class="online-note">' + (status === 'banned'
+          ? 'This account is banned from online play.' : status === 'offline'
+          ? 'Can\'t reach the server. You can still battle bots.' : 'Connecting…') + '</div></div>';
+        return;
+      }
+
+      if (d.battle) {
+        const b = ui.lobby;
+        if (!b || b.id !== d.battle.id) {
+          host.innerHTML = '<div class="card"><div class="online-note">Joining…</div></div>';
+          if (d.battle.id && !lobbyTimer) watchLobby();
+          return;
+        }
+        const box = caseById(b.case_id);
+        const creator = b.creator === d.id;
+        let seats = '';
+        for (let i = 0; i < b.max_players; i++) {
+          const p = b.players[i];
+          seats += p ? '<div class="seat' + (p.id === d.id ? ' you' : '') + '">' + escHtml(p.name) + '</div>'
+                     : '<div class="seat open">Waiting…</div>';
+        }
+        host.innerHTML = '<div class="card lobby-card">' +
+          '<h4>' + escHtml(box ? box.name : b.case_id) + '</h4>' +
+          '<p class="hint">' + b.rounds + ' round' + (b.rounds > 1 ? 's' : '') + ' · ' +
+            (b.mode === 'high' ? 'Highest total wins' : 'Lowest total wins') + ' · entry ' +
+            (d.battle.cost ? fmt(d.battle.cost) : 'free') + '</p>' +
+          '<div class="seats">' + seats + '</div>' +
+          '<p class="hint">' + (b.players.length < b.max_players
+            ? 'Starts when every seat is taken.' + (creator ? ' Or start now and bots take the empty seats.' : '')
+            : 'Starting…') + '</p>' +
+          '<div class="row">' +
+            (creator ? '<button class="btn btn-primary" id="lobby-start">Start now</button>' : '') +
+            '<button class="btn btn-ghost" id="lobby-leave">' + (creator ? 'Cancel battle' : 'Leave') + '</button>' +
+          '</div></div>';
+        if (creator) $('#lobby-start').addEventListener('click', () => { SFX.blip(); startNow(); });
+        $('#lobby-leave').addEventListener('click', leaveLobby);
+        return;
+      }
+
+      if (Date.now() - lastLobbies > 3000) loadLobbies();
+      const list = ui.lobbies;
+      let rows;
+      if (list === null) rows = '<div class="online-note">Can\'t reach the server.</div>';
+      else if (!list.length) rows = '<div class="empty" style="padding:24px"><h3>No open battles</h3><p>Create one above.</p></div>';
+      else rows = list.map((b) => {
+        const box = caseById(b.case_id);
+        const cost = box ? box.price * b.rounds : 0;
+        const can = box && b.version === GAME_VERSION && state.coins >= cost && !battle.running;
+        const host = b.players[0] ? b.players[0].name : '';
+        return '<div class="lobby">' +
+          '<span class="mini" style="--rc:' + (box ? box.accent : '#888') + '">' +
+            (box ? artFor({ kind: 'crate', name: box.name, rarity: 'common' }) : '') + '</span>' +
+          '<div><b>' + escHtml(box ? box.name : 'Unknown case') + '</b><span>' + escHtml(host) + ' · ' +
+            b.rounds + ' round' + (b.rounds > 1 ? 's' : '') + ' · ' + (b.mode === 'high' ? 'highest wins' : 'lowest wins') +
+            ' · ' + b.players.length + '/' + b.max_players + ' players</span></div>' +
+          '<div class="cost">' + (cost ? fmt(cost) : 'FREE') + '</div>' +
+          '<button class="btn btn-primary btn-sm" data-join="' + b.id + '"' + (can ? '' : ' disabled') + '>' +
+            (!box || b.version > GAME_VERSION ? 'Update game' : b.version !== GAME_VERSION ? 'Old version'
+              : state.coins < cost ? 'Need coins' : 'Join') + '</button>' +
+        '</div>';
+      }).join('');
+      host.innerHTML = '<div class="card" style="margin-top:18px"><h4>Open battles</h4>' + rows + '</div>';
+      $$('#bt-online [data-join]').forEach((btn) => btn.addEventListener('click', () => {
+        SFX.blip();
+        joinLobby((ui.lobbies || []).find((b) => b.id === btn.dataset.join));
+      }));
+    }
+
+    /* ---------- lifecycle ---------- */
+
+    async function start() {
+      setStatus(enabled() ? 'connecting' : 'off');
+      if (!enabled()) return;
+      renderModCard();
+      if (!state.profile) return;                    // the name gate calls start() again
+      if (!(await ensureRegistered())) { setStatus('offline'); }
+      renderWhoami();
+      pushStats(false);
+      syncTrades();
+      const d = data();
+      if (d.battle && d.battle.id) pollLobby().then(() => { if (data().battle && !lobbyTimer && !battle.live) watchLobby(); });
+      else if (d.battle) leaveSeat(true);              // never got a lobby id: refund
+    }
+
+    let ticks = 0;
+    function tick() {
+      if (!enabled()) return;
+      ticks++;
+      if (!data().token) { if (state.profile && ticks % 6 === 0) ensureRegistered(); return; }
+      if (ticks % 9 === 0) pushStats(false);
+      const tradeTab = tradeOnlineVisible();
+      if (Date.now() - lastTrades > (tradeTab ? 5000 : 20000)) syncTrades();
+      if ($('#panel-battles').classList.contains('active') && battle.src !== 'solo' && !battle.live && !battleBusy()
+          && Date.now() - lastLobbies > 4000) loadLobbies();
+      if ($('#panel-leaderboard').classList.contains('active') && lb.src !== 'codes' && Date.now() - board.at > 60000) {
+        renderLeaderboard();
+      }
+    }
+
+    function renderModCard() {
+      const card = $('#mod-card');
+      if (card) card.style.display = enabled() ? '' : 'none';
+    }
+
+    if (enabled()) {
+      setInterval(tick, 5000);
+      window.addEventListener('pagehide', () => pushStats(true, true));
+    }
+
+    return {
+      enabled: enabled, start: start, signedIn: signedIn, myId: myId, changed: changed,
+      renderBoard: renderBoard, moderate: moderate, renderModCard: renderModCard,
+      renderTradeOnline: renderTradeOnline, search: search, pickPartner: pickPartner,
+      battleBusy: battleBusy, createLobby: createLobby, renderBattles: renderBattles, finishBattle: finishBattle
+    };
+  })();
 
   /* =========================================================
      Wiring
@@ -4997,9 +6051,25 @@
         });
       });
     });
-    $('#bt-start').addEventListener('click', startBattle);
+    $('#bt-start').addEventListener('click', () => {
+      if (online.enabled() && battle.src !== 'solo') online.createLobby();
+      else startBattle();
+    });
+    $$('#bt-src .chip').forEach((c) => c.addEventListener('click', () => {
+      if (battle.running) return;
+      battle.src = c.dataset.src; SFX.blip(); renderBattleSetup();
+    }));
+    $$('#trade-src .chip').forEach((c) => c.addEventListener('click', () => {
+      trade.src = c.dataset.src; SFX.blip(); renderTrade();
+    }));
+    $$('#lb-src .chip').forEach((c) => c.addEventListener('click', () => {
+      lb.src = c.dataset.src; SFX.blip(); renderLeaderboard();
+    }));
+    $('#to-search').addEventListener('input', (e) => online.search(e.target.value.trim()));
+    $('#mod-ban').addEventListener('click', () => online.moderate('ban', $('#mod-id').value));
+    $('#mod-unban').addEventListener('click', () => online.moderate('unban', $('#mod-id').value));
     $('#admin-btn').addEventListener('click', () => { SFX.blip(); setTab('admin'); });
-    $$('#lb-sort .chip').forEach((c) => c.addEventListener('click', () => {
+    $$('#lb-sort [data-sort]').forEach((c) => c.addEventListener('click', () => {
       lb.sort = c.dataset.sort; SFX.blip(); renderLeaderboard();
     }));
     $('#share-stats').addEventListener('click', shareStats);
@@ -5053,6 +6123,7 @@
       if (held) unlockAdmin(held, true);
     } catch (e) { /* ignore */ }
     runSplash();
+    online.start();
   }
 
   init();

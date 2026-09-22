@@ -1,11 +1,11 @@
-name = "case-sim-leaderboard"
+name = "case-sim-server"
 main = "src/worker.js"
 compatibility_date = "2025-06-01"
 
 [[d1_databases]]
 binding = "DB"
-database_name = "case-sim-leaderboard"
-# Paste the id printed by `npx wrangler d1 create case-sim-leaderboard`.
+database_name = "case-sim"
+# Paste the id printed by `npx wrangler d1 create case-sim`.
 database_id = "REPLACE_WITH_YOUR_DATABASE_ID"
 
 [vars]

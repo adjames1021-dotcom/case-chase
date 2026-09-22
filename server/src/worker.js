@@ -1,27 +1,51 @@
 /*
-  Case Opening Sim — global leaderboard.
+  Case Opening Sim — online server.
 
-  POST /api/submit       a player's signed stats snapshot (the same entry the
-                         game puts in trade codes)
-  GET  /api/leaderboard  ?sort=value|best|opened|played&limit=1..200
-  POST /api/admin        a moderation request signed with the admin key
+  A small Cloudflare Worker with a D1 database. It stores players, a trade
+  inbox and battle lobbies, and serves the global leaderboard. It does not
+  run game logic: each player's game rolls its own cases and keeps its own
+  inventory. For battles the server only hands out a random seed and a start
+  time, and every player's game derives the same rolls from that seed.
 
-  Every snapshot is signed by the player's own key and the player id is a
-  hash of that key, so nobody can post as someone else. Players can still
-  overstate their own stats by editing their save: the game runs in the
-  browser, and only moving the game logic onto a server fixes that.
+  Security is deliberately light. A player is identified by a random token
+  issued at registration, which stops casual impersonation, but a player can
+  still edit their own save. That's the intended trade-off for a game among
+  friends; moving rolls and inventories onto the server is the upgrade path.
+
+  Routes (JSON in, JSON out; send the token as "Authorization: Bearer <token>")
+    POST /api/register                 { name } -> { id, name, token }
+    POST /api/stats              auth  { played, opened, best_value, best_item, inv_value, inventory }
+    GET  /api/leaderboard              ?sort=value|best|opened|played&limit=1..200
+    GET  /api/players                  ?q=name   (search, for picking a trade partner)
+    GET  /api/players/:id              public profile and inventory
+    POST /api/trades             auth  { to, give:{items,coins}, want:{items,coins}, message }
+    GET  /api/trades             auth  your recent trades, both directions
+    POST /api/trades/:id/:action auth  accept | decline | cancel | settle
+    POST /api/battles            auth  { case_id, rounds, max_players, mode, version }
+    GET  /api/battles                  open lobbies
+    GET  /api/battles/:id              one battle
+    POST /api/battles/:id/:action auth join | leave | start
+    POST /api/admin                    moderation, signed with the game's admin key
 */
 
 const NAME_RE = /^[A-Za-z0-9_-]{3,16}$/;
-const KEY_RE = /^[A-Za-z0-9_-]{43}$/;
 const ECDSA = { name: 'ECDSA', namedCurve: 'P-256' };
 const SIGN = { name: 'ECDSA', hash: 'SHA-256' };
 const SORT_COLUMNS = { value: 'inv_value', best: 'best_value', opened: 'opened', played: 'played' };
-const MIN_INTERVAL = 10;        // seconds between accepted updates from one player
-const CLOCK_SKEW = 300;         // how far ahead of our clock a snapshot may be
-const MAX_BODY = 4096;
+
+const STATS_INTERVAL = 10;          // s between accepted stats updates per player
+const LOBBY_TTL = 15 * 60;          // s an unfilled battle lobby stays open
+const START_DELAY_MS = 4000;        // lead time so every player starts the battle together
+const MAX_PENDING_TRADES = 20;      // outgoing pending offers per player
+const MAX_TRADE_ITEMS = 20;
+const MAX_INVENTORY = 500;
+const MAX_BODY = 64 * 1024;
+const MAX_COINS = 1e12;
 
 const utf8 = new TextEncoder();
+const nowS = () => Math.floor(Date.now() / 1000);
+
+/* ---------- helpers ---------- */
 
 function b64u(bytes) {
   let bin = '';
@@ -39,35 +63,16 @@ function unb64u(str) {
   return out;
 }
 
-async function idForKey(x, y) {
-  const digest = new Uint8Array(await crypto.subtle.digest('SHA-256', utf8.encode(x + '.' + y)));
-  return b64u(digest.slice(0, 8));
-}
+const randomId = (bytes) => b64u(crypto.getRandomValues(new Uint8Array(bytes || 9)));
 
-// Must match entryBody() in the game exactly, or signatures won't verify.
-const entryBody = (e) => JSON.stringify([e.n, e.i, e.t, e.s, e.k]);
-
-async function verifyEntry(e) {
-  try {
-    if (!e || typeof e !== 'object' || !NAME_RE.test(e.n) || typeof e.i !== 'string') return false;
-    if (!Number.isInteger(e.t) || e.t <= 0) return false;
-    if (!Array.isArray(e.s) || e.s.length !== 5) return false;
-    if (e.s.some((v, i) => !Number.isInteger(v) || v < (i === 3 ? -1 : 0) || v > 1e13)) return false;
-    if (!Array.isArray(e.k) || e.k.length !== 2 || !e.k.every((v) => KEY_RE.test(v))) return false;
-    if (typeof e.g !== 'string') return false;
-    if ((await idForKey(e.k[0], e.k[1])) !== e.i) return false;
-    const key = await crypto.subtle.importKey('jwk',
-      { kty: 'EC', crv: 'P-256', x: e.k[0], y: e.k[1], ext: true }, ECDSA, false, ['verify']);
-    return await crypto.subtle.verify(SIGN, key, unb64u(e.g), utf8.encode(entryBody(e)));
-  } catch (err) {
-    return false;
-  }
+async function hashToken(token) {
+  return b64u(new Uint8Array(await crypto.subtle.digest('SHA-256', utf8.encode('token:' + token))));
 }
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
   'Access-Control-Max-Age': '86400'
 };
 
@@ -78,100 +83,315 @@ function json(data, status, extra) {
   });
 }
 
-async function readJson(request) {
+const fail = (status, error) => json({ error: error }, status);
+
+async function body(request) {
   const text = await request.text();
   if (text.length > MAX_BODY) throw new Error('too large');
-  return JSON.parse(text);
+  return text ? JSON.parse(text) : {};
 }
 
-async function submit(request, env) {
-  let e;
-  try { e = await readJson(request); } catch (err) { return json({ error: 'bad request' }, 400); }
-  if (!(await verifyEntry(e))) return json({ error: 'bad signature' }, 400);
+const isInt = (v, lo, hi) => Number.isInteger(v) && v >= lo && v <= hi;
 
-  const now = Math.floor(Date.now() / 1000);
-  if (e.t > now + CLOCK_SKEW) return json({ error: 'clock ahead' }, 400);
+// An item as the game sends it: [uid, table index, wear 0-5, float x10000, tracker 0/1]
+const validItem = (t) => Array.isArray(t) && t.length === 5 &&
+  isInt(t[0], 0, 1e12) && isInt(t[1], 0, 9999) && isInt(t[2], 0, 5) && isInt(t[3], 0, 10000) && isInt(t[4], 0, 1);
 
-  const row = await env.DB.prepare('SELECT t, updated_at, banned FROM players WHERE id = ?').bind(e.i).first();
-  if (row) {
-    if (row.banned) return json({ ok: true });                       // accepted, quietly ignored
-    if (e.t <= row.t) return json({ ok: true, stale: true });        // older than what we hold
-    if (now - row.updated_at < MIN_INTERVAL) return json({ error: 'slow down' }, 429);
+function validBundle(b, maxItems) {
+  if (!b || typeof b !== 'object') return { items: [], coins: 0 };
+  const items = Array.isArray(b.items) ? b.items : [];
+  const coins = b.coins == null ? 0 : b.coins;
+  if (items.length > maxItems || !items.every(validItem) || !isInt(coins, 0, MAX_COINS)) return null;
+  return { items: items, coins: coins };
+}
+
+async function authed(request, env) {
+  const m = /^Bearer ([A-Za-z0-9_-]{20,64})$/.exec(request.headers.get('Authorization') || '');
+  if (!m) return null;
+  const p = await env.DB.prepare('SELECT id, name, banned, last_seen FROM players WHERE token_hash = ?')
+    .bind(await hashToken(m[1])).first();
+  if (!p) return null;
+  if (p.banned) return { banned: true };
+  const t = nowS();
+  if (t - p.last_seen > 60) {           // one write a minute is plenty for "online" dots
+    await env.DB.prepare('UPDATE players SET last_seen = ? WHERE id = ?').bind(t, p.id).run();
   }
+  return p;
+}
 
+/* ---------- players ---------- */
+
+async function register(request, env) {
+  const b = await body(request);
+  const name = String(b.name || '').trim();
+  if (!NAME_RE.test(name)) return fail(400, 'bad name');
+  const id = randomId(9), token = randomId(24), t = nowS();
   await env.DB.prepare(
-    `INSERT INTO players (id, name, t, played, opened, best_value, best_item, inv_value, entry, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-     ON CONFLICT(id) DO UPDATE SET
-       name = excluded.name, t = excluded.t, played = excluded.played, opened = excluded.opened,
-       best_value = excluded.best_value, best_item = excluded.best_item, inv_value = excluded.inv_value,
-       entry = excluded.entry, updated_at = excluded.updated_at
-     WHERE players.banned = 0 AND excluded.t > players.t`
-  ).bind(e.i, e.n, e.t, e.s[0], e.s[1], e.s[2], e.s[3], e.s[4], JSON.stringify(e), now).run();
+    'INSERT INTO players (id, name, name_lower, token_hash, created_at, last_seen) VALUES (?, ?, ?, ?, ?, ?)'
+  ).bind(id, name, name.toLowerCase(), await hashToken(token), t, t).run();
+  return json({ id: id, name: name, token: token });
+}
 
+async function stats(request, env, me) {
+  const b = await body(request);
+  const nums = [b.played, b.opened, b.best_value, b.inv_value];
+  if (!nums.every((v) => isInt(v, 0, 1e13)) || !isInt(b.best_item, -1, 9999)) return fail(400, 'bad stats');
+  const inv = Array.isArray(b.inventory) ? b.inventory : [];
+  if (inv.length > MAX_INVENTORY || !inv.every(validItem)) return fail(400, 'bad inventory');
+
+  const row = await env.DB.prepare('SELECT stats_at FROM players WHERE id = ?').bind(me.id).first();
+  const t = nowS();
+  if (row && t - row.stats_at < STATS_INTERVAL) return fail(429, 'slow down');
+  await env.DB.prepare(
+    `UPDATE players SET played = ?, opened = ?, best_value = ?, best_item = ?, inv_value = ?,
+       inventory = ?, stats_at = ?, last_seen = ? WHERE id = ?`
+  ).bind(b.played, b.opened, b.best_value, b.best_item, b.inv_value, JSON.stringify(inv), t, t, me.id).run();
   return json({ ok: true });
 }
 
 async function leaderboard(url, env) {
-  const column = SORT_COLUMNS[url.searchParams.get('sort')] || 'inv_value';   // whitelisted, safe to inline
+  const column = SORT_COLUMNS[url.searchParams.get('sort')] || 'inv_value';   // whitelisted
   const limit = Math.min(200, Math.max(1, parseInt(url.searchParams.get('limit'), 10) || 100));
   const { results } = await env.DB.prepare(
-    `SELECT id, name, t, played, opened, best_value, best_item, inv_value
-       FROM players WHERE banned = 0
-      ORDER BY ${column} DESC, t DESC LIMIT ?`
+    `SELECT id, name, played, opened, best_value, best_item, inv_value, stats_at, last_seen
+       FROM players WHERE banned = 0 AND stats_at > 0
+      ORDER BY ${column} DESC, stats_at DESC LIMIT ?`
   ).bind(limit).all();
-  return json({ players: results, now: Math.floor(Date.now() / 1000) }, 200,
-    { 'Cache-Control': 'public, max-age=10' });
+  return json({ players: results, now: nowS() }, 200, { 'Cache-Control': 'public, max-age=10' });
 }
 
-// Moderation: { p: '{"a":"remove"|"restore","id":"...","ts":123}', g: signature }
-async function admin(request, env) {
-  let body, payload;
-  try {
-    body = await readJson(request);
-    payload = JSON.parse(body.p);
-  } catch (err) { return json({ error: 'bad request' }, 400); }
+async function searchPlayers(url, env) {
+  const q = String(url.searchParams.get('q') || '').toLowerCase().replace(/[^a-z0-9_-]/g, '').slice(0, 16);
+  const stmt = q
+    ? env.DB.prepare(`SELECT id, name, last_seen, inv_value FROM players
+                       WHERE banned = 0 AND name_lower LIKE ? ORDER BY last_seen DESC LIMIT 20`).bind(q + '%')
+    : env.DB.prepare(`SELECT id, name, last_seen, inv_value FROM players
+                       WHERE banned = 0 ORDER BY last_seen DESC LIMIT 20`);
+  const { results } = await stmt.all();
+  return json({ players: results, now: nowS() });
+}
 
+async function playerProfile(id, env) {
+  const p = await env.DB.prepare(
+    `SELECT id, name, last_seen, inv_value, inventory FROM players WHERE id = ? AND banned = 0`
+  ).bind(id).first();
+  if (!p) return fail(404, 'no such player');
+  return json({ id: p.id, name: p.name, last_seen: p.last_seen, inv_value: p.inv_value,
+                inventory: JSON.parse(p.inventory || '[]'), now: nowS() });
+}
+
+/* ---------- trades ----------
+   The sender's game removes the offered items when the offer is made; the
+   server holds the description until it resolves. Each side then applies its
+   own half and calls "settle", which is what stops either side applying twice. */
+
+async function createTrade(request, env, me) {
+  const b = await body(request);
+  const give = validBundle(b.give, MAX_TRADE_ITEMS);
+  const want = validBundle(b.want, MAX_TRADE_ITEMS);
+  if (!give || !want) return fail(400, 'bad offer');
+  if (!give.items.length && !give.coins && !want.items.length && !want.coins) return fail(400, 'empty offer');
+  if (typeof b.to !== 'string' || b.to === me.id) return fail(400, 'bad recipient');
+  const to = await env.DB.prepare('SELECT id FROM players WHERE id = ? AND banned = 0').bind(b.to).first();
+  if (!to) return fail(404, 'no such player');
+  const pending = await env.DB.prepare(
+    `SELECT COUNT(*) AS n FROM trades WHERE from_id = ? AND status = 'pending'`).bind(me.id).first();
+  if (pending.n >= MAX_PENDING_TRADES) return fail(429, 'too many open offers');
+
+  const id = randomId(9), t = nowS();
+  const message = String(b.message || '').slice(0, 120);
+  await env.DB.prepare(
+    `INSERT INTO trades (id, from_id, to_id, give, want, message, status, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, 'pending', ?, ?)`
+  ).bind(id, me.id, b.to, JSON.stringify(give), JSON.stringify(want), message, t, t).run();
+  return json({ ok: true, id: id });
+}
+
+async function listTrades(env, me) {
+  const { results } = await env.DB.prepare(
+    `SELECT t.*, f.name AS from_name, r.name AS to_name
+       FROM trades t
+       JOIN players f ON f.id = t.from_id
+       JOIN players r ON r.id = t.to_id
+      WHERE t.from_id = ? OR t.to_id = ?
+      ORDER BY t.updated_at DESC LIMIT 60`
+  ).bind(me.id, me.id).all();
+  return json({
+    now: nowS(),
+    trades: results.map((r) => ({
+      id: r.id, from: r.from_id, from_name: r.from_name, to: r.to_id, to_name: r.to_name,
+      give: JSON.parse(r.give), want: JSON.parse(r.want), message: r.message, status: r.status,
+      from_settled: !!r.from_settled, to_settled: !!r.to_settled,
+      created_at: r.created_at, updated_at: r.updated_at
+    }))
+  });
+}
+
+async function tradeAction(id, action, env, me) {
+  const t = nowS();
+  const run = (sql, ...args) => env.DB.prepare(sql).bind(...args).run();
+  let res;
+  if (action === 'accept' || action === 'decline') {
+    res = await run(`UPDATE trades SET status = ?, updated_at = ? WHERE id = ? AND to_id = ? AND status = 'pending'`,
+      action === 'accept' ? 'accepted' : 'declined', t, id, me.id);
+  } else if (action === 'cancel') {
+    res = await run(`UPDATE trades SET status = 'cancelled', updated_at = ? WHERE id = ? AND from_id = ? AND status = 'pending'`,
+      t, id, me.id);
+  } else if (action === 'settle') {
+    res = await run(
+      `UPDATE trades SET
+         from_settled = CASE WHEN from_id = ? THEN 1 ELSE from_settled END,
+         to_settled   = CASE WHEN to_id   = ? THEN 1 ELSE to_settled END
+       WHERE id = ? AND status != 'pending' AND (from_id = ? OR to_id = ?)`, me.id, me.id, id, me.id, me.id);
+  } else {
+    return fail(404, 'unknown action');
+  }
+  if (!res.meta || !res.meta.changes) return fail(409, 'trade is not in that state');
+  return json({ ok: true });
+}
+
+/* ---------- battles ---------- */
+
+const battleOut = (b) => ({
+  id: b.id, creator: b.creator, case_id: b.case_id, rounds: b.rounds, max_players: b.max_players,
+  mode: b.mode, version: b.version, players: JSON.parse(b.players), status: b.status,
+  seed: b.seed, start_at: b.start_at, created_at: b.created_at, now_ms: Date.now()
+});
+
+async function expireLobbies(env) {
+  await env.DB.prepare(`UPDATE battles SET status = 'cancelled', updated_at = ?
+                         WHERE status = 'open' AND created_at < ?`).bind(nowS(), nowS() - LOBBY_TTL).run();
+}
+
+async function createBattle(request, env, me) {
+  const b = await body(request);
+  if (typeof b.case_id !== 'string' || !/^[a-z0-9_-]{1,24}$/.test(b.case_id)) return fail(400, 'bad case');
+  if (!isInt(b.rounds, 1, 10) || !isInt(b.max_players, 2, 4) || !isInt(b.version, 1, 1e6)) return fail(400, 'bad settings');
+  if (b.mode !== 'high' && b.mode !== 'low') return fail(400, 'bad mode');
+
+  // One open lobby per creator.
+  await env.DB.prepare(`UPDATE battles SET status = 'cancelled', updated_at = ? WHERE creator = ? AND status = 'open'`)
+    .bind(nowS(), me.id).run();
+  const id = randomId(9), t = nowS();
+  await env.DB.prepare(
+    `INSERT INTO battles (id, creator, case_id, rounds, max_players, mode, version, players, status, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'open', ?, ?)`
+  ).bind(id, me.id, b.case_id, b.rounds, b.max_players, b.mode, b.version,
+         JSON.stringify([{ id: me.id, name: me.name }]), t, t).run();
+  return json(battleOut(await env.DB.prepare('SELECT * FROM battles WHERE id = ?').bind(id).first()));
+}
+
+async function listBattles(env) {
+  await expireLobbies(env);
+  const { results } = await env.DB.prepare(
+    `SELECT * FROM battles WHERE status = 'open' ORDER BY created_at DESC LIMIT 30`).all();
+  return json({ battles: results.map(battleOut), now_ms: Date.now() });
+}
+
+async function getBattle(id, env) {
+  await expireLobbies(env);
+  const b = await env.DB.prepare('SELECT * FROM battles WHERE id = ?').bind(id).first();
+  return b ? json(battleOut(b)) : fail(404, 'no such battle');
+}
+
+// Read-modify-write guarded by a revision counter, so two joins can't both take the last seat.
+async function battleAction(id, action, request, env, me) {
+  const req = await body(request);
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const b = await env.DB.prepare('SELECT * FROM battles WHERE id = ?').bind(id).first();
+    if (!b) return fail(404, 'no such battle');
+    if (b.status !== 'open') return fail(409, 'battle already ' + b.status);
+    const players = JSON.parse(b.players);
+    const seated = players.some((p) => p.id === me.id);
+    let status = 'open', seed = null, startAt = null;
+
+    if (action === 'join') {
+      if (seated) return json(battleOut(b));
+      if (req.version !== b.version) return fail(409, 'different game version');
+      if (players.length >= b.max_players) return fail(409, 'battle is full');
+      players.push({ id: me.id, name: me.name });
+    } else if (action === 'leave') {
+      if (!seated) return fail(409, 'not in this battle');
+      if (b.creator === me.id) status = 'cancelled';
+      else players.splice(players.findIndex((p) => p.id === me.id), 1);
+    } else if (action === 'start') {
+      if (b.creator !== me.id) return fail(403, 'only the creator can start');
+      for (let n = 1; players.length < b.max_players; n++) {
+        players.push({ id: 'bot:' + n, name: 'Bot ' + n, bot: true });
+      }
+    } else {
+      return fail(404, 'unknown action');
+    }
+
+    if (status === 'open' && players.length >= b.max_players) {
+      status = 'running';
+      seed = randomId(16);
+      startAt = Date.now() + START_DELAY_MS;
+    }
+
+    const res = await env.DB.prepare(
+      `UPDATE battles SET players = ?, status = ?, seed = COALESCE(?, seed), start_at = COALESCE(?, start_at),
+              updated_at = ?, rev = rev + 1
+        WHERE id = ? AND rev = ? AND status = 'open'`
+    ).bind(JSON.stringify(players), status, seed, startAt, nowS(), id, b.rev).run();
+    if (res.meta && res.meta.changes) {
+      return json(battleOut(await env.DB.prepare('SELECT * FROM battles WHERE id = ?').bind(id).first()));
+    }
+  }
+  return fail(409, 'busy, try again');
+}
+
+/* ---------- moderation ----------
+   { p: '{"a":"ban"|"unban","id":"...","ts":123}', g: signature from the admin key } */
+
+async function admin(request, env) {
+  let b, p;
+  try { b = await body(request); p = JSON.parse(b.p); } catch (e) { return fail(400, 'bad request'); }
   let genuine = false;
   try {
     const key = await crypto.subtle.importKey('jwk',
       { kty: 'EC', crv: 'P-256', x: env.ADMIN_X, y: env.ADMIN_Y, ext: true }, ECDSA, false, ['verify']);
-    genuine = await crypto.subtle.verify(SIGN, key, unb64u(body.g), utf8.encode(body.p));
-  } catch (err) { genuine = false; }
-  if (!genuine) return json({ error: 'not admin' }, 403);
-
-  const now = Math.floor(Date.now() / 1000);
-  if (!Number.isInteger(payload.ts) || Math.abs(now - payload.ts) > CLOCK_SKEW) {
-    return json({ error: 'expired request' }, 400);
-  }
-  if (typeof payload.id !== 'string' || payload.id.length > 32) return json({ error: 'bad id' }, 400);
-  if (payload.a !== 'remove' && payload.a !== 'restore') return json({ error: 'bad action' }, 400);
-
-  const banned = payload.a === 'remove' ? 1 : 0;
-  const res = await env.DB.prepare('UPDATE players SET banned = ? WHERE id = ?').bind(banned, payload.id).run();
-  if (!res.meta || !res.meta.changes) {
-    // Ban ids we haven't seen yet too, so they can't appear later.
-    if (banned) {
-      await env.DB.prepare(
-        `INSERT OR IGNORE INTO players (id, name, t, entry, updated_at, banned) VALUES (?, 'removed', 0, '{}', ?, 1)`
-      ).bind(payload.id, now).run();
-    }
-  }
-  return json({ ok: true, action: payload.a, id: payload.id });
+    genuine = await crypto.subtle.verify(SIGN, key, unb64u(b.g), utf8.encode(b.p));
+  } catch (e) { genuine = false; }
+  if (!genuine) return fail(403, 'not admin');
+  if (!isInt(p.ts, 0, 1e12) || Math.abs(nowS() - p.ts) > 300) return fail(400, 'expired request');
+  if (typeof p.id !== 'string' || (p.a !== 'ban' && p.a !== 'unban')) return fail(400, 'bad request');
+  await env.DB.prepare('UPDATE players SET banned = ? WHERE id = ?').bind(p.a === 'ban' ? 1 : 0, p.id).run();
+  return json({ ok: true });
 }
+
+/* ---------- router ---------- */
 
 export default {
   async fetch(request, env) {
-    const url = new URL(request.url);
     if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: CORS });
+    const url = new URL(request.url);
+    const parts = url.pathname.replace(/\/+$/, '').split('/').slice(1);   // ['api', ...]
+    const method = request.method;
     try {
-      if (url.pathname === '/api/leaderboard' && request.method === 'GET') return await leaderboard(url, env);
-      if (url.pathname === '/api/submit' && request.method === 'POST') return await submit(request, env);
-      if (url.pathname === '/api/admin' && request.method === 'POST') return await admin(request, env);
-      if (url.pathname === '/') return json({ ok: true, service: 'case-sim-leaderboard' });
-      return json({ error: 'not found' }, 404);
+      if (!parts.length || parts[0] !== 'api') return json({ ok: true, service: 'case-sim-server' });
+      const [, a, b, c] = parts;
+
+      if (method === 'POST' && a === 'register') return await register(request, env);
+      if (method === 'GET' && a === 'leaderboard') return await leaderboard(url, env);
+      if (method === 'GET' && a === 'players' && !b) return await searchPlayers(url, env);
+      if (method === 'GET' && a === 'players' && b) return await playerProfile(b, env);
+      if (method === 'GET' && a === 'battles' && !b) return await listBattles(env);
+      if (method === 'GET' && a === 'battles' && b) return await getBattle(b, env);
+      if (method === 'POST' && a === 'admin') return await admin(request, env);
+
+      const me = await authed(request, env);
+      if (!me) return fail(401, 'not signed in');
+      if (me.banned) return fail(403, 'banned');
+      if (method === 'POST' && a === 'stats') return await stats(request, env, me);
+      if (method === 'POST' && a === 'trades' && !b) return await createTrade(request, env, me);
+      if (method === 'GET' && a === 'trades') return await listTrades(env, me);
+      if (method === 'POST' && a === 'trades' && b && c) return await tradeAction(b, c, env, me);
+      if (method === 'POST' && a === 'battles' && !b) return await createBattle(request, env, me);
+      if (method === 'POST' && a === 'battles' && b && c) return await battleAction(b, c, request, env, me);
+      return fail(404, 'not found');
     } catch (err) {
-      return json({ error: 'server error' }, 500);
+      return fail(500, 'server error');
     }
   }
 };
