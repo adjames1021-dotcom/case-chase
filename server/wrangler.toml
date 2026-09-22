@@ -1,12 +1,14 @@
 name = "case-sim-server"
 main = "src/worker.js"
+# Your Cloudflare account. Not a secret: it only works together with a login or API token.
+account_id = "c4b9d3250d966ac6efadd0db7204459c"
 compatibility_date = "2025-06-01"
 
 [[d1_databases]]
 binding = "DB"
 database_name = "case-sim"
-# Paste the id printed by `npx wrangler d1 create case-sim`.
-database_id = "REPLACE_WITH_YOUR_DATABASE_ID"
+# Printed by `npx wrangler d1 create case-sim`.
+database_id = "8bb7c3c1-5849-48f4-9f5b-35e5a8fba6a3"
 
 [vars]
 # Public half of the admin key, the same one the game carries. It lets the

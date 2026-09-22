@@ -1,120 +1,37 @@
 # Case Sim online server
 
-This folder is the backend for online play. It turns on three things in the game:
+The backend for online play: the global leaderboard, direct trades and online case battles. It's a Cloudflare Worker (`src/worker.js`) with a D1 database (`schema.sql`), both on Cloudflare's free plan.
 
-- **Global leaderboard.** Every online player, ranked by inventory value, best drop, cases opened or time played.
-- **Direct trades.** Find a player, pick items from both inventories, add coins and a message, and send an offer. They accept or decline from their Trade tab.
-- **Online case battles.** Create a lobby and other players join it. If you don't want to wait, start early and bots fill the empty seats. Everyone watches the same rolls at the same time.
+- **Live at:** https://case-sim-server.caseopeningsim.workers.dev
+- **Database:** `case-sim` (its id is in `wrangler.toml`)
+- **Game setting:** `SERVER_URL` in `site/index.html` points here
 
-It runs on Cloudflare's free tier as one Worker (a small server script) plus one D1 database (SQLite). You don't need a credit card for it.
+It deploys automatically when `server/` changes on `main` (see the main [README](../README.md)). If `schema.sql` changed, its tables are updated first. The game works offline if the server can't be reached.
 
-If you never set it up, the game still works offline, with trade codes, bot battles and the leaderboard that travels in codes.
-
----
-
-## What you need
-
-- A free Cloudflare account: <https://dash.cloudflare.com/sign-up>
-- Node.js 18 or newer: <https://nodejs.org> (the LTS installer is fine)
-- A terminal open in this `server` folder
-
-## Setup (about 10 minutes)
-
-### 1. Install the tools
+## Deploying by hand
 
 ```bash
 cd server
 npm install
-```
-
-This installs `wrangler`, Cloudflare's command-line tool, into this folder.
-
-### 2. Log in to Cloudflare
-
-```bash
 npx wrangler login
-```
-
-A browser window opens. Click **Allow**.
-
-### 3. Create the database
-
-```bash
-npx wrangler d1 create case-sim
-```
-
-The output includes something like:
-
-```toml
-[[d1_databases]]
-binding = "DB"
-database_name = "case-sim"
-database_id = "0f1e2d3c-aaaa-bbbb-cccc-1234567890ab"
-```
-
-Copy the `database_id` value and paste it into `wrangler.toml` in place of `REPLACE_WITH_YOUR_DATABASE_ID`.
-
-### 4. Create the tables
-
-```bash
-npm run db:init
-```
-
-(This runs `wrangler d1 execute case-sim --remote --file schema.sql`. It's safe to run again later.)
-
-### 5. Deploy the server
-
-```bash
+npm run db:init      # only needed when schema.sql changed; safe to repeat
 npm run deploy
 ```
 
-At the end it prints your server's address:
-
-```
-https://case-sim-server.<your-name>.workers.dev
-```
-
-Open that address in a browser. You should see `{"ok":true,"service":"case-sim-server"}`.
-
-### 6. Point the game at it
-
-Open `case-opening-sim.html` in a text editor, search for `SERVER_URL`, and paste your address:
-
-```js
-const SERVER_URL = 'https://case-sim-server.<your-name>.workers.dev';
-```
-
-Save the file and reload the game. A green dot next to your name in the top bar means you're connected. Trade, Battles and Ranks now open on their **Online** views. The **Codes** and **Vs bots** views still work as before.
-
-### 7. Share the game
-
-Everyone has to play the **same copy** of the HTML file, with `SERVER_URL` set. Two ways to do that:
-
-- **Send the file.** It runs straight from disk (double-click it). Send the edited `case-opening-sim.html` to your friends.
-- **Host it (recommended).** Then everyone just opens a link. Free options:
-  - **Cloudflare Pages:** in the dashboard go to *Workers & Pages → Create → Pages → Upload assets*. Upload a folder that holds the game renamed to `index.html` (plus `assets/` if you use an image pack). You get a `https://<name>.pages.dev` link.
-  - **GitHub Pages:** in the repo, open *Settings → Pages* and choose the branch. This only works if the repo is public, or on a paid GitHub plan.
-
-The server accepts requests from any page (CORS `*`), so both options, and plain files, work with no extra settings.
-
----
-
-## Trying it locally first (optional)
-
-You can run the whole thing on your own computer before you deploy:
+## Running it locally
 
 ```bash
+cd server
 npm run db:init:local
-npm run dev
+npm run dev          # http://127.0.0.1:8787
 ```
 
-The server runs at `http://127.0.0.1:8787`. Set `SERVER_URL` to that address and open the game in two different browsers, or one normal window and one private window, to play against yourself.
+To use the local server, change `SERVER_URL` in a **copy** of `site/index.html` to `http://127.0.0.1:8787`. Then open that copy in two different browsers (or a normal and a private window) to play against yourself. Don't commit that change: the pre-deploy checks refuse any `SERVER_URL` that isn't `https://`.
 
-## Updating
+## Starting from scratch on a new Cloudflare account
 
-- **Server code changed?** Run `npm run deploy` again. Players' data stays.
-- **Schema changed?** Run `npm run db:init` again. It only adds what's missing.
-- **Game changed?** Replace the HTML file you share or host. When you change how items roll or which cases exist, bump `GAME_VERSION` in the game. Battles only match players on the same version, so rolls always line up, and older games are told to update.
+1. `npx wrangler d1 create case-sim`, then put the printed `database_id` in `wrangler.toml`. Also set `account_id` there, and in `.github/workflows/deploy.yml`.
+2. `npm run db:init`, then `npm run deploy`. Put the address it prints into `SERVER_URL` in `site/index.html`, and into the last step of the workflow.
 
 ## Moderation
 

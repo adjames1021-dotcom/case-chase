@@ -1,0 +1,108 @@
+# Every push to main is checked, then deployed to Cloudflare:
+#   site/    -> https://case-sim.pages.dev
+#   server/  -> https://case-sim-server.caseopeningsim.workers.dev
+# If a check fails, nothing is deployed and the live site keeps running the
+# last good version.
+#
+# Needs one repository secret, CLOUDFLARE_API_TOKEN (see README.md). Without
+# it the checks still run and the deploy steps are skipped.
+
+name: Check and deploy
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:        # "Run workflow" button: redeploys everything
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy
+  cancel-in-progress: false
+
+env:
+  CLOUDFLARE_ACCOUNT_ID: c4b9d3250d966ac6efadd0db7204459c
+  PAGES_PROJECT: case-sim
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Check game and server files
+        run: node scripts/check.mjs
+      - name: Install a test browser
+        run: |
+          npm install --no-save --no-package-lock playwright@1
+          npx playwright install --with-deps chromium
+      - name: Play the game in a headless browser
+        run: node scripts/smoke.mjs
+
+  deploy:
+    needs: check
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Work out what changed
+        id: plan
+        env:
+          TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          BEFORE: ${{ github.event.before }}
+        run: |
+          if [ -z "$TOKEN" ]; then
+            echo "::warning::CLOUDFLARE_API_TOKEN is not set, so nothing was deployed. See README.md."
+            echo "token=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          echo "token=true" >> "$GITHUB_OUTPUT"
+          if [ "${{ github.event_name }}" != "push" ] || ! git cat-file -e "$BEFORE^{commit}" 2>/dev/null; then
+            echo "site=true" >> "$GITHUB_OUTPUT"
+            echo "server=true" >> "$GITHUB_OUTPUT"
+            echo "schema=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          changed=$(git diff --name-only "$BEFORE" "$GITHUB_SHA")
+          echo "$changed"
+          echo "site=$(echo "$changed" | grep -q '^site/' && echo true || echo false)" >> "$GITHUB_OUTPUT"
+          echo "server=$(echo "$changed" | grep -q '^server/' && echo true || echo false)" >> "$GITHUB_OUTPUT"
+          echo "schema=$(echo "$changed" | grep -q '^server/schema.sql$' && echo true || echo false)" >> "$GITHUB_OUTPUT"
+
+      # Server first, so a new game version never talks to an old server.
+      - name: Update database tables
+        if: steps.plan.outputs.schema == 'true'
+        working-directory: server
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: npx --yes wrangler@4 d1 execute case-sim --remote --file schema.sql --yes
+
+      - name: Deploy server
+        if: steps.plan.outputs.server == 'true'
+        working-directory: server
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: npx --yes wrangler@4 deploy
+
+      - name: Deploy game
+        if: steps.plan.outputs.site == 'true'
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: npx --yes wrangler@4 pages deploy site --project-name "$PAGES_PROJECT" --branch main --commit-dirty=true
+
+      - name: Confirm the live site answers
+        if: steps.plan.outputs.token == 'true'
+        run: |
+          sleep 5
+          curl -fsS https://case-sim-server.caseopeningsim.workers.dev/ && echo
+          curl -fsS -o /dev/null -w "game: HTTP %{http_code}\n" https://case-sim.pages.dev/

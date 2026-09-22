@@ -13,7 +13,7 @@ window.CASE_SIM_IMAGES = {
 
 The key is the item's exact name as it appears in the game. Any item you
 don't list keeps its built-in art, so you can convert as few or as many as
-you like. Paths are relative to `case-opening-sim.html`, and absolute URLs
+you like. Paths are relative to `site/index.html`, and absolute URLs
 work too.
 
 Transparent PNGs at roughly 2.5:1 (for example 640x256) match the layout
