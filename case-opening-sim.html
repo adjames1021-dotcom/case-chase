@@ -1,0 +1,2203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Case Opening Sim</title>
+<style>
+  :root {
+    --bg: #f2efe9;
+    --surface: #ffffff;
+    --surface-2: #faf8f4;
+    --surface-3: #ece8e0;
+    --line: #e2dcd1;
+    --line-strong: #cec7b9;
+    --ink: #171614;
+    --ink-2: #635c51;
+    --ink-3: #9a9286;
+    --orange: #f26a1b;
+    --orange-dark: #c6520c;
+    --orange-soft: #fdeee2;
+
+    --common: #93a0ad;
+    --uncommon: #4f9b5e;
+    --rare: #3b7fd4;
+    --epic: #8b46d6;
+    --legendary: #dd8a12;
+    --mythic: #d2373c;
+
+    --shadow-sm: 0 1px 2px rgba(30,24,16,.07);
+    --shadow: 0 6px 22px rgba(30,24,16,.10);
+    --shadow-lg: 0 24px 60px rgba(30,24,16,.22);
+
+    --cond: 'Oswald', 'Roboto Condensed', 'Arial Narrow', 'Segoe UI', sans-serif;
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    margin: 0; padding: 0; min-height: 100%;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  body {
+    background-image:
+      radial-gradient(circle at 10% -8%, rgba(242,106,27,.08), transparent 45%),
+      radial-gradient(circle at 95% -2%, rgba(59,127,212,.05), transparent 40%);
+    background-attachment: fixed;
+  }
+  button { font-family: inherit; }
+
+  /* Counter-Strike style section label */
+  .label {
+    font-family: var(--cond);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 1.6px;
+    text-transform: uppercase;
+    color: var(--ink-3);
+  }
+
+  /* ---------- Header ---------- */
+  header {
+    position: sticky; top: 0; z-index: 40;
+    background: rgba(242,239,233,.92);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--line);
+  }
+  .header-inner {
+    max-width: 1220px; margin: 0 auto;
+    padding: 13px 22px;
+    display: flex; align-items: center; gap: 16px;
+  }
+  .brand { display: flex; align-items: center; gap: 11px; margin-right: auto; }
+  .brand-mark {
+    width: 34px; height: 34px;
+    background: linear-gradient(140deg, var(--orange), var(--orange-dark));
+    clip-path: polygon(22% 0, 100% 0, 100% 78%, 78% 100%, 0 100%, 0 22%);
+    display: grid; place-items: center;
+    box-shadow: 0 4px 12px rgba(242,106,27,.34);
+  }
+  .brand-mark svg { width: 19px; height: 19px; }
+  .brand h1 {
+    margin: 0; font-family: var(--cond);
+    font-size: 19px; font-weight: 700;
+    letter-spacing: 2.4px; text-transform: uppercase;
+  }
+  .brand small {
+    display: block; font-size: 9.5px; font-weight: 700;
+    letter-spacing: 2.2px; text-transform: uppercase; color: var(--ink-3);
+  }
+
+  .balance {
+    display: flex; align-items: baseline; gap: 7px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    clip-path: polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px);
+    padding: 10px 17px;
+    box-shadow: var(--shadow-sm);
+  }
+  .balance b { font-size: 18px; font-weight: 800; font-variant-numeric: tabular-nums; }
+  .balance i {
+    font-style: normal; font-family: var(--cond);
+    font-size: 10px; font-weight: 700; letter-spacing: 1.4px;
+    color: var(--orange); text-transform: uppercase;
+  }
+  .balance.bump b { animation: bump .5s ease; }
+  @keyframes bump {
+    0% { transform: scale(1); } 32% { transform: scale(1.2); color: var(--orange); } 100% { transform: scale(1); }
+  }
+
+  .icon-btn {
+    background: var(--surface); border: 1px solid var(--line);
+    color: var(--ink-2); width: 40px; height: 40px;
+    cursor: pointer; display: grid; place-items: center;
+    transition: .15s ease; box-shadow: var(--shadow-sm);
+    clip-path: polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px);
+  }
+  .icon-btn:hover { border-color: var(--orange); color: var(--orange); }
+  .icon-btn svg { width: 17px; height: 17px; }
+
+  /* ---------- Tabs ---------- */
+  .tabs {
+    max-width: 1220px; margin: 0 auto; padding: 0 22px;
+    display: flex; gap: 2px;
+  }
+  .tab {
+    position: relative; background: none; border: 0;
+    padding: 12px 20px 14px;
+    font-family: var(--cond);
+    font-size: 13.5px; font-weight: 700;
+    letter-spacing: 1.6px; text-transform: uppercase;
+    color: var(--ink-3); cursor: pointer;
+    transition: color .15s ease;
+  }
+  .tab:hover { color: var(--ink-2); }
+  .tab.active { color: var(--ink); }
+  .tab.active::after {
+    content: ''; position: absolute;
+    left: 12px; right: 12px; bottom: -1px; height: 3px;
+    background: var(--orange);
+  }
+  .tab .pill {
+    display: inline-block; margin-left: 7px;
+    background: var(--orange); color: #fff;
+    padding: 1px 7px; font-size: 10px; font-weight: 800;
+    font-variant-numeric: tabular-nums;
+    clip-path: polygon(4px 0, 100% 0, 100% calc(100% - 4px), calc(100% - 4px) 100%, 0 100%, 0 4px);
+  }
+
+  /* ---------- Layout ---------- */
+  main { max-width: 1220px; margin: 0 auto; padding: 26px 22px 90px; }
+  .panel { display: none; }
+  .panel.active { display: block; animation: fade .24s ease; }
+  @keyframes fade { from { opacity: 0; transform: translateY(7px); } to { opacity: 1; transform: none; } }
+
+  .section-head {
+    display: flex; align-items: flex-end; justify-content: space-between;
+    gap: 16px; margin-bottom: 20px; flex-wrap: wrap;
+  }
+  .section-head h2 {
+    margin: 0; font-family: var(--cond);
+    font-size: 25px; font-weight: 700;
+    letter-spacing: 2.4px; text-transform: uppercase;
+  }
+  .section-head h2 em {
+    font-style: normal; color: var(--orange);
+  }
+  .section-head p { margin: 5px 0 0; font-size: 13px; color: var(--ink-2); }
+
+  .btn {
+    border: 0; padding: 10px 17px;
+    font-family: var(--cond);
+    font-size: 13px; font-weight: 700;
+    letter-spacing: 1.3px; text-transform: uppercase;
+    cursor: pointer; transition: .15s ease; white-space: nowrap;
+    clip-path: polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px);
+  }
+  .btn-primary { background: var(--orange); color: #fff; }
+  .btn-primary:hover:not(:disabled) { background: var(--orange-dark); }
+  .btn-ghost { background: var(--surface); border: 1px solid var(--line); color: var(--ink-2); }
+  .btn-ghost:hover:not(:disabled) { border-color: var(--orange); color: var(--orange); }
+  .btn:disabled { opacity: .42; cursor: not-allowed; }
+  .btn-sm { padding: 8px 13px; font-size: 12px; }
+
+  .link-btn {
+    background: none; border: 0; color: var(--ink-3);
+    font-family: var(--cond); font-size: 11.5px; font-weight: 700;
+    letter-spacing: 1.2px; text-transform: uppercase;
+    cursor: pointer; padding: 0;
+    border-bottom: 1px solid var(--line-strong);
+  }
+  .link-btn:hover { color: var(--orange); border-color: var(--orange); }
+
+  .chip {
+    background: var(--surface); border: 1px solid var(--line);
+    color: var(--ink-2); padding: 8px 14px;
+    font-family: var(--cond); font-size: 12px; font-weight: 700;
+    letter-spacing: 1.2px; text-transform: uppercase;
+    cursor: pointer; transition: .15s ease;
+    clip-path: polygon(6px 0, 100% 0, 100% calc(100% - 6px), calc(100% - 6px) 100%, 0 100%, 0 6px);
+  }
+  .chip:hover { border-color: var(--line-strong); }
+  .chip.active { background: var(--orange); border-color: var(--orange); color: #fff; }
+
+  /* ---------- Case grid ---------- */
+  .case-grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(248px, 1fr)); gap: 16px;
+  }
+  .case-card {
+    background: var(--surface); border: 1px solid var(--line);
+    padding: 15px; box-shadow: var(--shadow-sm);
+    transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease;
+    display: flex; flex-direction: column;
+    clip-path: polygon(14px 0, 100% 0, 100% calc(100% - 14px), calc(100% - 14px) 100%, 0 100%, 0 14px);
+  }
+  .case-card:hover { transform: translateY(-4px); box-shadow: var(--shadow); border-color: var(--line-strong); }
+  .case-art {
+    height: 136px; display: grid; place-items: center;
+    margin-bottom: 13px; position: relative; overflow: hidden;
+  }
+  .case-hero { width: 92%; position: relative; z-index: 1; display: grid; place-items: center; }
+  .case-hero svg { width: 100%; height: 108px; display: block; }
+  .case-badge {
+    position: absolute; right: 6px; bottom: 4px; z-index: 2; opacity: .5;
+  }
+  .case-badge svg { width: 30px; height: 30px; display: block; }
+  .case-art::after {
+    content: ''; position: absolute; inset: 0;
+    background: repeating-linear-gradient(135deg, rgba(255,255,255,.18) 0 9px, transparent 9px 18px);
+  }
+  .case-name {
+    font-family: var(--cond); font-size: 16px; font-weight: 700;
+    letter-spacing: 1.2px; text-transform: uppercase;
+  }
+  .case-sub { font-size: 11.5px; color: var(--ink-3); margin: 3px 0 11px; }
+  .odds-bar { display: flex; height: 6px; overflow: hidden; margin-bottom: 11px; background: var(--line); }
+  .odds-bar span { height: 100%; }
+  .case-top {
+    font-size: 11px; color: var(--ink-3); margin-bottom: 12px;
+    display: flex; align-items: center; gap: 5px;
+  }
+  .case-top b { color: var(--ink-2); font-weight: 700; }
+  .case-foot { margin-top: auto; display: flex; align-items: center; gap: 8px; }
+  .case-price {
+    font-size: 16px; font-weight: 800; font-variant-numeric: tabular-nums; margin-right: auto;
+  }
+  .case-price.free { color: var(--uncommon); font-family: var(--cond); letter-spacing: 1.5px; }
+</style>
+<style>
+  /* ---------- Item card (CS inventory look) ---------- */
+  .item {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    padding: 9px; position: relative; overflow: hidden;
+    display: flex; flex-direction: column; gap: 5px;
+  }
+  .item::before {
+    content: ''; position: absolute; left: 0; right: 0; bottom: 0;
+    height: 4px; background: var(--rc, var(--common));
+  }
+  .item-art {
+    height: 68px; display: grid; place-items: center; position: relative;
+    background:
+      radial-gradient(ellipse at 50% 58%, color-mix(in srgb, var(--rc) 30%, transparent),
+                      color-mix(in srgb, var(--rc) 7%, transparent) 62%, transparent 78%),
+      var(--surface-2);
+  }
+  .item-art svg { width: 97%; height: 88%; position: relative; z-index: 1; }
+  .item-name {
+    font-size: 11.5px; font-weight: 700; line-height: 1.25;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .item-sub {
+    display: flex; align-items: center; justify-content: space-between; gap: 6px;
+    font-family: var(--cond); font-size: 9.5px; font-weight: 700;
+    letter-spacing: .9px; text-transform: uppercase;
+    white-space: nowrap; overflow: hidden;
+  }
+  .item-sub span { overflow: hidden; text-overflow: ellipsis; }
+  .item-wear { color: var(--ink-3); }
+  .item-rarity { color: var(--rc); }
+  .item-meta {
+    display: flex; align-items: center; justify-content: space-between; gap: 6px;
+  }
+  .item-value { font-size: 12.5px; font-weight: 800; font-variant-numeric: tabular-nums; }
+  .float-bar {
+    height: 3px; background: var(--surface-3); position: relative; overflow: hidden;
+  }
+  .float-bar i {
+    position: absolute; top: 0; bottom: 0; width: 2px;
+    background: var(--ink-2);
+  }
+  .float-bar::before {
+    content: ''; position: absolute; inset: 0;
+    background: linear-gradient(90deg, #4f9b5e 0 7%, #7ab04f 7% 15%, #d8b320 15% 38%, #dd7f12 38% 45%, #d2373c 45% 100%);
+    opacity: .3;
+  }
+  .st-badge {
+    position: absolute; top: 6px; left: 6px; z-index: 2;
+    background: var(--orange); color: #fff;
+    font-family: var(--cond); font-size: 9px; font-weight: 700;
+    letter-spacing: .8px; padding: 2px 5px;
+  }
+
+  /* ---------- Overlays ---------- */
+  .overlay {
+    position: fixed; inset: 0; z-index: 100;
+    background: rgba(28,23,17,.5); backdrop-filter: blur(5px);
+    display: none; align-items: center; justify-content: center; padding: 22px;
+  }
+  .overlay.open { display: flex; animation: fade .2s ease; }
+  .sheet {
+    background: var(--bg); border: 1px solid var(--line);
+    box-shadow: var(--shadow-lg);
+    width: 100%; max-width: 940px; max-height: 92vh; overflow-y: auto; padding: 22px;
+    clip-path: polygon(20px 0, 100% 0, 100% calc(100% - 20px), calc(100% - 20px) 100%, 0 100%, 0 20px);
+  }
+  .sheet-head {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 16px;
+  }
+  .sheet-head h3 {
+    margin: 0; font-family: var(--cond); font-size: 19px; font-weight: 700;
+    letter-spacing: 2px; text-transform: uppercase;
+  }
+  .sheet-head p { margin: 4px 0 0; font-size: 12px; color: var(--ink-2); }
+
+  /* ---------- Reel ---------- */
+  .reel-wrap {
+    position: relative; background: var(--surface);
+    border: 1px solid var(--line); padding: 13px 0; margin-bottom: 11px; overflow: hidden;
+  }
+  .reel-wrap::before, .reel-wrap::after {
+    content: ''; position: absolute; top: 0; bottom: 0; width: 88px; z-index: 3; pointer-events: none;
+  }
+  .reel-wrap::before { left: 0; background: linear-gradient(90deg, var(--surface) 10%, transparent); }
+  .reel-wrap::after { right: 0; background: linear-gradient(270deg, var(--surface) 10%, transparent); }
+  .marker {
+    position: absolute; top: 0; bottom: 0; left: 50%; width: 3px; margin-left: -1.5px;
+    background: var(--orange); z-index: 4;
+  }
+  .marker::before, .marker::after {
+    content: ''; position: absolute; left: 50%; margin-left: -7px;
+    border-left: 7px solid transparent; border-right: 7px solid transparent;
+  }
+  .marker::before { top: 0; border-top: 9px solid var(--orange); }
+  .marker::after { bottom: 0; border-bottom: 9px solid var(--orange); }
+  .reel-track { display: flex; gap: 10px; will-change: transform; }
+  .reel-track .item { width: 122px; flex: 0 0 122px; }
+  .reel-wrap.done .item.win {
+    box-shadow: 0 0 0 2px var(--rc), 0 10px 26px color-mix(in srgb, var(--rc) 40%, transparent);
+    animation: winpulse .5s ease;
+  }
+  @keyframes winpulse { 0% { transform: scale(1); } 40% { transform: scale(1.07); } 100% { transform: scale(1); } }
+
+  .result-grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 12px; margin-bottom: 16px;
+  }
+  .result-grid .item { animation: pop .4s cubic-bezier(.2,1.35,.4,1) backwards; }
+  @keyframes pop { from { opacity: 0; transform: scale(.82) translateY(10px); } to { opacity: 1; transform: none; } }
+
+  .sheet-actions { display: flex; gap: 10px; align-items: center; justify-content: flex-end; flex-wrap: wrap; }
+  .payout { margin-right: auto; font-size: 13px; color: var(--ink-2); }
+  .payout b { color: var(--ink); font-variant-numeric: tabular-nums; }
+  .payout .up { color: var(--uncommon); }
+  .payout .down { color: var(--mythic); }
+
+  /* ---------- Inventory ---------- */
+  .toolbar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 18px; }
+  select.control {
+    background: var(--surface); border: 1px solid var(--line);
+    padding: 9px 12px; font-size: 12.5px; font-weight: 600;
+    color: var(--ink); font-family: inherit; cursor: pointer; box-shadow: var(--shadow-sm);
+  }
+  select.control:focus { outline: 2px solid var(--orange-soft); border-color: var(--orange); }
+
+  .inv-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(166px, 1fr)); gap: 12px; }
+  .inv-grid .item .sell {
+    width: 100%; margin-top: 2px;
+    background: var(--surface-2); border: 1px solid var(--line); color: var(--ink-2);
+    padding: 6px; font-family: var(--cond); font-size: 11px; font-weight: 700;
+    letter-spacing: 1px; text-transform: uppercase; cursor: pointer; transition: .15s ease;
+  }
+  .inv-grid .item .sell:hover { background: var(--orange); border-color: var(--orange); color: #fff; }
+
+  .empty {
+    border: 1px dashed var(--line-strong); padding: 56px 24px; text-align: center;
+    color: var(--ink-3); background: var(--surface-2);
+  }
+  .empty h3 {
+    margin: 0 0 6px; font-family: var(--cond); font-size: 16px; color: var(--ink-2);
+    font-weight: 700; letter-spacing: 1.4px; text-transform: uppercase;
+  }
+  .empty p { margin: 0; font-size: 13px; }
+
+  .stat-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(146px, 1fr)); gap: 11px; margin-bottom: 20px; }
+  .stat {
+    background: var(--surface); border: 1px solid var(--line); padding: 12px 15px; box-shadow: var(--shadow-sm);
+    border-left: 3px solid var(--orange);
+  }
+  .stat i {
+    display: block; font-style: normal; font-family: var(--cond);
+    font-size: 10px; font-weight: 700; letter-spacing: 1.3px;
+    text-transform: uppercase; color: var(--ink-3); margin-bottom: 4px;
+  }
+  .stat b { font-size: 19px; font-weight: 800; font-variant-numeric: tabular-nums; }
+
+  /* ---------- Upgrader ---------- */
+  .up-layout { display: grid; grid-template-columns: 1fr 356px; gap: 18px; align-items: start; }
+  @media (max-width: 900px) {
+    .up-layout { grid-template-columns: 1fr; }
+    .header-inner { flex-wrap: wrap; }
+  }
+  .card {
+    background: var(--surface); border: 1px solid var(--line); padding: 17px; box-shadow: var(--shadow-sm);
+    clip-path: polygon(16px 0, 100% 0, 100% calc(100% - 16px), calc(100% - 16px) 100%, 0 100%, 0 16px);
+  }
+  .card h4 {
+    margin: 0 0 4px; font-family: var(--cond); font-size: 15px; font-weight: 700;
+    letter-spacing: 1.6px; text-transform: uppercase;
+  }
+  .card .hint { margin: 0 0 13px; font-size: 12px; color: var(--ink-3); }
+
+  .pick-grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 10px; max-height: 360px; overflow-y: auto; padding: 2px;
+  }
+  .pick-grid .item { cursor: pointer; transition: .15s ease; }
+  .pick-grid .item:hover { border-color: var(--line-strong); transform: translateY(-2px); }
+  .pick-grid .item.sel { border-color: var(--orange); box-shadow: 0 0 0 2px var(--orange-soft); }
+  .pick-grid .item.sel::after {
+    content: '✓'; position: absolute; top: 6px; right: 7px;
+    width: 18px; height: 18px; background: var(--orange); color: #fff;
+    font-size: 10px; font-weight: 800; display: grid; place-items: center; z-index: 2;
+  }
+
+  .wheel-box { display: grid; place-items: center; padding: 4px 0 12px; }
+  .wheel-holder { position: relative; width: 252px; height: 252px; }
+  .wheel-holder svg { width: 100%; height: 100%; display: block; }
+  #wheel-rotor { transform-origin: 50% 50%; }
+  .wheel-center { position: absolute; inset: 0; display: grid; place-items: center; pointer-events: none; text-align: center; }
+  .wheel-center b {
+    display: block; font-family: var(--cond); font-size: 34px; font-weight: 700;
+    letter-spacing: -.5px; font-variant-numeric: tabular-nums;
+  }
+  .wheel-center span {
+    font-family: var(--cond); font-size: 10px; font-weight: 700;
+    letter-spacing: 1.4px; text-transform: uppercase; color: var(--ink-3);
+    display: block; max-width: 150px; margin: 2px auto 0; line-height: 1.3;
+  }
+  .wheel-center.win b { color: var(--uncommon); }
+  .wheel-center.lose b { color: var(--mythic); }
+
+  .mult-row { display: flex; gap: 5px; margin-bottom: 13px; }
+  .mult-row .chip { flex: 1; text-align: center; padding: 9px 2px; }
+
+  .kv {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 8px 0; font-size: 12.5px; border-bottom: 1px dashed var(--line);
+  }
+  .kv:last-of-type { border-bottom: 0; }
+  .kv span { color: var(--ink-2); }
+  .kv b { font-weight: 800; font-variant-numeric: tabular-nums; }
+
+  .target-preview {
+    display: flex; align-items: center; gap: 11px;
+    background: var(--surface-2); border: 1px solid var(--line);
+    padding: 10px; margin-bottom: 13px; position: relative; overflow: hidden;
+  }
+  .target-preview::before {
+    content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; background: var(--rc);
+  }
+  .target-preview .tp-art {
+    width: 82px; height: 50px; flex: 0 0 82px;
+    display: grid; place-items: center; border: 1px solid var(--line);
+    background: radial-gradient(ellipse at 50% 58%, color-mix(in srgb, var(--rc) 26%, transparent), transparent 72%), var(--surface);
+  }
+  .target-preview .tp-art svg { width: 94%; height: 86%; }
+  .target-preview .tp-name { font-size: 12.5px; font-weight: 800; line-height: 1.25; }
+  .target-preview .tp-val { font-size: 11.5px; color: var(--ink-2); margin-top: 2px; font-variant-numeric: tabular-nums; }
+
+  .toast-host {
+    position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%);
+    z-index: 200; display: flex; flex-direction: column; gap: 8px; align-items: center; pointer-events: none;
+  }
+  .toast {
+    background: var(--ink); color: #fff; padding: 10px 19px;
+    font-family: var(--cond); font-size: 12.5px; font-weight: 700;
+    letter-spacing: 1.1px; text-transform: uppercase;
+    box-shadow: var(--shadow-lg);
+    clip-path: polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px);
+    animation: toast-in .25s ease, toast-out .3s ease 2.3s forwards;
+  }
+  .toast.good { background: #2e7a41; }
+  .toast.bad { background: #b02f34; }
+  @keyframes toast-in { from { opacity: 0; transform: translateY(14px); } }
+  @keyframes toast-out { to { opacity: 0; transform: translateY(-8px); } }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-inner">
+    <div class="brand">
+      <div class="brand-mark">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M3 8l9-4 9 4v8l-9 4-9-4z"/><path d="M3 8l9 4 9-4"/><path d="M12 12v8"/>
+        </svg>
+      </div>
+      <div>
+        <h1>Case Opening Sim</h1>
+        <small>Open · Collect · Upgrade</small>
+      </div>
+    </div>
+
+    <div class="balance" id="balance"><b id="balance-value">0</b><i>coins</i></div>
+
+    <button class="icon-btn" id="mute-btn" title="Toggle sound" aria-label="Toggle sound">
+      <svg id="mute-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/>
+      </svg>
+    </button>
+
+    <button class="icon-btn" id="reset-btn" title="Reset progress" aria-label="Reset progress">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/>
+      </svg>
+    </button>
+  </div>
+
+  <nav class="tabs">
+    <button class="tab active" data-tab="cases">Cases</button>
+    <button class="tab" data-tab="inventory">Inventory <span class="pill" id="inv-count">0</span></button>
+    <button class="tab" data-tab="upgrader">Upgrader</button>
+  </nav>
+</header>
+
+<main>
+  <section class="panel active" id="panel-cases">
+    <div class="section-head">
+      <div>
+        <h2>Cases</h2>
+        <p>Pick a crate, spin the reel, keep what you pull. Every skin rolls its own wear and float.</p>
+      </div>
+      <div class="toolbar" style="margin:0">
+        <span class="label">Open</span>
+        <button class="chip" data-count="1">x1</button>
+        <button class="chip" data-count="3">x3</button>
+        <button class="chip" data-count="5">x5</button>
+      </div>
+    </div>
+    <div class="case-grid" id="case-grid"></div>
+  </section>
+
+  <section class="panel" id="panel-inventory">
+    <div class="section-head">
+      <div>
+        <h2>Inventory</h2>
+        <p>Everything you've pulled. Sell for coins or feed it to the upgrader.</p>
+      </div>
+    </div>
+
+    <div class="stat-row">
+      <div class="stat"><i>Items held</i><b id="stat-items">0</b></div>
+      <div class="stat"><i>Inventory value</i><b id="stat-value">0</b></div>
+      <div class="stat"><i>Cases opened</i><b id="stat-opened">0</b></div>
+      <div class="stat"><i>Best pull</i><b id="stat-best">—</b></div>
+    </div>
+
+    <div class="toolbar">
+      <select class="control" id="inv-sort">
+        <option value="value-desc">Value: high to low</option>
+        <option value="value-asc">Value: low to high</option>
+        <option value="newest">Newest first</option>
+        <option value="float">Best float first</option>
+        <option value="name">Name A–Z</option>
+      </select>
+      <select class="control" id="inv-filter">
+        <option value="all">All rarities</option>
+        <option value="common">Common</option>
+        <option value="uncommon">Uncommon</option>
+        <option value="rare">Rare</option>
+        <option value="epic">Epic</option>
+        <option value="legendary">Legendary</option>
+        <option value="mythic">Mythic</option>
+      </select>
+      <button class="chip" id="tracker-only">Tracker only</button>
+      <button class="btn btn-ghost btn-sm" id="sell-filtered">Sell shown</button>
+    </div>
+
+    <div id="inv-body"></div>
+  </section>
+
+  <section class="panel" id="panel-upgrader">
+    <div class="section-head">
+      <div>
+        <h2>Upgrader</h2>
+        <p>Stake items, pick a multiplier, spin the wheel. Land in the orange and trade up.</p>
+      </div>
+    </div>
+
+    <div class="up-layout">
+      <div class="card">
+        <h4>Your stake</h4>
+        <p class="hint" id="stake-hint">Select one or more items to put on the line.</p>
+        <div id="stake-body"></div>
+      </div>
+
+      <div class="card">
+        <h4>Wheel</h4>
+        <p class="hint">Bigger multiplier, thinner slice.</p>
+
+        <div class="wheel-box">
+          <div class="wheel-holder">
+            <svg viewBox="0 0 240 240">
+              <g id="wheel-rotor">
+                <circle cx="120" cy="120" r="103" fill="none" stroke="#e6e0d5" stroke-width="28"/>
+                <path id="wheel-arc" fill="none" stroke="#f26a1b" stroke-width="28" stroke-linecap="butt" d=""/>
+              </g>
+              <circle cx="120" cy="120" r="85" fill="#fff" stroke="#e2dcd1" stroke-width="1"/>
+              <polygon points="120,28 111,8 129,8" fill="#171614"/>
+            </svg>
+            <div class="wheel-center" id="wheel-center">
+              <b id="wheel-pct">—</b>
+              <span id="wheel-label">win chance</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="mult-row" id="mult-row">
+          <button class="chip" data-mult="1.5">1.5x</button>
+          <button class="chip active" data-mult="2">2x</button>
+          <button class="chip" data-mult="5">5x</button>
+          <button class="chip" data-mult="10">10x</button>
+        </div>
+
+        <div id="target-slot"></div>
+
+        <div class="kv"><span>Stake value</span><b id="up-stake">0</b></div>
+        <div class="kv"><span>Target value</span><b id="up-target">0</b></div>
+        <div class="kv"><span>Win chance</span><b id="up-chance">0%</b></div>
+
+        <button class="btn btn-primary" id="spin-btn" style="width:100%;margin-top:13px" disabled>Select items to spin</button>
+      </div>
+    </div>
+  </section>
+</main>
+
+<div class="overlay" id="open-overlay">
+  <div class="sheet">
+    <div class="sheet-head">
+      <div>
+        <h3 id="open-title">Opening</h3>
+        <p id="open-sub"></p>
+      </div>
+      <button class="link-btn" id="skip-btn">Skip</button>
+    </div>
+    <div id="reels"></div>
+    <div id="open-results" style="display:none">
+      <div class="result-grid" id="result-grid"></div>
+      <div class="sheet-actions">
+        <div class="payout" id="open-payout"></div>
+        <button class="btn btn-ghost" id="sell-pulls">Sell all pulls</button>
+        <button class="btn btn-primary" id="keep-pulls">Keep in inventory</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="contents-overlay">
+  <div class="sheet">
+    <div class="sheet-head">
+      <div>
+        <h3 id="contents-title">Contents</h3>
+        <p id="contents-sub"></p>
+      </div>
+      <button class="link-btn" id="contents-close">Close</button>
+    </div>
+    <div class="inv-grid" id="contents-grid"></div>
+  </div>
+</div>
+
+<div class="toast-host" id="toasts"></div>
+<script>
+(function () {
+  'use strict';
+
+  /* Part-based weapon models. viewBox 240 x 96, muzzle points right.
+     mat: 'skin' takes the painted finish, 'metal'/'dark' stay hardware-coloured.
+     tone: <1 darkens the part, >1 lightens it, giving the model depth. */
+  const MODELS = {
+    rifle_ak: [
+      { d: 'M4,38 L48,34 L48,60 L4,64 Z', tone: .78 },
+      { d: 'M44,34 L152,34 L152,58 L44,58 Z', tone: 1 },
+      { d: 'M58,27 L126,27 L126,34 L58,34 Z', tone: 1.1 },
+      { d: 'M126,25 L138,25 L138,34 L126,34 Z', mat: 'metal', tone: .8 },
+      { d: 'M152,38 L198,38 L198,53 L152,53 Z', tone: .84 },
+      { d: 'M152,28 L194,28 L194,38 L152,38 Z', tone: 1.05 },
+      { d: 'M198,41 L230,41 L230,48 L198,48 Z', mat: 'metal', tone: .9 },
+      { d: 'M226,37 L238,37 L238,52 L226,52 Z', mat: 'metal', tone: .7 },
+      { d: 'M210,24 L220,24 L220,41 L210,41 Z', mat: 'metal', tone: .75 },
+      { d: 'M62,58 L86,58 L79,90 L57,90 Z', tone: .72 },
+      { d: 'M102,58 C96,76 102,90 116,98 L136,94 C124,84 120,72 122,58 Z', tone: .82 },
+      { d: 'M86,58 L102,58 L102,64 L94,72 L86,66 Z', mat: 'metal', tone: .62 },
+      { d: 'M89,58 L95,58 L95,66 L89,66 Z', mat: 'dark', tone: .9 }
+    ],
+    rifle_m4: [
+      { d: 'M6,38 L14,34 L36,34 L36,58 L14,62 L6,58 Z', tone: .76 },
+      { d: 'M36,40 L54,40 L54,54 L36,54 Z', mat: 'metal', tone: .7 },
+      { d: 'M52,32 L134,32 L134,56 L52,56 Z', tone: 1 },
+      { d: 'M70,22 L120,22 L120,32 L70,32 Z', mat: 'metal', tone: .8 },
+      { d: 'M134,36 L194,36 L194,52 L134,52 Z', tone: .88 },
+      { d: 'M194,41 L228,41 L228,47 L194,47 Z', mat: 'metal', tone: .9 },
+      { d: 'M198,22 L208,22 L208,41 L198,41 Z', mat: 'metal', tone: .75 },
+      { d: 'M64,56 L86,56 L79,88 L57,88 Z', tone: .72 },
+      { d: 'M98,56 L120,56 L117,90 L99,90 Z', tone: .82 },
+      { d: 'M86,56 L100,56 L100,62 L93,70 L86,64 Z', mat: 'metal', tone: .62 }
+    ],
+    sniper: [
+      { d: 'M6,34 L118,34 L118,60 L6,60 Z M40,37 A11,11 0 0,1 40,59 A11,11 0 0,1 40,37 Z', tone: .8, rule: 'evenodd' },
+      { d: 'M18,24 L76,24 L76,34 L18,34 Z', tone: .88 },
+      { d: 'M116,32 L180,32 L180,58 L116,58 Z', tone: 1 },
+      { d: 'M92,12 L166,12 L166,28 L92,28 Z', mat: 'dark', tone: .9 },
+      { d: 'M100,10 L110,10 L110,32 L100,32 Z', mat: 'dark', tone: .7 },
+      { d: 'M150,10 L160,10 L160,32 L150,32 Z', mat: 'dark', tone: .7 },
+      { d: 'M180,39 L236,39 L236,48 L180,48 Z', mat: 'metal', tone: .9 },
+      { d: 'M228,36 L240,36 L240,51 L228,51 Z', mat: 'metal', tone: .7 },
+      { d: 'M156,28 L172,28 L172,34 L156,34 Z', mat: 'metal', tone: .65 },
+      { d: 'M74,58 L96,58 L89,90 L67,90 Z', tone: .72 },
+      { d: 'M126,58 L150,58 L147,80 L129,80 Z', tone: .82 }
+    ],
+    smg: [
+      { d: 'M8,38 L44,35 L44,53 L8,56 Z', tone: .76 },
+      { d: 'M42,32 L142,32 L142,56 L42,56 Z', tone: 1 },
+      { d: 'M60,25 L74,25 L74,32 L60,32 Z', mat: 'metal', tone: .75 },
+      { d: 'M142,40 L178,40 L178,48 L142,48 Z', mat: 'metal', tone: .88 },
+      { d: 'M172,36 L184,36 L184,52 L172,52 Z', mat: 'metal', tone: .68 },
+      { d: 'M56,56 L78,56 L72,86 L50,86 Z', tone: .72 },
+      { d: 'M94,56 L116,56 L113,92 L96,92 Z', tone: .82 },
+      { d: 'M82,56 L90,56 L90,64 L82,64 Z', mat: 'metal', tone: .6 }
+    ],
+    pistol: [
+      { d: 'M54,24 L198,24 L198,45 L54,45 Z', tone: 1 },
+      { d: 'M186,30 L202,30 L202,40 L186,40 Z', mat: 'metal', tone: .7 },
+      { d: 'M58,45 L152,45 L152,57 L58,57 Z', tone: .9 },
+      { d: 'M58,50 L108,50 L94,94 L46,94 Z', tone: .74 },
+      { d: 'M104,57 L140,57 L140,66 L116,74 L102,66 Z', tone: .85 },
+      { d: 'M110,57 L118,57 L118,66 L110,66 Z', mat: 'metal', tone: .6 },
+      { d: 'M62,28 L72,28 L72,36 L62,36 Z', mat: 'metal', tone: .65 }
+    ],
+    revolver: [
+      { d: 'M62,26 L196,26 L196,42 L62,42 Z', tone: 1 },
+      { d: 'M94,24 Q116,18 138,24 L138,54 Q116,60 94,54 Z', tone: .88 },
+      { d: 'M102,28 L108,28 L108,50 L102,50 Z', mat: 'dark', tone: 1.1 },
+      { d: 'M124,28 L130,28 L130,50 L124,50 Z', mat: 'dark', tone: 1.1 },
+      { d: 'M62,18 L78,18 L78,28 L62,28 Z', mat: 'metal', tone: .65 },
+      { d: 'M186,30 L200,30 L200,38 L186,38 Z', mat: 'metal', tone: .7 },
+      { d: 'M62,42 L100,42 L84,92 L40,92 Z', tone: .74 },
+      { d: 'M100,58 L140,58 L140,67 L118,76 L100,67 Z', tone: .85 },
+      { d: 'M112,58 L120,58 L120,68 L112,68 Z', mat: 'metal', tone: .6 }
+    ],
+    shotgun: [
+      { d: 'M4,38 L46,32 L46,60 L4,66 Z', tone: .78 },
+      { d: 'M44,34 L128,34 L128,58 L44,58 Z', tone: 1 },
+      { d: 'M128,36 L166,36 L166,52 L128,52 Z', tone: .8 },
+      { d: 'M128,39 L234,39 L234,50 L128,50 Z', mat: 'metal', tone: .92 },
+      { d: 'M158,48 L222,48 L222,60 L158,60 Z', tone: .7 },
+      { d: 'M170,48 L176,48 L176,60 L170,60 Z', mat: 'dark', tone: 1.2 },
+      { d: 'M190,48 L196,48 L196,60 L190,60 Z', mat: 'dark', tone: 1.2 },
+      { d: 'M60,58 L84,58 L77,90 L53,90 Z', tone: .72 },
+      { d: 'M88,58 L96,58 L96,67 L88,67 Z', mat: 'metal', tone: .6 }
+    ],
+    knife_bayonet: [
+      { d: 'M72,30 L196,37 L216,48 L196,59 L72,59 Z', tone: 1 },
+      { d: 'M86,42 L182,45 L182,50 L86,50 Z', mat: 'metal', tone: .78 },
+      { d: 'M62,22 L76,22 L76,70 L62,70 Z', mat: 'metal', tone: .72 },
+      { d: 'M18,34 L64,34 L64,58 L18,58 Z', tone: .76 },
+      { d: 'M8,30 L22,30 L22,62 L8,62 Z', mat: 'metal', tone: .68 }
+    ],
+    knife_karambit: [
+      { d: 'M150,18 C196,28 218,58 202,86 C200,62 182,42 152,36 Z', tone: 1 },
+      { d: 'M64,58 C92,48 128,34 152,16 L166,32 C136,54 102,68 76,76 Z', tone: .8 },
+      { d: 'M48,56 A17,17 0 1,0 48,90 A17,17 0 1,0 48,56 Z M48,64 A9,9 0 1,1 48,82 A9,9 0 1,1 48,64 Z', tone: .74, rule: 'evenodd' },
+      { d: 'M158,30 C180,40 194,58 192,74 C188,58 176,44 158,38 Z', mat: 'metal', tone: .85 }
+    ],
+    knife_butterfly: [
+      { d: 'M98,34 L192,41 L210,49 L192,57 L98,57 Z', tone: 1 },
+      { d: 'M14,30 L104,30 L104,42 L14,42 Z', tone: .8 },
+      { d: 'M14,50 L104,50 L104,62 L14,62 Z', tone: .8 },
+      { d: 'M96,28 L108,28 L108,64 L96,64 Z', mat: 'metal', tone: .7 },
+      { d: 'M20,32 L28,32 L28,60 L20,60 Z', mat: 'metal', tone: .65 }
+    ],
+    gloves: [
+      { d: 'M22,30 L64,22 L72,80 L30,88 Z', tone: .78 },
+      { d: 'M62,22 L150,26 Q162,28 162,40 L162,66 Q162,78 150,80 L66,84 Z', tone: 1 },
+      { d: 'M158,26 L206,30 Q214,31 214,38 Q214,45 206,45 L158,42 Z', tone: .95 },
+      { d: 'M158,44 L210,46 Q218,47 218,54 Q218,61 210,60 L158,58 Z', tone: .95 },
+      { d: 'M158,60 L206,64 Q214,65 214,72 Q214,78 206,77 L158,74 Z', tone: .95 },
+      { d: 'M156,76 L192,80 Q200,81 199,87 Q198,93 190,92 L156,88 Z', tone: .9 },
+      { d: 'M70,80 L104,82 Q114,83 115,91 L74,94 Q68,90 70,80 Z', tone: .88 },
+      { d: 'M126,32 L138,33 L138,45 L126,44 Z', mat: 'dark', tone: 1.5 },
+      { d: 'M126,50 L138,51 L138,63 L126,62 Z', mat: 'dark', tone: 1.5 },
+      { d: 'M126,68 L138,69 L138,79 L126,78 Z', mat: 'dark', tone: 1.5 },
+      { d: 'M26,44 L68,38 L70,50 L28,56 Z', mat: 'dark', tone: 1.2 },
+      { d: 'M52,40 L62,39 L63,49 L53,50 Z', mat: 'metal', tone: 1.1 }
+    ],
+    sticker: [
+      { d: 'M120,10 L142,34 L176,26 L170,60 L200,78 L170,96 L176,130 L142,122 L120,146 L98,122 L64,130 L70,96 L40,78 L70,60 L64,26 L98,34 Z', tone: 1 },
+      { d: 'M120,44 L133,70 L161,74 L141,94 L146,122 L120,109 L94,122 L99,94 L79,74 L107,70 Z', tone: 1.45 }
+    ],
+    charm: [
+      { d: 'M120,20 A14,14 0 1,0 120,48 A14,14 0 1,0 120,20 Z M120,28 A6,6 0 1,1 120,40 A6,6 0 1,1 120,28 Z', mat: 'metal', tone: .8, rule: 'evenodd' },
+      { d: 'M114,48 L126,48 L130,58 L110,58 Z', mat: 'metal', tone: .7 },
+      { d: 'M98,58 Q120,50 142,58 Q152,74 146,96 Q120,118 94,96 Q88,74 98,58 Z', tone: 1 },
+      { d: 'M108,74 A7,7 0 1,1 108,88 A7,7 0 1,1 108,74 Z', mat: 'dark', tone: 1.4 },
+      { d: 'M132,74 A7,7 0 1,1 132,88 A7,7 0 1,1 132,74 Z', mat: 'dark', tone: 1.4 }
+    ],
+    agent: [
+      { d: 'M120,16 Q142,16 144,40 Q146,62 120,66 Q94,62 96,40 Q98,16 120,16 Z', tone: .92 },
+      { d: 'M98,34 Q120,26 142,34 L142,42 Q120,36 98,42 Z', mat: 'dark', tone: .8 },
+      { d: 'M104,64 L136,64 L150,76 Q166,84 168,120 L72,120 Q74,84 90,76 Z', tone: 1 },
+      { d: 'M112,66 L128,66 L120,92 L110,78 Z', tone: .8 }
+    ]
+  };
+
+  /* Renders a part-based model with a procedural painted finish. */
+  let __uid = 0;
+  
+  function hashString(str) {
+    let h = 2166136261;
+    for (let i = 0; i < str.length; i++) { h ^= str.charCodeAt(i); h = Math.imul(h, 16777619); }
+    return h >>> 0;
+  }
+  
+  function renderModel(kind, name, box) {
+    const parts = MODELS[kind] || MODELS.rifle_ak;
+    const seed = hashString(name);
+    const rnd = (n) => ((seed >>> (n * 4)) & 4095) / 4095;
+    const hueA = Math.floor(rnd(0) * 360);
+    const hueB = (hueA + 30 + Math.floor(rnd(1) * 180)) % 360;
+    const sat = 30 + Math.floor(rnd(2) * 38);
+    const id = 'm' + (__uid++);
+    const vb = box || '0 0 240 96';
+  
+    const skinPaths = parts.filter(p => !p.mat || p.mat === 'skin');
+    const clipD = skinPaths.map(p => p.d).join(' ');
+  
+    // Finish families, picked from the name hash, so a skin always looks the same.
+    const FINISHES = ['fade', 'camo', 'marble', 'stripe', 'solid'];
+    const finish = FINISHES[seed % FINISHES.length];
+    const h = (deg) => 'hsl(' + (((hueA + deg) % 360) + 360) % 360 + ',' + sat + '%,';
+  
+    let pattern = '';
+    if (finish === 'camo') {
+      for (let i = 0; i < 4; i++) {
+        const x = rnd(i + 3) * 250 - 20;
+        const w = 26 + rnd(i + 4) * 60;
+        const sk = -34 + rnd(i + 5) * 68;
+        pattern += '<polygon points="' + x + ',-10 ' + (x + w) + ',-10 ' + (x + w + sk) +
+          ',110 ' + (x + sk) + ',110" fill="' + h(-24 + i * 16) + (28 + i * 11) + '%)" opacity="' +
+          (0.3 + i * 0.07).toFixed(2) + '"/>';
+      }
+    } else if (finish === 'marble') {
+      for (let i = 0; i < 5; i++) {
+        const cx = rnd(i + 3) * 260 - 10;
+        const cy = rnd(i + 6) * 100;
+        pattern += '<ellipse cx="' + cx.toFixed(0) + '" cy="' + cy.toFixed(0) + '" rx="' +
+          (24 + rnd(i + 4) * 46).toFixed(0) + '" ry="' + (14 + rnd(i + 5) * 26).toFixed(0) +
+          '" transform="rotate(' + (rnd(i + 7) * 120 - 60).toFixed(0) + ' ' + cx.toFixed(0) + ' ' +
+          cy.toFixed(0) + ')" fill="' + h(-40 + i * 24) + (34 + i * 10) + '%)" opacity="' +
+          (0.42 - i * 0.05).toFixed(2) + '"/>';
+      }
+    } else if (finish === 'stripe') {
+      for (let i = 0; i < 7; i++) {
+        const x = -30 + i * 42;
+        const w = 6 + rnd(i + 3) * 16;
+        pattern += '<polygon points="' + x + ',-10 ' + (x + w) + ',-10 ' + (x + w + 34) +
+          ',110 ' + (x + 34) + ',110" fill="' + h(i % 2 ? 18 : -18) + (i % 2 ? 62 : 26) +
+          '%)" opacity="' + (i % 2 ? 0.3 : 0.4) + '"/>';
+      }
+    }
+    // 'fade' and 'solid' rely on the base gradient alone
+  
+    let body = '';
+    // painted parts: gradient + camo, clipped to their silhouette
+    body += '<g clip-path="url(#c' + id + ')">' +
+            '<rect x="-20" y="-20" width="300" height="140" fill="url(#g' + id + ')"/>' +
+            pattern +
+            '<rect x="-20" y="-20" width="300" height="70" fill="url(#s' + id + ')"/>' +
+            '</g>';
+  
+    // hardware parts keep a gunmetal finish
+    parts.filter(p => p.mat === 'metal' || p.mat === 'dark').forEach(p => {
+      const l = Math.round((p.mat === 'dark' ? 26 : 46) * (p.tone == null ? 1 : p.tone));
+      body += '<path d="' + p.d + '" fill="hsl(215,8%,' + l + '%)"' +
+              (p.rule ? ' fill-rule="evenodd"' : '') + '/>';
+    });
+  
+    // per-part shading so the model reads three-dimensionally
+    parts.forEach(p => {
+      const t = p.tone == null ? 1 : p.tone;
+      if (p.mat === 'metal' || p.mat === 'dark' || Math.abs(t - 1) < 0.02) return;
+      const dark = t < 1;
+      body += '<path d="' + p.d + '" fill="' + (dark ? '#000' : '#fff') + '" opacity="' +
+              (Math.abs(1 - t) * (dark ? 0.6 : 0.5)).toFixed(3) + '"' +
+              (p.rule ? ' fill-rule="evenodd"' : '') + '/>';
+    });
+  
+    // outlines last
+    body += '<g fill="none" stroke="rgba(18,15,12,.42)" stroke-width="1.2" stroke-linejoin="round">' +
+            parts.map(p => '<path d="' + p.d + '"' + (p.rule ? ' fill-rule="evenodd"' : '') + '/>').join('') +
+            '</g>';
+  
+    return '<svg viewBox="' + vb + '" xmlns="http://www.w3.org/2000/svg">' +
+      '<defs>' +
+        '<linearGradient id="g' + id + '" x1="0" y1="0" x2="1" y2="0.65">' +
+          (finish === 'fade'
+            ? '<stop offset="0%" stop-color="' + h(0) + '58%)"/>' +
+              '<stop offset="34%" stop-color="' + h(46) + '52%)"/>' +
+              '<stop offset="67%" stop-color="' + h(96) + '46%)"/>' +
+              '<stop offset="100%" stop-color="' + h(150) + '38%)"/>'
+            : '<stop offset="0%" stop-color="hsl(' + hueA + ',' + sat + '%,60%)"/>' +
+              '<stop offset="55%" stop-color="hsl(' + hueA + ',' + sat + '%,45%)"/>' +
+              '<stop offset="100%" stop-color="hsl(' + hueB + ',' + sat + '%,31%)"/>') +
+        '</linearGradient>' +
+        '<linearGradient id="s' + id + '" x1="0" y1="0" x2="0" y2="1">' +
+          '<stop offset="0%" stop-color="#fff" stop-opacity=".34"/>' +
+          '<stop offset="100%" stop-color="#fff" stop-opacity="0"/>' +
+        '</linearGradient>' +
+        '<clipPath id="c' + id + '">' + skinPaths.map(p =>
+          '<path d="' + p.d + '"' + (p.rule ? ' clip-rule="evenodd"' : '') + '/>').join('') + '</clipPath>' +
+      '</defs>' + body + '</svg>';
+  }
+
+  /* =========================================================
+     Audio — everything is synthesised, no sample files
+     ========================================================= */
+
+  const SFX = (function () {
+    let ctx = null, master = null, revSend = null, noiseBuf = null, ready = false;
+    let muted = false;
+
+    function makeNoise(seconds) {
+      const len = Math.floor(ctx.sampleRate * seconds);
+      const buf = ctx.createBuffer(1, len, ctx.sampleRate);
+      const d = buf.getChannelData(0);
+      for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
+      return buf;
+    }
+
+    // A decaying noise burst makes a serviceable room reverb.
+    function impulse(seconds, decay) {
+      const len = Math.floor(ctx.sampleRate * seconds);
+      const buf = ctx.createBuffer(2, len, ctx.sampleRate);
+      for (let c = 0; c < 2; c++) {
+        const d = buf.getChannelData(c);
+        for (let i = 0; i < len; i++) {
+          d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, decay);
+        }
+      }
+      return buf;
+    }
+
+    function boot() {
+      if (ready) return true;
+      try {
+        ctx = new (window.AudioContext || window.webkitAudioContext)();
+        master = ctx.createGain();
+        master.gain.value = 0.85;
+        const comp = ctx.createDynamicsCompressor();
+        comp.threshold.value = -14;
+        comp.ratio.value = 7;
+        master.connect(comp);
+        comp.connect(ctx.destination);
+
+        const conv = ctx.createConvolver();
+        conv.buffer = impulse(2.0, 2.6);
+        revSend = ctx.createGain();
+        revSend.gain.value = 1;
+        revSend.connect(conv);
+        conv.connect(master);
+
+        noiseBuf = makeNoise(2);
+        ready = true;
+      } catch (e) { ready = false; }
+      return ready;
+    }
+
+    function live() {
+      if (muted) return false;
+      if (!boot()) return false;
+      if (ctx.state === 'suspended') ctx.resume();
+      return true;
+    }
+
+    function out(node, wet) {
+      node.connect(master);
+      if (wet > 0) {
+        const g = ctx.createGain();
+        g.gain.value = wet;
+        node.connect(g);
+        g.connect(revSend);
+      }
+    }
+
+    // One shaped oscillator note.
+    function tone(o) {
+      const t0 = ctx.currentTime + (o.at || 0);
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = o.type || 'sine';
+      osc.frequency.setValueAtTime(o.freq, t0);
+      if (o.to) osc.frequency.exponentialRampToValueAtTime(o.to, t0 + o.dur);
+      if (o.detune) osc.detune.value = o.detune;
+
+      const peak = o.gain == null ? 0.2 : o.gain;
+      const atk = o.attack == null ? 0.006 : o.attack;
+      gain.gain.setValueAtTime(0.0001, t0);
+      gain.gain.exponentialRampToValueAtTime(peak, t0 + atk);
+      gain.gain.exponentialRampToValueAtTime(0.0001, t0 + o.dur);
+
+      let node = gain;
+      if (o.filter) {
+        const f = ctx.createBiquadFilter();
+        f.type = o.filter;
+        f.frequency.setValueAtTime(o.fFrom || 1200, t0);
+        if (o.fTo) f.frequency.exponentialRampToValueAtTime(o.fTo, t0 + o.dur);
+        f.Q.value = o.q || 1;
+        gain.connect(f);
+        node = f;
+      }
+      osc.connect(gain);
+      out(node, o.wet == null ? 0.16 : o.wet);
+      osc.start(t0);
+      osc.stop(t0 + o.dur + 0.05);
+    }
+
+    // One shaped noise burst.
+    function noise(o) {
+      const t0 = ctx.currentTime + (o.at || 0);
+      const src = ctx.createBufferSource();
+      src.buffer = noiseBuf;
+      src.loop = true;
+      const f = ctx.createBiquadFilter();
+      f.type = o.filter || 'bandpass';
+      f.frequency.setValueAtTime(o.fFrom || 1800, t0);
+      if (o.fTo) f.frequency.exponentialRampToValueAtTime(o.fTo, t0 + o.dur);
+      f.Q.value = o.q == null ? 4 : o.q;
+
+      const gain = ctx.createGain();
+      const peak = o.gain == null ? 0.2 : o.gain;
+      gain.gain.setValueAtTime(0.0001, t0);
+      gain.gain.exponentialRampToValueAtTime(peak, t0 + (o.attack == null ? 0.004 : o.attack));
+      gain.gain.exponentialRampToValueAtTime(0.0001, t0 + o.dur);
+
+      src.connect(f); f.connect(gain);
+      out(gain, o.wet == null ? 0.1 : o.wet);
+      src.start(t0);
+      src.stop(t0 + o.dur + 0.05);
+    }
+
+    const SCALE = [0, 4, 7, 11, 14, 19, 23, 26];  // lydian-ish stack, always consonant
+
+    return {
+      setMuted(m) { muted = m; },
+      unlock() { if (!muted) boot(); },
+
+      // Reel tile passing the marker: a dry mechanical click.
+      tick() {
+        if (!live()) return;
+        const p = 1500 + Math.random() * 900;
+        noise({ dur: 0.035, gain: 0.16, fFrom: p, fTo: p * 0.55, q: 7, wet: 0.04 });
+        tone({ freq: 150, to: 90, dur: 0.045, gain: 0.1, type: 'triangle', wet: 0 });
+      },
+
+      // Slower, heavier click for the upgrader wheel.
+      wheelTick() {
+        if (!live()) return;
+        noise({ dur: 0.05, gain: 0.13, fFrom: 1000, fTo: 500, q: 6, wet: 0.07 });
+        tone({ freq: 120, to: 72, dur: 0.06, gain: 0.1, type: 'triangle', wet: 0 });
+      },
+
+      // Tension sweep before a big reveal.
+      riser(dur) {
+        if (!live()) return;
+        tone({ freq: 140, to: 1500, dur: dur, gain: 0.1, type: 'sawtooth',
+               filter: 'lowpass', fFrom: 400, fTo: 5200, q: 6, attack: dur * 0.6, wet: 0.3 });
+        noise({ dur: dur, gain: 0.07, filter: 'bandpass', fFrom: 500, fTo: 6000,
+                q: 1.2, attack: dur * 0.7, wet: 0.3 });
+      },
+
+      // Reveal. Scales from a soft blip to a full fanfare with rarity.
+      win(rarity) {
+        if (!live()) return;
+        const rank = { common: 0, uncommon: 1, rare: 2, epic: 3, legendary: 4, mythic: 5 }[rarity] || 0;
+        const root = 196 * Math.pow(2, rank / 12);   // higher rarity, brighter key
+        const notes = 2 + rank;
+        const step = 0.075 - rank * 0.005;
+
+        // impact
+        noise({ dur: 0.18, gain: 0.16 + rank * 0.03, filter: 'lowpass',
+                fFrom: 2600, fTo: 240, q: 1, wet: 0.2 });
+        tone({ freq: 90, to: 46, dur: 0.35 + rank * 0.08,
+               gain: 0.16 + rank * 0.035, type: 'sine', wet: 0.25 });
+
+        // arpeggio
+        for (let i = 0; i < notes; i++) {
+          const f = root * Math.pow(2, SCALE[i] / 12);
+          tone({ freq: f, at: i * step, dur: 0.5 + i * 0.06,
+                 gain: 0.15, type: 'triangle', wet: 0.3 });
+          if (rank >= 3) {
+            tone({ freq: f * 2, at: i * step + 0.012, dur: 0.34,
+                   gain: 0.055, type: 'sine', wet: 0.45 });
+          }
+        }
+
+        // top-end sparkle for the big ones
+        if (rank >= 4) {
+          for (let i = 0; i < 7; i++) {
+            tone({ freq: root * Math.pow(2, (SCALE[i % SCALE.length] + 24) / 12),
+                   at: 0.22 + i * 0.055, dur: 0.5, gain: 0.05, type: 'sine', wet: 0.6 });
+          }
+          tone({ freq: root / 2, at: 0.1, dur: 1.5, gain: 0.1, type: 'sawtooth',
+                 filter: 'lowpass', fFrom: 900, fTo: 200, wet: 0.4 });
+        }
+      },
+
+      // Upgrader miss.
+      lose() {
+        if (!live()) return;
+        noise({ dur: 0.3, gain: 0.1, filter: 'lowpass', fFrom: 1400, fTo: 180, q: 1, wet: 0.15 });
+        [0, 0.13, 0.28].forEach((at, i) => {
+          tone({ freq: 240 / (1 + i * 0.32), to: 150 / (1 + i * 0.32), at: at,
+                 dur: 0.42, gain: 0.14, type: 'sawtooth',
+                 filter: 'lowpass', fFrom: 1100, fTo: 260, wet: 0.25, detune: i * 9 });
+        });
+      },
+
+      // Selling: a bright metallic ping.
+      coin() {
+        if (!live()) return;
+        [2100, 3150, 4200].forEach((f, i) => {
+          tone({ freq: f, at: i * 0.018, dur: 0.26 - i * 0.05,
+                 gain: 0.1 - i * 0.025, type: 'sine', wet: 0.35 });
+        });
+        noise({ dur: 0.05, gain: 0.07, fFrom: 5200, fTo: 2600, q: 5, wet: 0.2 });
+      },
+
+      // Wheel launch.
+      whoosh() {
+        if (!live()) return;
+        noise({ dur: 0.5, gain: 0.11, filter: 'bandpass',
+                fFrom: 320, fTo: 2600, q: 1.1, attack: 0.16, wet: 0.3 });
+      },
+
+      // UI selection blip.
+      blip() {
+        if (!live()) return;
+        tone({ freq: 620, to: 880, dur: 0.07, gain: 0.07, type: 'square', wet: 0.08 });
+      }
+    };
+  })();
+
+  /* =========================================================
+     Rarities, wear, and the case table
+     ========================================================= */
+
+  const RARITIES = ['common', 'uncommon', 'rare', 'epic', 'legendary', 'mythic'];
+  const RARITY_COLOR = {
+    common: '#93a0ad', uncommon: '#4f9b5e', rare: '#3b7fd4',
+    epic: '#8b46d6', legendary: '#dd8a12', mythic: '#d2373c'
+  };
+
+  // Odds are tuned so every paid case returns ~93% of its price on average.
+  const ODDS = {
+    t1: { common: .62, uncommon: .24, rare: .10, epic: .03, legendary: .009, mythic: .001 },
+    t2: { common: .58, uncommon: .25, rare: .11, epic: .045, legendary: .013, mythic: .002 },
+    t3: { common: .54, uncommon: .26, rare: .125, epic: .055, legendary: .017, mythic: .003 },
+    t4: { common: .50, uncommon: .27, rare: .14, epic: .065, legendary: .021, mythic: .004 },
+    t5: { common: .46, uncommon: .28, rare: .155, epic: .075, legendary: .025, mythic: .005 },
+    t6: { common: .42, uncommon: .29, rare: .17, epic: .085, legendary: .029, mythic: .006 }
+  };
+
+  // Wear grades, weighted so the average multiplier lands at ~0.99.
+  const WEARS = [
+    { key: 'fn', name: 'Factory New',    short: 'FN', mult: 1.35, p: .10, lo: 0.00, hi: 0.07 },
+    { key: 'mw', name: 'Minimal Wear',   short: 'MW', mult: 1.15, p: .18, lo: 0.07, hi: 0.15 },
+    { key: 'ft', name: 'Field-Tested',   short: 'FT', mult: 1.00, p: .38, lo: 0.15, hi: 0.38 },
+    { key: 'ww', name: 'Well-Worn',      short: 'WW', mult: 0.85, p: .20, lo: 0.38, hi: 0.45 },
+    { key: 'bs', name: 'Battle-Scarred', short: 'BS', mult: 0.70, p: .14, lo: 0.45, hi: 1.00 }
+  ];
+  const WEAR_BY_KEY = {};
+  WEARS.forEach((w) => { WEAR_BY_KEY[w.key] = w; });
+
+  // Stickers, charms and agents have no wear grade — same as the real thing.
+  const NO_WEAR = { sticker: 1, charm: 1, agent: 1 };
+  // Gloves take wear but never a tracker.
+  const NO_TRACKER = { sticker: 1, charm: 1, agent: 1, gloves: 1 };
+
+  const TRACKER_CHANCE = 0.08;
+  const TRACKER_MULT = 1.25;
+
+  function I(name, kind, rarity, value) { return { name, kind, rarity, value }; }
+
+  const CASES = [
+    {
+      id: 'scrap', name: 'Scrap Tin', sub: 'Free pull, on the house', price: 0,
+      accent: '#8d9199', odds: ODDS.t1,
+      items: [
+        I('P-22 | Duct Tape', 'pistol', 'common', 4),
+        I('SP-5 | Rust Bucket', 'smg', 'common', 5),
+        I('AR-12 | Primer Grey', 'rifle_m4', 'common', 6),
+        I('BR-12 | Shed Find', 'shotgun', 'uncommon', 10),
+        I('Hand Wraps | Workshop', 'gloves', 'uncommon', 11),
+        I('Sticker | Bent Nail', 'sticker', 'uncommon', 12),
+        I('KR-74 | Copper Tape', 'rifle_ak', 'rare', 23),
+        I('HX-45 | Oil Slick', 'pistol', 'rare', 26),
+        I('Charm | Lucky Bolt', 'charm', 'rare', 29),
+        I('Bayonet | Scrapyard', 'knife_bayonet', 'epic', 65),
+        I('LR-800 | Sandbag', 'sniper', 'epic', 75),
+        I('KR-74 | Junkyard King', 'rifle_ak', 'legendary', 230),
+        I('Karambit | Last Resort', 'knife_karambit', 'mythic', 800)
+      ]
+    },
+    {
+      id: 'starter', name: 'Starter Crate', sub: 'Entry level, honest odds', price: 25,
+      accent: '#f26a1b', odds: ODDS.t1,
+      items: [
+        I('P-22 | Sandstorm', 'pistol', 'common', 7),
+        I('SP-5 | Field Drab', 'smg', 'common', 8),
+        I('AR-12 | Chalkline', 'rifle_m4', 'common', 9),
+        I('HX-45 | Clay Wash', 'pistol', 'uncommon', 16),
+        I('Hand Wraps | Canvas', 'gloves', 'uncommon', 19),
+        I('BR-12 | Birchwood', 'shotgun', 'uncommon', 21),
+        I('LR-800 | Iron Sight', 'sniper', 'rare', 41),
+        I('KR-74 | Bramble', 'rifle_ak', 'rare', 47),
+        I('RX-357 | Brasswork', 'revolver', 'rare', 52),
+        I('AR-12 | Emberline', 'rifle_m4', 'epic', 115),
+        I('Bayonet | Riverstone', 'knife_bayonet', 'epic', 133),
+        I('AWS-7 | First Light', 'sniper', 'legendary', 414),
+        I('Bayonet | Molten Core', 'knife_bayonet', 'mythic', 1551)
+      ]
+    },
+    {
+      id: 'capsule', name: 'Sticker Capsule', sub: 'Stickers and charms only', price: 60,
+      accent: '#e0a012', odds: ODDS.t2,
+      items: [
+        I('Sticker | Paper Crane', 'sticker', 'common', 14),
+        I('Sticker | Half Volume', 'sticker', 'common', 16),
+        I('Charm | Rubber Duck', 'charm', 'common', 18),
+        I('Sticker | Static Signal', 'sticker', 'uncommon', 32),
+        I('Charm | Brass Tag', 'charm', 'uncommon', 36),
+        I('Sticker | Night Owl', 'sticker', 'uncommon', 41),
+        I('Sticker | Hazard Bloom', 'sticker', 'rare', 80),
+        I('Charm | Glass Marble', 'charm', 'rare', 91),
+        I('Sticker | Chrome Fang', 'sticker', 'rare', 102),
+        I('Sticker | Holo Drift', 'sticker', 'epic', 225),
+        I('Charm | Gilded Pin', 'charm', 'epic', 259),
+        I('Sticker | Foil Phoenix', 'sticker', 'legendary', 806),
+        I('Charm | Solid Gold Skull', 'charm', 'mythic', 3023)
+      ]
+    },
+    {
+      id: 'urban', name: 'Urban Cache', sub: 'Street finishes and spray work', price: 110,
+      accent: '#3f9a52', odds: ODDS.t2,
+      items: [
+        I('SP-5 | Sidewalk', 'smg', 'common', 26),
+        I('P-22 | Meter Grey', 'pistol', 'common', 30),
+        I('AR-12 | Transit Tape', 'rifle_m4', 'common', 33),
+        I('MK Vector | Fire Escape', 'smg', 'uncommon', 59),
+        I('Hand Wraps | Cross Town', 'gloves', 'uncommon', 67),
+        I('BR-12 | Boarded Up', 'shotgun', 'uncommon', 74),
+        I('KR-74 | Overpass', 'rifle_ak', 'rare', 146),
+        I('HX-45 | Night Shift', 'pistol', 'rare', 166),
+        I('Sticker | Tag Over Tag', 'sticker', 'rare', 186),
+        I('LR-800 | Rooftop', 'sniper', 'epic', 412),
+        I('AR-12 | Block Party', 'rifle_m4', 'epic', 474),
+        I('Bayonet | Chain Link', 'knife_bayonet', 'legendary', 1478),
+        I('Butterfly Knife | City Lights', 'knife_butterfly', 'mythic', 5542)
+      ]
+    },
+    {
+      id: 'neon', name: 'Neon Vault', sub: 'Glow finishes, sharper odds', price: 420,
+      accent: '#2f7fd6', odds: ODDS.t3,
+      items: [
+        I('P-22 | Coolant', 'pistol', 'common', 85),
+        I('SP-5 | Signal Blue', 'smg', 'common', 96),
+        I('AR-12 | Vapor Trail', 'rifle_m4', 'common', 108),
+        I('MK Vector | Arcade', 'smg', 'uncommon', 190),
+        I('Hand Wraps | Circuitry', 'gloves', 'uncommon', 216),
+        I('RX-357 | Pulse Width', 'revolver', 'uncommon', 242),
+        I('KR-74 | Laser Grid', 'rifle_ak', 'rare', 476),
+        I('AWS-7 | Cathode', 'sniper', 'rare', 540),
+        I('BR-12 | Strobe', 'shotgun', 'rare', 605),
+        I('AR-12 | Hyperdrive', 'rifle_m4', 'epic', 1340),
+        I('HX-45 | Synth Wave', 'pistol', 'epic', 1542),
+        I('Karambit | Voltage', 'knife_karambit', 'legendary', 4804),
+        I('AWS-7 | Nightfall Neon', 'sniper', 'mythic', 18014)
+      ]
+    },
+    {
+      id: 'operative', name: 'Operative Kit', sub: 'Agents, gloves and field gear', price: 800,
+      accent: '#5a7d5a', odds: ODDS.t3,
+      items: [
+        I('Operative | Recruit', 'agent', 'common', 161),
+        I('Hand Wraps | Ranger Green', 'gloves', 'common', 183),
+        I('P-22 | Issue Black', 'pistol', 'common', 205),
+        I('Operative | Sapper', 'agent', 'uncommon', 362),
+        I('Field Gloves | Dust Patrol', 'gloves', 'uncommon', 412),
+        I('SP-5 | Quartermaster', 'smg', 'uncommon', 461),
+        I('Operative | Night Diver', 'agent', 'rare', 906),
+        I('Moto Gloves | Sand Rider', 'gloves', 'rare', 1029),
+        I('LR-800 | Overwatch', 'sniper', 'rare', 1153),
+        I('Operative | Ghost Company', 'agent', 'epic', 2553),
+        I('Moto Gloves | Crimson Weave', 'gloves', 'epic', 2937),
+        I('Operative | The Quartermaster', 'agent', 'legendary', 9150),
+        I('Moto Gloves | Gold Standard', 'gloves', 'mythic', 34312)
+      ]
+    },
+    {
+      id: 'obsidian', name: 'Obsidian Reserve', sub: 'Dark lacquer, heavy hitters', price: 1250,
+      accent: '#4a4a55', odds: ODDS.t4,
+      items: [
+        I('SP-5 | Basalt', 'smg', 'common', 219),
+        I('P-22 | Ashfall', 'pistol', 'common', 249),
+        I('AR-12 | Charcoal Weave', 'rifle_m4', 'common', 279),
+        I('LR-800 | Slate Cut', 'sniper', 'uncommon', 493),
+        I('Hand Wraps | Soot', 'gloves', 'uncommon', 560),
+        I('BR-12 | Blackout', 'shotgun', 'uncommon', 627),
+        I('KR-74 | Black Glass', 'rifle_ak', 'rare', 1232),
+        I('MK Vector | Tar Pit', 'smg', 'rare', 1400),
+        I('RX-357 | Onyx', 'revolver', 'rare', 1568),
+        I('AWS-7 | Eclipse', 'sniper', 'epic', 3473),
+        I('AR-12 | Magma Vein', 'rifle_m4', 'epic', 3995),
+        I('Bayonet | Volcanic Glass', 'knife_bayonet', 'legendary', 12446),
+        I('Karambit | Event Horizon', 'knife_karambit', 'mythic', 46674)
+      ]
+    },
+    {
+      id: 'blades', name: 'Blade Depot', sub: 'Knives, and nothing but', price: 2400,
+      accent: '#b4553a', odds: ODDS.t4,
+      items: [
+        I('Bayonet | Field Issue', 'knife_bayonet', 'common', 421),
+        I('Butterfly Knife | Stonewash', 'knife_butterfly', 'common', 478),
+        I('Karambit | Boreal Forest', 'knife_karambit', 'common', 535),
+        I('Bayonet | Safari Mesh', 'knife_bayonet', 'uncommon', 946),
+        I('Butterfly Knife | Urban Masked', 'knife_butterfly', 'uncommon', 1075),
+        I('Karambit | Scorched', 'knife_karambit', 'uncommon', 1204),
+        I('Bayonet | Case Hardened', 'knife_bayonet', 'rare', 2366),
+        I('Butterfly Knife | Slaughter', 'knife_butterfly', 'rare', 2688),
+        I('Karambit | Blue Steel', 'knife_karambit', 'rare', 3011),
+        I('Bayonet | Tiger Tooth', 'knife_bayonet', 'epic', 6667),
+        I('Butterfly Knife | Marble Fade', 'knife_butterfly', 'epic', 7671),
+        I('Karambit | Lore', 'knife_karambit', 'legendary', 23897),
+        I('Butterfly Knife | Ruby Doppler', 'knife_butterfly', 'mythic', 89615)
+      ]
+    },
+    {
+      id: 'prism', name: 'Prism Elite', sub: 'Refractive coats, elite pool', price: 3800,
+      accent: '#8b46d6', odds: ODDS.t5,
+      items: [
+        I('P-22 | Spectrum', 'pistol', 'common', 590),
+        I('SP-5 | Facet', 'smg', 'common', 670),
+        I('AR-12 | Prism Wrap', 'rifle_m4', 'common', 750),
+        I('Hand Wraps | Opal Cut', 'gloves', 'uncommon', 1327),
+        I('MK Vector | Refraction', 'smg', 'uncommon', 1508),
+        I('RX-357 | Lightbender', 'revolver', 'uncommon', 1688),
+        I('AWS-7 | Lightfall', 'sniper', 'rare', 3317),
+        I('HX-45 | Iridium', 'pistol', 'rare', 3769),
+        I('BR-12 | Kaleidoscope', 'shotgun', 'rare', 4221),
+        I('KR-74 | Diamond Dust', 'rifle_ak', 'epic', 9347),
+        I('AR-12 | Crown Glass', 'rifle_m4', 'epic', 10754),
+        I('Butterfly Knife | Aurora Cut', 'knife_butterfly', 'legendary', 33502),
+        I('KR-74 | Pure Spectrum', 'rifle_ak', 'mythic', 125631)
+      ]
+    },
+    {
+      id: 'chroma', name: 'Chroma Lab', sub: 'Experimental finishes', price: 6500,
+      accent: '#1f9d8f', odds: ODDS.t5,
+      items: [
+        I('SP-5 | Test Batch', 'smg', 'common', 1009),
+        I('P-22 | Reagent', 'pistol', 'common', 1146),
+        I('AR-12 | Clean Room', 'rifle_m4', 'common', 1284),
+        I('Moto Gloves | Polymer', 'gloves', 'uncommon', 2269),
+        I('LR-800 | Centrifuge', 'sniper', 'uncommon', 2579),
+        I('BR-12 | Catalyst', 'shotgun', 'uncommon', 2888),
+        I('KR-74 | Unstable Isotope', 'rifle_ak', 'rare', 5673),
+        I('MK Vector | Half Life', 'smg', 'rare', 6447),
+        I('RX-357 | Cold Fusion', 'revolver', 'rare', 7220),
+        I('AWS-7 | Supercritical', 'sniper', 'epic', 15988),
+        I('AR-12 | Chain Reaction', 'rifle_m4', 'epic', 18395),
+        I('Karambit | Fissure', 'knife_karambit', 'legendary', 57305),
+        I('Moto Gloves | Antimatter', 'gloves', 'mythic', 214895)
+      ]
+    },
+    {
+      id: 'apex', name: 'Apex Chroma', sub: 'Top shelf. Best odds in the shop.', price: 11000,
+      accent: '#d63b3b', odds: ODDS.t6,
+      items: [
+        I('SP-5 | Titan Grey', 'smg', 'common', 1531),
+        I('AR-12 | Apex Wrap', 'rifle_m4', 'common', 1740),
+        I('P-22 | Chromeworks', 'pistol', 'common', 1949),
+        I('Moto Gloves | Summit', 'gloves', 'uncommon', 3446),
+        I('LR-800 | Long Shadow', 'sniper', 'uncommon', 3915),
+        I('BR-12 | Breachpoint', 'shotgun', 'uncommon', 4385),
+        I('MK Vector | Redline Apex', 'smg', 'rare', 8614),
+        I('KR-74 | Solar Flare', 'rifle_ak', 'rare', 9788),
+        I('RX-357 | Deadline', 'revolver', 'rare', 10963),
+        I('AWS-7 | Kill Confirmed', 'sniper', 'epic', 24275),
+        I('AR-12 | Chroma Burst', 'rifle_m4', 'epic', 27930),
+        I('Bayonet | Gold Standard', 'knife_bayonet', 'legendary', 87008),
+        I('Karambit | Apex Predator', 'knife_karambit', 'mythic', 326281)
+      ]
+    },
+    {
+      id: 'vanguard', name: 'Vanguard Vault', sub: 'The deep end. Nothing cheap inside.', price: 25000,
+      accent: '#1d1b18', odds: ODDS.t6,
+      items: [
+        I('AR-12 | Vanguard Issue', 'rifle_m4', 'common', 3480),
+        I('KR-74 | Black Tie', 'rifle_ak', 'common', 3955),
+        I('P-22 | Signet', 'pistol', 'common', 4430),
+        I('Moto Gloves | Vault Leather', 'gloves', 'uncommon', 7831),
+        I('AWS-7 | Silent Partner', 'sniper', 'uncommon', 8899),
+        I('Operative | The Broker', 'agent', 'uncommon', 9966),
+        I('MK Vector | Blacklist', 'smg', 'rare', 19577),
+        I('RX-357 | Last Word', 'revolver', 'rare', 22246),
+        I('Operative | Cipher', 'agent', 'rare', 24916),
+        I('KR-74 | Imperial Dragon', 'rifle_ak', 'epic', 55171),
+        I('AWS-7 | Oracle', 'sniper', 'epic', 63477),
+        I('Butterfly Knife | Vanguard Fade', 'knife_butterfly', 'legendary', 197746),
+        I('Butterfly Knife | Crown Jewel', 'knife_butterfly', 'mythic', 741548)
+      ]
+    }
+  ];
+
+  const ALL_ITEMS = CASES.reduce((acc, c) => acc.concat(c.items), []);
+
+  /* =========================================================
+     State
+     ========================================================= */
+
+  const SAVE_KEY = 'case-opening-sim-v2';
+  const START_COINS = 500;
+
+  const state = {
+    coins: START_COINS, inventory: [], opened: 0, best: null, muted: false, uid: 1
+  };
+
+  function save() {
+    try {
+      localStorage.setItem(SAVE_KEY, JSON.stringify({
+        coins: state.coins, inventory: state.inventory, opened: state.opened,
+        best: state.best, muted: state.muted, uid: state.uid
+      }));
+    } catch (e) { /* storage unavailable — play on without persistence */ }
+  }
+
+  function load() {
+    try {
+      const raw = localStorage.getItem(SAVE_KEY);
+      if (!raw) return;
+      const d = JSON.parse(raw);
+      if (typeof d.coins === 'number') state.coins = d.coins;
+      if (Array.isArray(d.inventory)) state.inventory = d.inventory;
+      if (typeof d.opened === 'number') state.opened = d.opened;
+      if (d.best) state.best = d.best;
+      state.muted = !!d.muted;
+      state.uid = d.uid || (state.inventory.length + 1);
+    } catch (e) { /* corrupt save — start clean */ }
+  }
+
+  const fmt = (n) => Math.round(n).toLocaleString('en-US');
+
+  /* =========================================================
+     Rolling drops
+     ========================================================= */
+
+  function rollWear() {
+    let roll = Math.random(), acc = 0;
+    for (let i = 0; i < WEARS.length; i++) {
+      acc += WEARS[i].p;
+      if (roll < acc) return WEARS[i];
+    }
+    return WEARS[2];
+  }
+
+  function rollRarity(odds) {
+    let roll = Math.random(), acc = 0;
+    for (let i = 0; i < RARITIES.length; i++) {
+      acc += odds[RARITIES[i]] || 0;
+      if (roll < acc) return RARITIES[i];
+    }
+    return 'common';
+  }
+
+  // Turns a drop-table entry into a concrete, uniquely-rolled item.
+  function instantiate(base) {
+    const it = {
+      name: base.name, kind: base.kind, rarity: base.rarity,
+      base: base.value, value: base.value
+    };
+    if (!NO_WEAR[base.kind]) {
+      const w = rollWear();
+      it.wear = w.key;
+      it.float = +(w.lo + Math.random() * (w.hi - w.lo)).toFixed(4);
+      it.value *= w.mult;
+    }
+    if (!NO_TRACKER[base.kind] && Math.random() < TRACKER_CHANCE) {
+      it.tracker = true;
+      it.value *= TRACKER_MULT;
+    }
+    it.value = Math.max(1, Math.round(it.value));
+    return it;
+  }
+
+  function rollItem(box) {
+    const rarity = rollRarity(box.odds);
+    const pool = box.items.filter((it) => it.rarity === rarity);
+    const source = pool.length ? pool : box.items;
+    return instantiate(source[Math.floor(Math.random() * source.length)]);
+  }
+
+  function addItem(item) {
+    const copy = Object.assign({}, item, { uid: state.uid++ });
+    state.inventory.push(copy);
+    return copy;
+  }
+
+  /* =========================================================
+     Helpers
+     ========================================================= */
+
+  const $ = (sel) => document.querySelector(sel);
+  const $$ = (sel) => Array.prototype.slice.call(document.querySelectorAll(sel));
+
+  function toast(msg, kind) {
+    const el = document.createElement('div');
+    el.className = 'toast' + (kind ? ' ' + kind : '');
+    el.textContent = msg;
+    $('#toasts').appendChild(el);
+    setTimeout(() => el.remove(), 2700);
+  }
+
+  // Non-weapon items show their category where the wear grade would sit.
+  const KIND_LABEL = {
+    sticker: 'Sticker', charm: 'Charm', agent: 'Agent', gloves: 'Gloves',
+    knife_bayonet: 'Knife', knife_karambit: 'Knife', knife_butterfly: 'Knife'
+  };
+
+  function itemMarkup(item, extra) {
+    const wear = item.wear ? WEAR_BY_KEY[item.wear] : null;
+    const sub = wear ? wear.short : (KIND_LABEL[item.kind] || 'Weapon');
+    const subTitle = wear ? wear.name : sub;
+    const vb = item.kind === 'sticker' ? '0 0 240 156'
+             : (item.kind === 'charm' || item.kind === 'agent') ? '0 0 240 130'
+             : '0 0 240 96';
+    return '<div class="item ' + (extra || '') + '" style="--rc:' + RARITY_COLOR[item.rarity] + '">' +
+      (item.tracker ? '<span class="st-badge">TRK</span>' : '') +
+      '<div class="item-art">' + renderModel(item.kind, item.name, vb) + '</div>' +
+      '<div class="item-name" title="' + item.name + '">' + item.name + '</div>' +
+      '<div class="item-sub"><span class="item-wear" title="' + subTitle + '">' + sub + '</span>' +
+        '<span class="item-rarity">' + item.rarity + '</span></div>' +
+      (item.float != null
+        ? '<div class="float-bar"><i style="left:' + (item.float * 100).toFixed(1) + '%"></i></div>'
+        : '') +
+      '<div class="item-meta">' +
+        '<span class="label">' + (item.float != null ? item.float.toFixed(3) : '') + '</span>' +
+        '<span class="item-value">' + fmt(item.value) + '</span>' +
+      '</div>' +
+    '</div>';
+  }
+
+  /* =========================================================
+     Chrome
+     ========================================================= */
+
+  function renderBalance() {
+    $('#balance-value').textContent = fmt(state.coins);
+    $('#inv-count').textContent = state.inventory.length;
+    const bal = $('#balance');
+    bal.classList.remove('bump');
+    void bal.offsetWidth;
+    bal.classList.add('bump');
+  }
+
+  function setTab(name) {
+    $$('.tab').forEach((t) => t.classList.toggle('active', t.dataset.tab === name));
+    $$('.panel').forEach((p) => p.classList.toggle('active', p.id === 'panel-' + name));
+    if (name === 'inventory') renderInventory();
+    if (name === 'upgrader') renderUpgrader();
+  }
+
+  function caseArt(accent) {
+    return '<svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">' +
+      '<path d="M60 14 L104 34 L104 84 L60 106 L16 84 L16 34 Z" fill="rgba(255,255,255,.94)" ' +
+        'stroke="' + accent + '" stroke-width="3" stroke-linejoin="round"/>' +
+      '<path d="M16 34 L60 54 L104 34" fill="none" stroke="' + accent + '" stroke-width="3" stroke-linejoin="round"/>' +
+      '<path d="M60 54 L60 106" fill="none" stroke="' + accent + '" stroke-width="3"/>' +
+      '<rect x="49" y="55" width="22" height="18" rx="3" fill="' + accent + '"/>' +
+      '<circle cx="60" cy="64" r="3.4" fill="#fff"/>' +
+    '</svg>';
+  }
+
+  /* =========================================================
+     Cases tab
+     ========================================================= */
+
+  let openCount = 1;
+
+  function renderCases() {
+    $('#case-grid').innerHTML = CASES.map((box, i) => {
+      const bars = RARITIES.map((r) =>
+        '<span style="flex:' + ((box.odds[r] || 0) * 1000) + ';background:' + RARITY_COLOR[r] + '"></span>'
+      ).join('');
+      const top = box.items.reduce((a, b) => (b.value > a.value ? b : a), box.items[0]);
+      const vb = top.kind === 'sticker' ? '0 0 240 156'
+               : (top.kind === 'charm' || top.kind === 'agent') ? '0 0 240 130'
+               : '0 0 240 96';
+      return '<article class="case-card">' +
+        '<div class="case-art" style="background:radial-gradient(ellipse at 50% 56%,' +
+          box.accent + '30,' + box.accent + '0c 58%,transparent 76%)">' +
+          '<div class="case-hero">' + renderModel(top.kind, top.name, vb) + '</div>' +
+          '<span class="case-badge">' + caseArt(box.accent) + '</span>' +
+        '</div>' +
+        '<div class="case-name">' + box.name + '</div>' +
+        '<div class="case-sub">' + box.sub + '</div>' +
+        '<div class="odds-bar">' + bars + '</div>' +
+        '<div class="case-top"><span class="label">Top</span><b>' + top.name + '</b></div>' +
+        '<div class="case-foot">' +
+          '<span class="case-price' + (box.price === 0 ? ' free' : '') + '">' +
+            (box.price === 0 ? 'FREE' : fmt(box.price)) + '</span>' +
+          '<button class="link-btn" data-contents="' + i + '">Contents</button>' +
+          '<button class="btn btn-primary btn-sm" data-open="' + i + '">Open</button>' +
+        '</div>' +
+      '</article>';
+    }).join('');
+
+    $$('#case-grid [data-open]').forEach((btn) =>
+      btn.addEventListener('click', () => startOpening(CASES[+btn.dataset.open])));
+    $$('#case-grid [data-contents]').forEach((btn) =>
+      btn.addEventListener('click', () => showContents(CASES[+btn.dataset.contents])));
+    refreshCaseButtons();
+  }
+
+  function refreshCaseButtons() {
+    $$('#case-grid [data-open]').forEach((btn) => {
+      const box = CASES[+btn.dataset.open];
+      const cost = box.price * openCount;
+      btn.disabled = state.coins < cost;
+      btn.textContent = openCount > 1 ? 'Open x' + openCount : 'Open';
+      btn.title = cost > 0 ? 'Costs ' + fmt(cost) + ' coins' : 'Free';
+    });
+  }
+
+  function showContents(box) {
+    $('#contents-title').textContent = box.name;
+    $('#contents-sub').textContent = RARITIES.map((r) =>
+      r.charAt(0).toUpperCase() + r.slice(1) + ' ' + ((box.odds[r] || 0) * 100).toFixed(1) + '%'
+    ).join('  ·  ');
+    $('#contents-grid').innerHTML = box.items.slice()
+      .sort((a, b) => b.value - a.value)
+      .map((it) => itemMarkup(it)).join('');
+    $('#contents-overlay').classList.add('open');
+    SFX.blip();
+  }
+
+  /* =========================================================
+     Opening
+     ========================================================= */
+
+  const TILE = 122, GAP = 10, PITCH = TILE + GAP;
+  const STRIP_LEN = 74, WIN_INDEX = 62;
+  const SPIN_MS = 5600;
+
+  let opening = null;
+
+  function startOpening(box) {
+    if (opening) return;
+    const cost = box.price * openCount;
+    if (state.coins < cost) { toast('Not enough coins', 'bad'); return; }
+
+    SFX.unlock();
+    state.coins -= cost;
+    state.opened += openCount;
+    renderBalance();
+    refreshCaseButtons();
+
+    const winners = [];
+    for (let i = 0; i < openCount; i++) winners.push(rollItem(box));
+
+    opening = { winners, box, reels: [], finished: 0, settled: false, timers: [] };
+
+    $('#open-title').textContent = box.name;
+    $('#open-sub').textContent = openCount > 1
+      ? 'Opening ' + openCount + ' cases · ' + (cost === 0 ? 'free' : fmt(cost) + ' coins')
+      : (cost === 0 ? 'Free pull' : fmt(cost) + ' coins');
+    $('#open-results').style.display = 'none';
+    $('#skip-btn').style.display = '';
+    $('#reels').innerHTML = '';
+    $('#open-overlay').classList.add('open');
+
+    SFX.whoosh();
+
+    winners.forEach((winner, idx) => {
+      const wrap = document.createElement('div');
+      wrap.className = 'reel-wrap';
+      wrap.innerHTML = '<div class="marker"></div><div class="reel-track"></div>';
+      $('#reels').appendChild(wrap);
+
+      const track = wrap.querySelector('.reel-track');
+      let html = '';
+      for (let i = 0; i < STRIP_LEN; i++) {
+        html += itemMarkup(i === WIN_INDEX ? winner : rollItem(box), i === WIN_INDEX ? 'win' : '');
+      }
+      track.innerHTML = html;
+
+      const viewport = wrap.clientWidth;
+      const jitter = (Math.random() - 0.5) * (TILE - 34);
+      const target = WIN_INDEX * PITCH + TILE / 2 - viewport / 2 + jitter;
+      const dur = SPIN_MS + idx * 450;
+
+      track.style.transform = 'translateX(0px)';
+      opening.reels.push({ wrap, track, target, winner });
+
+      requestAnimationFrame(() => requestAnimationFrame(() => {
+        track.style.transition = 'transform ' + dur + 'ms cubic-bezier(.08,.62,.12,1)';
+        track.style.transform = 'translateX(' + (-target) + 'px)';
+      }));
+
+      // Build tension when something big is about to land.
+      const rank = RARITIES.indexOf(winner.rarity);
+      if (rank >= 4) {
+        opening.timers.push(setTimeout(() => {
+          if (opening && !opening.reels[idx].done) SFX.riser(1.5);
+        }, dur - 1500));
+      }
+
+      track.addEventListener('transitionend', function handler(e) {
+        if (e.propertyName !== 'transform') return;
+        track.removeEventListener('transitionend', handler);
+        settleReel(idx);
+      });
+    });
+
+    runTicker();
+  }
+
+  function settleReel(idx) {
+    const reel = opening && opening.reels[idx];
+    if (!reel || reel.done) return;
+    reel.done = true;
+    reel.wrap.classList.add('done');
+    SFX.win(reel.winner.rarity);
+    opening.finished++;
+    if (opening.finished >= opening.reels.length) finishOpening();
+  }
+
+  // Clicks once per tile crossing the centre marker.
+  function runTicker() {
+    let last = -1;
+    function frame() {
+      if (!opening || opening.settled) return;
+      const reel = opening.reels[0];
+      if (reel && !reel.done) {
+        const raw = getComputedStyle(reel.track).transform;
+        if (raw && raw !== 'none') {
+          try {
+            const m = new DOMMatrixReadOnly(raw);
+            const idx = Math.floor((-m.m41 + reel.wrap.clientWidth / 2) / PITCH);
+            if (idx !== last) { last = idx; SFX.tick(); }
+          } catch (e) { /* mid-transition parse hiccup — skip this frame */ }
+        }
+      }
+      requestAnimationFrame(frame);
+    }
+    requestAnimationFrame(frame);
+  }
+
+  function skipOpening() {
+    if (!opening) return;
+    opening.timers.forEach(clearTimeout);
+    opening.timers = [];
+    opening.reels.forEach((reel, idx) => {
+      if (reel.done) return;
+      reel.track.style.transition = 'none';
+      reel.track.style.transform = 'translateX(' + (-reel.target) + 'px)';
+      settleReel(idx);
+    });
+  }
+
+  function finishOpening() {
+    if (!opening || opening.settled) return;
+    opening.settled = true;
+    opening.timers.forEach(clearTimeout);
+    $('#skip-btn').style.display = 'none';
+
+    const winners = opening.winners;
+    const total = winners.reduce((s, it) => s + it.value, 0);
+    const spent = opening.box.price * winners.length;
+
+    winners.forEach((it) => {
+      if (!state.best || it.value > state.best.value) {
+        state.best = { name: it.name, value: it.value, rarity: it.rarity };
+      }
+    });
+
+    $('#result-grid').innerHTML = winners.map((it, i) =>
+      itemMarkup(it).replace('class="item ', 'style="animation-delay:' + (i * 75) + 'ms" class="item ')
+    ).join('');
+
+    const diff = total - spent;
+    $('#open-payout').innerHTML = 'Pulled <b>' + fmt(total) + '</b> from <b>' + fmt(spent) + '</b> · ' +
+      '<b class="' + (diff >= 0 ? 'up' : 'down') + '">' + (diff >= 0 ? '+' : '') + fmt(diff) + '</b>';
+    $('#sell-pulls').textContent = 'Sell all for ' + fmt(total);
+    $('#open-results').style.display = '';
+    save();
+  }
+
+  function closeOpening(sellAll) {
+    if (!opening || !opening.settled) return;
+    if (sellAll) {
+      const total = opening.winners.reduce((s, it) => s + it.value, 0);
+      state.coins += total;
+      SFX.coin();
+      toast('Sold ' + opening.winners.length + ' for ' + fmt(total), 'good');
+    } else {
+      opening.winners.forEach(addItem);
+      toast('Added to inventory');
+    }
+    opening = null;
+    $('#open-overlay').classList.remove('open');
+    $('#reels').innerHTML = '';
+    renderBalance();
+    refreshCaseButtons();
+    renderInventory();
+    save();
+  }
+
+  /* =========================================================
+     Inventory
+     ========================================================= */
+
+  let trackerOnly = false;
+
+  function sortedInventory() {
+    const filter = $('#inv-filter').value;
+    const sort = $('#inv-sort').value;
+    let list = state.inventory.slice();
+    if (filter !== 'all') list = list.filter((it) => it.rarity === filter);
+    if (trackerOnly) list = list.filter((it) => it.tracker);
+    if (sort === 'value-desc') list.sort((a, b) => b.value - a.value);
+    else if (sort === 'value-asc') list.sort((a, b) => a.value - b.value);
+    else if (sort === 'newest') list.sort((a, b) => b.uid - a.uid);
+    else if (sort === 'float') list.sort((a, b) =>
+      (a.float == null ? 2 : a.float) - (b.float == null ? 2 : b.float));
+    else list.sort((a, b) => a.name.localeCompare(b.name));
+    return list;
+  }
+
+  function renderInventory() {
+    const total = state.inventory.reduce((s, it) => s + it.value, 0);
+    $('#stat-items').textContent = fmt(state.inventory.length);
+    $('#stat-value').textContent = fmt(total);
+    $('#stat-opened').textContent = fmt(state.opened);
+    $('#stat-best').textContent = state.best ? fmt(state.best.value) : '—';
+    $('#stat-best').title = state.best ? state.best.name : '';
+
+    const list = sortedInventory();
+    const body = $('#inv-body');
+
+    if (!list.length) {
+      body.innerHTML = '<div class="empty"><h3>Nothing here yet</h3><p>' +
+        (state.inventory.length ? 'No items match these filters.' : 'Open a case to start your collection.') +
+        '</p></div>';
+      $('#sell-filtered').disabled = true;
+      $('#sell-filtered').textContent = 'Sell shown';
+      return;
+    }
+
+    $('#sell-filtered').disabled = false;
+    $('#sell-filtered').textContent = 'Sell shown (' + fmt(list.reduce((s, it) => s + it.value, 0)) + ')';
+    body.innerHTML = '<div class="inv-grid">' + list.map((it) =>
+      itemMarkup(it).replace(/<\/div>$/,
+        '<button class="sell" data-sell="' + it.uid + '">Sell ' + fmt(it.value) + '</button></div>')
+    ).join('') + '</div>';
+
+    $$('#inv-body [data-sell]').forEach((btn) =>
+      btn.addEventListener('click', () => sellItems([+btn.dataset.sell])));
+  }
+
+  function sellItems(uids) {
+    const set = new Set(uids);
+    let gained = 0;
+    state.inventory = state.inventory.filter((it) => {
+      if (!set.has(it.uid)) return true;
+      gained += it.value;
+      return false;
+    });
+    state.coins += gained;
+    SFX.coin();
+    toast('Sold for ' + fmt(gained), 'good');
+    renderBalance();
+    renderInventory();
+    refreshCaseButtons();
+    save();
+  }
+
+  /* =========================================================
+     Upgrader
+     ========================================================= */
+
+  const HOUSE_EDGE = 0.93;
+  const MAX_CHANCE = 0.90;
+  const MIN_CHANCE = 0.01;
+
+  const upgrade = {
+    selected: new Set(), mult: 2, target: null, chance: 0,
+    spinning: false, rotation: 0, result: null
+  };
+
+  function stakeValue() {
+    return state.inventory
+      .filter((it) => upgrade.selected.has(it.uid))
+      .reduce((s, it) => s + it.value, 0);
+  }
+
+  // Always aim at an item that really exists in a drop table, so the quoted
+  // multiplier is one the game can actually pay out.
+  function pickTarget(stake, mult) {
+    const wanted = stake * mult;
+    const candidates = ALL_ITEMS.filter((it) => it.value > stake * 1.05);
+    if (!candidates.length) return null;
+    return candidates.reduce((best, it) =>
+      Math.abs(it.value - wanted) < Math.abs(best.value - wanted) ? it : best, candidates[0]);
+  }
+
+  function describeArc(pct) {
+    if (pct <= 0) return '';
+    const r = 103, cx = 120, cy = 120;
+    const angle = Math.min(pct, 0.9999) * Math.PI * 2;
+    const x2 = cx + r * Math.sin(angle);
+    const y2 = cy - r * Math.cos(angle);
+    return 'M ' + cx + ' ' + (cy - r) + ' A ' + r + ' ' + r + ' 0 ' +
+           (angle > Math.PI ? 1 : 0) + ' 1 ' + x2 + ' ' + y2;
+  }
+
+  function renderUpgrader() {
+    const alive = new Set(state.inventory.map((it) => it.uid));
+    upgrade.selected.forEach((uid) => { if (!alive.has(uid)) upgrade.selected.delete(uid); });
+
+    const body = $('#stake-body');
+    if (!state.inventory.length) {
+      body.innerHTML = '<div class="empty"><h3>No items to stake</h3>' +
+        '<p>Open a case first, then bring the drops here.</p></div>';
+    } else {
+      const list = state.inventory.slice().sort((a, b) => b.value - a.value);
+      body.innerHTML = '<div class="pick-grid">' + list.map((it) =>
+        itemMarkup(it, upgrade.selected.has(it.uid) ? 'sel' : '')
+          .replace('class="item ', 'data-pick="' + it.uid + '" class="item ')
+      ).join('') + '</div>';
+
+      $$('#stake-body [data-pick]').forEach((el) => {
+        el.addEventListener('click', () => {
+          if (upgrade.spinning) return;
+          upgrade.result = null;
+          const uid = +el.dataset.pick;
+          if (upgrade.selected.has(uid)) upgrade.selected.delete(uid);
+          else upgrade.selected.add(uid);
+          SFX.blip();
+          renderUpgrader();
+        });
+      });
+    }
+
+    const count = upgrade.selected.size;
+    $('#stake-hint').textContent = count
+      ? count + ' item' + (count > 1 ? 's' : '') + ' staked · worth ' + fmt(stakeValue())
+      : 'Select one or more items to put on the line.';
+
+    updateWheel();
+  }
+
+  function updateWheel() {
+    const stake = stakeValue();
+    const target = stake > 0 ? pickTarget(stake, upgrade.mult) : null;
+    upgrade.target = target;
+
+    const chance = target
+      ? Math.max(MIN_CHANCE, Math.min(MAX_CHANCE, (stake / target.value) * HOUSE_EDGE))
+      : 0;
+    upgrade.chance = chance;
+
+    $('#wheel-arc').setAttribute('d', describeArc(chance));
+    $('#up-stake').textContent = fmt(stake);
+    $('#up-target').textContent = target ? fmt(target.value) : '—';
+    $('#up-chance').textContent = target ? (chance * 100).toFixed(1) + '%' : '—';
+
+    if (!upgrade.spinning && !upgrade.result) {
+      $('#wheel-center').className = 'wheel-center';
+      $('#wheel-pct').textContent = target ? Math.round(chance * 100) + '%' : '—';
+      $('#wheel-label').textContent = 'win chance';
+    }
+
+    $('#target-slot').innerHTML = target
+      ? '<div class="target-preview" style="--rc:' + RARITY_COLOR[target.rarity] + '">' +
+          '<div class="tp-art">' + renderModel(target.kind, target.name,
+            target.kind === 'sticker' ? '0 0 240 156'
+              : (target.kind === 'charm' || target.kind === 'agent') ? '0 0 240 130'
+              : '0 0 240 96') + '</div>' +
+          '<div><div class="tp-name">' + target.name + '</div>' +
+            '<div class="tp-val">' + fmt(target.value) + ' coins · ' +
+              (target.value / stake).toFixed(2) + 'x your stake</div></div>' +
+        '</div>'
+      : '';
+
+    const btn = $('#spin-btn');
+    if (upgrade.spinning) { btn.disabled = true; btn.textContent = 'Spinning'; }
+    else if (!stake) { btn.disabled = true; btn.textContent = 'Select items to spin'; }
+    else if (!target) { btn.disabled = true; btn.textContent = 'No higher target left'; }
+    else { btn.disabled = false; btn.textContent = 'Spin the wheel'; }
+  }
+
+  function spin() {
+    if (upgrade.spinning || !upgrade.target || !upgrade.selected.size) return;
+    const target = upgrade.target;
+    const chance = upgrade.chance;
+    const staked = Array.from(upgrade.selected);
+    const won = Math.random() < chance;
+
+    SFX.unlock();
+    upgrade.spinning = true;
+    updateWheel();
+    SFX.whoosh();
+
+    // Pointer sits at the top; land it inside the orange arc on a win.
+    const pad = 0.012;
+    const landing = won
+      ? (pad + Math.random() * Math.max(chance - pad * 2, 0.001)) * 360
+      : ((chance + pad) + Math.random() * Math.max(1 - chance - pad * 2, 0.001)) * 360;
+
+    upgrade.rotation += 360 * 6 + (360 - landing) - (upgrade.rotation % 360);
+    const rotor = $('#wheel-rotor');
+    rotor.style.transition = 'transform 4800ms cubic-bezier(.1,.62,.12,1)';
+    rotor.style.transform = 'rotate(' + upgrade.rotation + 'deg)';
+
+    $('#wheel-pct').textContent = '—';
+    $('#wheel-label').textContent = 'spinning';
+
+    // Ticks thin out as the wheel slows.
+    let elapsed = 0;
+    (function tickLoop() {
+      if (elapsed > 4600) return;
+      SFX.wheelTick();
+      const progress = elapsed / 4600;
+      const gap = 55 + Math.pow(progress, 2.6) * 420;
+      elapsed += gap;
+      setTimeout(tickLoop, gap);
+    })();
+
+    if (RARITIES.indexOf(target.rarity) >= 3) setTimeout(() => SFX.riser(1.4), 3400);
+
+    setTimeout(() => {
+      upgrade.spinning = false;
+      const set = new Set(staked);
+      state.inventory = state.inventory.filter((it) => !set.has(it.uid));
+      upgrade.selected.clear();
+
+      const center = $('#wheel-center');
+      if (won) {
+        const made = addItem(instantiate(target));
+        if (!state.best || made.value > state.best.value) {
+          state.best = { name: made.name, value: made.value, rarity: made.rarity };
+        }
+        center.className = 'wheel-center win';
+        $('#wheel-pct').textContent = 'WIN';
+        $('#wheel-label').textContent = made.name;
+        SFX.win(target.rarity);
+        toast('Upgraded into ' + target.name, 'good');
+      } else {
+        center.className = 'wheel-center lose';
+        $('#wheel-pct').textContent = 'LOST';
+        $('#wheel-label').textContent = staked.length + ' item' + (staked.length > 1 ? 's' : '') + ' gone';
+        SFX.lose();
+        toast('Wheel missed — stake lost', 'bad');
+      }
+
+      upgrade.result = { won: won };
+      renderBalance();
+      refreshCaseButtons();
+      save();
+      renderUpgrader();
+    }, 4900);
+  }
+
+  /* =========================================================
+     Wiring
+     ========================================================= */
+
+  function resetAll() {
+    if (!confirm('Reset all progress? Your coins and inventory will be wiped.')) return;
+    state.coins = START_COINS;
+    state.inventory = [];
+    state.opened = 0;
+    state.best = null;
+    state.uid = 1;
+    upgrade.selected.clear();
+    upgrade.result = null;
+    save();
+    renderBalance();
+    refreshCaseButtons();
+    renderInventory();
+    renderUpgrader();
+    toast('Progress reset');
+  }
+
+  function updateMuteIcon() {
+    $('#mute-icon').innerHTML = state.muted
+      ? '<polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="22" y1="9" x2="16" y2="15"/><line x1="16" y1="9" x2="22" y2="15"/>'
+      : '<polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/>';
+  }
+
+  function init() {
+    load();
+    SFX.setMuted(state.muted);
+
+    $$('.tab').forEach((t) => t.addEventListener('click', () => { SFX.blip(); setTab(t.dataset.tab); }));
+
+    $$('[data-count]').forEach((btn) => {
+      btn.classList.toggle('active', +btn.dataset.count === openCount);
+      btn.addEventListener('click', () => {
+        openCount = +btn.dataset.count;
+        $$('[data-count]').forEach((b) => b.classList.toggle('active', b === btn));
+        SFX.blip();
+        refreshCaseButtons();
+      });
+    });
+
+    $$('#mult-row .chip').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        if (upgrade.spinning) return;
+        upgrade.result = null;
+        upgrade.mult = parseFloat(btn.dataset.mult);
+        $$('#mult-row .chip').forEach((b) => b.classList.toggle('active', b === btn));
+        SFX.blip();
+        updateWheel();
+      });
+    });
+
+    $('#skip-btn').addEventListener('click', skipOpening);
+    $('#keep-pulls').addEventListener('click', () => closeOpening(false));
+    $('#sell-pulls').addEventListener('click', () => closeOpening(true));
+    $('#contents-close').addEventListener('click', () => $('#contents-overlay').classList.remove('open'));
+    $('#contents-overlay').addEventListener('click', (e) => {
+      if (e.target.id === 'contents-overlay') $('#contents-overlay').classList.remove('open');
+    });
+
+    $('#inv-sort').addEventListener('change', renderInventory);
+    $('#inv-filter').addEventListener('change', renderInventory);
+    $('#tracker-only').addEventListener('click', function () {
+      trackerOnly = !trackerOnly;
+      this.classList.toggle('active', trackerOnly);
+      SFX.blip();
+      renderInventory();
+    });
+    $('#sell-filtered').addEventListener('click', () => {
+      const list = sortedInventory();
+      if (!list.length) return;
+      if (list.length > 1 && !confirm('Sell ' + list.length + ' items for ' +
+          fmt(list.reduce((s, it) => s + it.value, 0)) + ' coins?')) return;
+      sellItems(list.map((it) => it.uid));
+    });
+
+    $('#spin-btn').addEventListener('click', spin);
+    $('#reset-btn').addEventListener('click', resetAll);
+    $('#mute-btn').addEventListener('click', () => {
+      state.muted = !state.muted;
+      SFX.setMuted(state.muted);
+      updateMuteIcon();
+      save();
+      if (!state.muted) SFX.blip();
+      toast(state.muted ? 'Sound off' : 'Sound on');
+    });
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key !== 'Escape') return;
+      $('#contents-overlay').classList.remove('open');
+      if (opening && opening.settled) closeOpening(false);
+    });
+
+    updateMuteIcon();
+    renderCases();
+    renderBalance();
+    renderInventory();
+    renderUpgrader();
+  }
+
+  init();
+})();
+</script>
+</body>
+</html>
