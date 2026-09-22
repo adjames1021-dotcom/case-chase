@@ -203,8 +203,6 @@
   .case-art { height: 132px; display: grid; place-items: center; margin-bottom: 12px; position: relative; overflow: hidden; }
   .case-hero { width: 92%; position: relative; z-index: 1; display: grid; place-items: center; }
   .case-hero svg, .case-hero img { width: 100%; height: 106px; display: block; object-fit: contain; }
-  .case-badge { position: absolute; right: 6px; bottom: 4px; z-index: 2; opacity: .4; }
-  .case-badge svg { width: 30px; height: 30px; display: block; }
   .case-name { font-family: var(--cond); font-size: 16px; font-weight: 700; letter-spacing: 1.2px; text-transform: uppercase; }
   .case-sub { font-size: 11.5px; color: var(--ink-3); margin: 3px 0 11px; }
   .odds-bar { display: flex; height: 6px; overflow: hidden; margin-bottom: 11px; background: var(--surface-3); }
@@ -662,6 +660,27 @@
   .gift-actions { display: flex; gap: 10px; justify-content: center; }
   .gift-actions .btn { min-width: 150px; }
 
+  /* ---------- Keys, vault, bonus drops ---------- */
+  .case-art { height: 158px; }
+  .case-hero svg { height: 150px; }
+  .case-card.locked { border-color: rgba(201,162,39,.35); }
+  .case-price.need { font-size: 12px; font-weight: 600; color: var(--ink-2); font-family: inherit; }
+  .case-price.need b { color: var(--gold); font-weight: 800; }
+  .item.bonus { box-shadow: 0 0 0 1px var(--gold), 0 0 22px rgba(240,166,42,.3); }
+  .item.bonus::after {
+    content: 'BONUS'; position: absolute; top: 6px; right: 6px; z-index: 2;
+    background: var(--gold); color: #1a1206; font-family: var(--cond);
+    font-size: 9px; font-weight: 700; letter-spacing: 1px; padding: 2px 6px;
+  }
+  .inv-grid .item .open-crate {
+    position: absolute; left: 8px; right: 8px; bottom: 44px; z-index: 3;
+    background: var(--gold); border: 0; color: #1a1206; padding: 7px;
+    font-family: var(--cond); font-size: 11px; font-weight: 700; letter-spacing: 1px;
+    text-transform: uppercase; cursor: pointer; opacity: 0; transform: translateY(5px);
+    transition: opacity .14s ease, transform .14s ease;
+  }
+  .inv-grid .item:hover .open-crate { opacity: 1; transform: none; }
+
   .toast-host {
     position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%);
     z-index: 200; display: flex; flex-direction: column; gap: 8px; align-items: center; pointer-events: none;
@@ -887,7 +906,6 @@
     <div class="section-head">
       <div>
         <h2>Cases</h2>
-        <p>Pick a crate, spin the reel, keep what you pull. Every skin rolls its own wear and float.</p>
       </div>
       <div class="toolbar" style="margin:0">
         <span class="label">Open</span>
@@ -903,7 +921,6 @@
     <div class="section-head">
       <div>
         <h2>Inventory</h2>
-        <p>Everything you've pulled. Sell for coins or feed it to the upgrader.</p>
       </div>
     </div>
 
@@ -945,20 +962,18 @@
     <div class="section-head">
       <div>
         <h2>Upgrader</h2>
-        <p>Stake items, pick a multiplier, spin the wheel. Land in the orange and trade up.</p>
       </div>
     </div>
 
     <div class="up-layout">
       <div class="card">
         <h4>Your stake</h4>
-        <p class="hint" id="stake-hint">Select one or more items to put on the line.</p>
+        <p class="hint" id="stake-hint">Select items</p>
         <div id="stake-body"></div>
       </div>
 
       <div class="card">
         <h4>Wheel</h4>
-        <p class="hint">Bigger multiplier, thinner slice.</p>
 
         <div class="wheel-box">
           <div class="wheel-holder">
@@ -990,7 +1005,7 @@
         <div class="kv"><span>Target value</span><b id="up-target">0</b></div>
         <div class="kv"><span>Win chance</span><b id="up-chance">0%</b></div>
 
-        <button class="btn btn-primary" id="spin-btn" style="width:100%;margin-top:13px" disabled>Select items to spin</button>
+        <button class="btn btn-primary" id="spin-btn" style="width:100%;margin-top:13px" disabled>Select items</button>
       </div>
     </div>
   </section>
@@ -999,21 +1014,19 @@
     <div class="section-head">
       <div>
         <h2>Trade</h2>
-        <p>Turn items into a code, send the code however you like, and whoever pastes it gets the items.</p>
       </div>
     </div>
 
     <div class="up-layout trade-layout">
       <div class="card">
         <h4>Send</h4>
-        <p class="hint" id="send-hint">Pick the items you want to send.</p>
+        <p class="hint" id="send-hint">Select items</p>
         <div id="send-body"></div>
-        <button class="btn btn-primary" id="make-code" style="width:100%;margin-top:13px" disabled>Select items to send</button>
+        <button class="btn btn-primary" id="make-code" style="width:100%;margin-top:13px" disabled>Select items</button>
       </div>
 
       <div class="card">
         <h4>Receive</h4>
-        <p class="hint">Paste a code someone sent you.</p>
         <textarea class="control code-box" id="code-in" rows="3" spellcheck="false"
                   placeholder="TRD1-..." autocomplete="off"></textarea>
         <div style="display:flex;gap:8px;margin-top:10px">
@@ -1025,8 +1038,7 @@
     </div>
 
     <div class="card" style="margin-top:18px">
-      <h4>Codes you have sent</h4>
-      <p class="hint">Kept locally so you can copy a code again if you lose it. The items have already left your inventory.</p>
+      <h4>Sent codes</h4>
       <div id="outbox"></div>
     </div>
   </section>
@@ -1035,7 +1047,6 @@
     <div class="section-head">
       <div>
         <h2>Case Battles</h2>
-        <p>Everyone opens the same cases at the same time. Best total takes every item on the table.</p>
       </div>
     </div>
 
@@ -1084,7 +1095,6 @@
     <div class="section-head">
       <div>
         <h2>Admin</h2>
-        <p>Create signed gift codes for coins and items. They open with a gift pop-up when redeemed.</p>
       </div>
       <button class="btn btn-ghost btn-sm" id="admin-lock" style="display:none">Lock admin</button>
     </div>
@@ -1095,8 +1105,8 @@
           <rect x="4.5" y="10.5" width="15" height="10" rx="2"/><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3"/><circle cx="12" cy="15.5" r="1.2"/>
         </svg>
       </div>
-      <h4>Admin key required</h4>
-      <p class="hint">Paste the admin key to unlock. It is kept for this tab only and forgotten when the tab closes.</p>
+      <h4>Admin</h4>
+      <p class="hint">Stays unlocked until you close the tab.</p>
       <div class="admin-unlock">
         <input class="control" id="admin-key-in" type="password" placeholder="ADMK-..." autocomplete="off" spellcheck="false">
         <button class="btn btn-primary" id="admin-unlock">Unlock</button>
@@ -1108,7 +1118,6 @@
       <div class="up-layout trade-layout">
         <div class="card">
           <h4>Build a gift</h4>
-          <p class="hint">Whoever redeems the code gets everything in it, once per save.</p>
           <label class="field"><span class="label">Coins</span>
             <input class="control" id="gift-coins-in" type="number" min="0" step="1" value="0"></label>
           <div class="field"><span class="label">Add an item</span>
@@ -1132,15 +1141,14 @@
 
         <div class="card">
           <h4>Gift code</h4>
-          <p class="hint">Send it however you like. Players paste it into Trade → Receive.</p>
-          <div id="gift-out"><div class="empty" style="padding:28px"><h3>No code yet</h3><p>Build a gift, then create it.</p></div></div>
+          <p class="hint">Redeem it in Trade.</p>
+          <div id="gift-out"><div class="empty" style="padding:28px"><h3>No code yet</h3></div></div>
           <button class="btn btn-ghost btn-sm" id="gift-preview" style="margin-top:12px" disabled>Preview the pop-up</button>
         </div>
       </div>
 
       <div class="card" style="margin-top:18px">
         <h4>Gifts created</h4>
-        <p class="hint">Kept on this device so you can copy one again.</p>
         <div id="gift-log"></div>
       </div>
     </div>
@@ -1187,7 +1195,7 @@
     <div class="sheet-head">
       <div>
         <h3>Confirm send</h3>
-        <p>These items leave your inventory now and live in the code instead.</p>
+        <p>These items will leave your inventory.</p>
       </div>
       <button class="link-btn" id="send-cancel">Cancel</button>
     </div>
@@ -1226,7 +1234,7 @@
       </svg>
     </div>
     <div class="gift-reveal" id="gift-reveal">
-      <div class="gift-kicker">A gift from the admin</div>
+      <div class="gift-kicker">Gift</div>
       <h3 id="gift-title">You’ve got a gift</h3>
       <p class="gift-msg" id="gift-msg"></p>
       <div class="gift-coins" id="gift-coins"></div>
@@ -1685,6 +1693,77 @@
       }
     };
 
+    /* ---------- weapon cases and keys ---------- */
+
+    // Emblems sit on each case's label, drawn in a 40 x 40 box.
+    const CRATE_EMBLEMS = {
+      wrench: 'M7,33 L23,17 Q21,8 29,4 L31,11 L36,12 L37,6 Q44,12 37,20 Q31,23 27,21 L11,37 Q8,39 6,36 Q5,34 7,33 Z',
+      star: 'M20,3 L25,15 L38,16 L28,25 L31,38 L20,31 L9,38 L12,25 L2,16 L15,15 Z',
+      peel: 'M5,5 L35,5 L35,25 L25,35 L5,35 Z M25,35 L25,25 L35,25 Z',
+      spray: 'M13,13 L27,13 L27,36 Q27,38 25,38 L15,38 Q13,38 13,36 Z M16,5 L24,5 L24,13 L16,13 Z M29,5 L35,3 L35,6 L29,8 Z',
+      bolt: 'M23,2 L8,22 L18,22 L14,38 L32,15 L21,15 Z',
+      helmet: 'M5,27 Q5,6 20,5 Q35,6 35,27 L38,31 L2,31 Z',
+      gem: 'M10,6 L30,6 L38,16 L20,36 L2,16 Z',
+      dagger: 'M20,2 L24,24 L16,24 Z M10,24 L30,24 L30,28 L10,28 Z M17.5,28 L22.5,28 L22.5,38 L17.5,38 Z',
+      prism: 'M20,4 L37,34 L3,34 Z',
+      flask: 'M15,3 L25,3 L25,14 L35,32 Q37,37 31,37 L9,37 Q3,37 5,32 L15,14 Z',
+      crown: 'M3,14 L12,22 L20,6 L28,22 L37,14 L33,34 L7,34 Z',
+      shield: 'M20,3 L35,8 Q35,28 20,37 Q5,28 5,8 Z',
+      dial: circ(20, 20, 17) + circ(20, 20, 10) + 'M18.5,1 L21.5,1 L21.5,8 L18.5,8 Z'
+    };
+
+    const crateInfo = {};
+    function registerCrates(list) {
+      list.forEach((c) => { crateInfo[c.name] = { accent: c.accent, emblem: c.emblem }; });
+    }
+
+    const corner = (x, y, fx, fy) => {
+      const X = (v) => x + v * fx, Y = (v) => y + v * fy;
+      return 'M' + X(0) + ',' + Y(14) + 'L' + X(0) + ',' + Y(4) + 'Q' + X(0) + ',' + Y(0) + ' ' + X(4) + ',' + Y(0) +
+             'L' + X(14) + ',' + Y(0) + 'L' + X(14) + ',' + Y(5) + 'L' + X(5) + ',' + Y(5) + 'L' + X(5) + ',' + Y(14) + 'Z';
+    };
+
+    function crateModel(item) {
+      const info = crateInfo[item.name] || {};
+      const accent = info.accent || item.accent || '#f26a1b';
+      return {
+        box: '0 0 240 176', shadow: [120, 166, 106, 6],
+        look: { hex: accent, finish: 'solid', l: 27 },
+        parts: [
+          { d: rr(34, 150, 30, 11, 2) + rr(176, 150, 30, 11, 2), m: 'dark' },
+          { d: 'M36,42 L204,42 Q210,42 213,46 L222,58 L18,58 L27,46 Q30,42 36,42 Z', m: 'skin' },
+          { d: 'M87,44 L87,30 Q87,22 95,22 L145,22 Q153,22 153,30 L153,44 L143,44 L143,32 L97,32 L97,44 Z', m: 'dark' },
+          { d: rr(18, 58, 204, 96, 9), m: 'skin' },
+          { d: rr(18, 55, 204, 26, 7), m: 'skin' },
+          { d: corner(18, 55, 1, 1) + corner(222, 55, -1, 1) + corner(18, 154, 1, -1) + corner(222, 154, -1, -1), m: 'metal' },
+          { d: rr(41, 70, 24, 32, 4) + rr(175, 70, 24, 32, 4), m: 'metal' },
+          { d: rr(78, 91, 84, 54, 5), m: 'label', fill: accent },
+          { d: CRATE_EMBLEMS[info.emblem] || CRATE_EMBLEMS.star, m: 'label', fill: '#fff', o: .9,
+            tf: 'translate(100,98)', shade: 'none', rule: info.emblem === 'dial' || info.emblem === 'peel' ? 1 : 0 }
+        ],
+        holes: rr(47, 84, 12, 7, 2) + rr(181, 84, 12, 7, 2),
+        lines: 'M20,81 L220,81 M24,120 L72,120 M168,120 L216,120 M24,134 L72,134 M168,134 L216,134',
+        lights: 'M36,42.8 L204,42.8 M27,56 L213,56 M80,91.8 L160,91.8',
+        text: { x: 120, y: 72, size: 10.5, str: String(item.name || '').toUpperCase() }
+      };
+    }
+
+    function keyModel() {
+      return {
+        box: '0 -6 240 132', shadow: [124, 116, 98, 4], rot: [-14, 120, 60],
+        look: { hex: '#d8a92e', finish: 'solid', l: 50 },
+        parts: [
+          { d: circ(58, 60, 31) + circ(58, 60, 13), m: 'skin', rule: 1 },
+          { d: rr(86, 53, 118, 14, 5), m: 'skin' },
+          { d: rr(86, 45, 13, 30, 3), m: 'metal' },
+          { d: 'M166,66 L166,87 L177,87 L177,78 L185,78 L185,91 L198,91 L198,66 Z', m: 'skin' }
+        ],
+        holes: circ(58, 38.5, 3.2) + circ(58, 81.5, 3.2) + circ(36.5, 60, 3.2) + circ(79.5, 60, 3.2),
+        lines: 'M104,60 L198,60',
+        lights: 'M88,53.8 L202,53.8 M40,40 Q58,26 76,40'
+      };
+    }
+
     /* ---------- stickers, charms and agents vary by name ---------- */
 
     const EMBLEMS = {
@@ -1833,6 +1912,25 @@
       mythic: ['doppler', 'fade', 'marble']
     };
     const RARITY_SAT = { common: .55, uncommon: .75, rare: .9, epic: 1, legendary: 1.08, mythic: 1.15 };
+
+    function hexHsl(hex) {
+      const n = parseInt(String(hex).replace('#', ''), 16);
+      const r = (n >> 16 & 255) / 255, g = (n >> 8 & 255) / 255, b = (n & 255) / 255;
+      const mx = Math.max(r, g, b), mn = Math.min(r, g, b);
+      let h = 0, s = 0;
+      const l = (mx + mn) / 2;
+      if (mx !== mn) {
+        const d = mx - mn;
+        s = l > .5 ? d / (2 - mx - mn) : d / (mx + mn);
+        h = (mx === r ? (g - b) / d + (g < b ? 6 : 0) : mx === g ? (b - r) / d + 2 : (r - g) / d + 4) * 60;
+      }
+      return [Math.round(h), Math.round(s * 100), Math.round(l * 100)];
+    }
+
+    function lookFromAccent(spec, item) {
+      const hsl = hexHsl(spec.hex);
+      return { h: hsl[0], s: Math.min(hsl[1], 62), l: spec.l, finish: spec.finish, seed: hash(item.name || '') };
+    }
 
     function lookFor(item) {
       const h = hash(item.name);
@@ -2041,12 +2139,14 @@
       if (item.kind === 'sticker') M = stickerModel(item);
       else if (item.kind === 'charm') M = charmModel(item);
       else if (item.kind === 'agent') M = agentModel(item);
+      else if (item.kind === 'crate') M = crateModel(item);
+      else if (item.kind === 'key') M = keyModel(item);
       if (!M) M = MODELS.rifle_ak;
 
       const box = M.box.split(' ').map(Number);
       const BX = box[0], BY = box[1], W = box[2], H = box[3];
       const id = fixedId || 'x' + (uid++).toString(36);
-      const look = lookFor(item);
+      const look = M.look ? lookFromAccent(M.look, item) : lookFor(item);
       const fin = finishPattern('p' + id, 'g' + id, W, H, look, item, BX, BY);
       const paint = 'url(#p' + id + ')';
 
@@ -2060,12 +2160,13 @@
       if (M.rot) out += '<g transform="rotate(' + M.rot.join(' ') + ')">';
 
       M.parts.forEach((p) => {
-        const rule = p.rule ? ' fill-rule="evenodd"' : '';
+        const rule = (p.rule ? ' fill-rule="evenodd"' : '') + (p.tf ? ' transform="' + p.tf + '"' : '') +
+                     (p.o != null ? ' opacity="' + p.o + '"' : '');
         if (p.border) {
           out += '<path d="' + p.d + '" fill="#f2f0eb" stroke="#f2f0eb" stroke-width="' + p.border +
             '" stroke-linejoin="round"' + rule + '/>';
         }
-        const fill = p.m === 'skin' ? paint : MAT[p.m] || MAT.metal;
+        const fill = p.fill || (p.m === 'skin' ? paint : MAT[p.m] || MAT.metal);
         out += '<path d="' + p.d + '" fill="' + fill + '"' + rule + '/>';
         if (p.tex) out += '<path d="' + p.d + '" fill="url(#mx-' + p.tex + ')"' + rule + '/>';
         const shade = p.shade === 'none' ? 'none' : p.shade === 'h' ? 'url(#mx-shade-h)' : 'url(#mx-shade)';
@@ -2080,6 +2181,12 @@
       if (M.pins && M.pins.length) {
         out += '<path d="' + M.pins.map((q) => circ(q[0], q[1], q[2])).join('') + '" fill="url(#mx-steel)" stroke="rgba(0,0,0,.5)" stroke-width=".6"/>';
       }
+      if (M.text) {
+        const tl = String(M.text.str).length * (M.text.size * 0.62 + 1.6) > 100 ? ' textLength="100" lengthAdjust="spacingAndGlyphs"' : '';
+        out += '<text x="' + M.text.x + '" y="' + M.text.y + '" text-anchor="middle" font-family="Oswald, \'Arial Narrow\', Arial, sans-serif" ' +
+          'font-size="' + M.text.size + '" font-weight="700" letter-spacing="1.6" fill="rgba(255,255,255,.78)"' + tl + '>' +
+          String(M.text.str).replace(/&/g, '&amp;').replace(/</g, '&lt;') + '</text>';
+      }
       if (M.gloss) {
         if (M.glossClip) {
           out += '<clipPath id="k' + id + '"><path d="' + M.glossClip + '"' + (M.glossRule ? ' clip-rule="evenodd"' : '') + '/></clipPath>' +
@@ -2093,7 +2200,7 @@
       return out + '</svg>';
     }
 
-    return { render: render, ensureDefs: ensureDefs, lookFor: lookFor, MODELS: MODELS };
+    return { render: render, ensureDefs: ensureDefs, lookFor: lookFor, registerCrates: registerCrates, MODELS: MODELS };
   })();
 
   /* =========================================================
@@ -2357,9 +2464,9 @@
   WEARS.forEach((w) => { WEAR_BY_KEY[w.key] = w; });
 
   // Stickers, charms and agents have no wear grade — same as the real thing.
-  const NO_WEAR = { sticker: 1, charm: 1, agent: 1 };
+  const NO_WEAR = { sticker: 1, charm: 1, agent: 1, key: 1, crate: 1 };
   // Gloves take wear but never a tracker.
-  const NO_TRACKER = { sticker: 1, charm: 1, agent: 1, gloves: 1 };
+  const NO_TRACKER = { sticker: 1, charm: 1, agent: 1, gloves: 1, key: 1, crate: 1 };
 
   const TRACKER_CHANCE = 0.08;
   const TRACKER_MULT = 1.25;
@@ -2594,10 +2701,43 @@
         I('Butterfly Knife | Vanguard Fade', 'knife_butterfly', 'legendary', 197746),
         I('Butterfly Knife | Crown Jewel', 'knife_butterfly', 'mythic', 741548)
       ]
+    },
+    {
+      id: 'vault', name: 'Vault Case', sub: '', price: 0, locked: true,
+      accent: '#c9a227', odds: ODDS.t6,
+      items: [
+        I('P-22 | Tumbler', 'pistol', 'common', 90),
+        I('SP-5 | Deposit Box', 'smg', 'common', 103),
+        I('AR-12 | Night Teller', 'rifle_m4', 'common', 115),
+        I('LR-800 | Safe Cracker', 'sniper', 'uncommon', 204),
+        I('Moto Gloves | Velvet Lining', 'gloves', 'uncommon', 231),
+        I('RX-357 | Combination', 'revolver', 'uncommon', 259),
+        I('KR-74 | Gold Reserve', 'rifle_ak', 'rare', 509),
+        I('BR-12 | Blast Door', 'shotgun', 'rare', 579),
+        I('MK Vector | Heist', 'smg', 'rare', 648),
+        I('AWS-7 | Bullion', 'sniper', 'epic', 1435),
+        I('Bayonet | Strongroom', 'knife_bayonet', 'epic', 1650),
+        I('Butterfly Knife | Gilded Vault', 'knife_butterfly', 'legendary', 5142),
+        I('Karambit | Treasury', 'knife_karambit', 'mythic', 19305)
+      ]
     }
   ];
 
-  const ALL_ITEMS = CASES.reduce((acc, c) => acc.concat(c.items), []);
+  // Keys and locked cases drop as bonus items and live in the inventory.
+  const VAULT_KEY = I('Vault Key', 'key', 'legendary', 90);
+  const VAULT_CRATE = I('Vault Case', 'crate', 'epic', 90);
+  const SPECIAL_ITEMS = [VAULT_KEY, VAULT_CRATE];
+  const ALL_ITEMS = CASES.reduce((acc, c) => acc.concat(c.items), []).concat(SPECIAL_ITEMS);
+
+  const CASE_EMBLEMS = {
+    scrap: 'wrench', starter: 'star', capsule: 'peel', urban: 'spray', neon: 'bolt', operative: 'helmet',
+    obsidian: 'gem', blades: 'dagger', prism: 'prism', chroma: 'flask', apex: 'crown', vanguard: 'shield', vault: 'dial'
+  };
+  ART.registerCrates(CASES.map((c) => ({ name: c.name, accent: c.accent, emblem: CASE_EMBLEMS[c.id] })));
+
+  // Chance per paid case of each bonus drop. Scales with price and caps low,
+  // so the vault never pushes a case's return over its price.
+  const bonusChance = (box) => box.price > 0 ? Math.min(0.03, 0.0015 + box.price / 60000) : 0;
 
   /* =========================================================
      State
@@ -2711,7 +2851,7 @@
 
   // Non-weapon items show their category where the wear grade would sit.
   const KIND_LABEL = {
-    sticker: 'Sticker', charm: 'Charm', agent: 'Agent', gloves: 'Gloves',
+    sticker: 'Sticker', charm: 'Charm', agent: 'Agent', gloves: 'Gloves', key: 'Key', crate: 'Case',
     knife_bayonet: 'Knife', knife_karambit: 'Knife', knife_butterfly: 'Knife'
   };
 
@@ -2733,7 +2873,8 @@
 
   function itemMarkup(item, extra, lite) {
     const wear = item.wear ? WEAR_BY_KEY[item.wear] : null;
-    const sub = wear ? wear.short : (KIND_LABEL[item.kind] || 'Weapon');
+    // The type is already on the line above the name, so only skins need this slot.
+    const sub = wear ? wear.short : '';
     const subTitle = wear ? wear.name : sub;
     // Rarity reads from the tile glow and the strip along the bottom, so the
     // text stays minimal and the artwork gets the room.
@@ -2781,17 +2922,6 @@
     if (name === 'admin') renderAdmin();
   }
 
-  function caseArt(accent) {
-    return '<svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">' +
-      '<path d="M60 14 L104 34 L104 84 L60 106 L16 84 L16 34 Z" fill="rgba(255,255,255,.94)" ' +
-        'stroke="' + accent + '" stroke-width="3" stroke-linejoin="round"/>' +
-      '<path d="M16 34 L60 54 L104 34" fill="none" stroke="' + accent + '" stroke-width="3" stroke-linejoin="round"/>' +
-      '<path d="M60 54 L60 106" fill="none" stroke="' + accent + '" stroke-width="3"/>' +
-      '<rect x="49" y="55" width="22" height="18" rx="3" fill="' + accent + '"/>' +
-      '<circle cx="60" cy="64" r="3.4" fill="#fff"/>' +
-    '</svg>';
-  }
-
   /* =========================================================
      Cases tab
      ========================================================= */
@@ -2804,19 +2934,19 @@
         '<span style="flex:' + ((box.odds[r] || 0) * 1000) + ';background:' + RARITY_COLOR[r] + '"></span>'
       ).join('');
       const top = box.items.reduce((a, b) => (b.value > a.value ? b : a), box.items[0]);
-      return '<article class="case-card">' +
-        '<div class="case-art" style="background:radial-gradient(ellipse at 50% 56%,' +
-          box.accent + '30,' + box.accent + '0c 58%,transparent 76%)">' +
-          '<div class="case-hero">' + artFor(top) + '</div>' +
-          '<span class="case-badge">' + caseArt(box.accent) + '</span>' +
+      return '<article class="case-card' + (box.locked ? ' locked' : '') + '">' +
+        '<div class="case-art" style="background:radial-gradient(ellipse at 50% 60%,' +
+          box.accent + '38,' + box.accent + '0c 58%,transparent 76%)">' +
+          '<div class="case-hero">' + artFor({ kind: 'crate', name: box.name, rarity: 'common' }) + '</div>' +
         '</div>' +
         '<div class="case-name">' + box.name + '</div>' +
-        '<div class="case-sub">' + box.sub + '</div>' +
         '<div class="odds-bar">' + bars + '</div>' +
         '<div class="case-top"><span class="label">Top</span><b>' + top.name + '</b></div>' +
         '<div class="case-foot">' +
-          '<span class="case-price' + (box.price === 0 ? ' free' : '') + '">' +
-            (box.price === 0 ? 'FREE' : fmt(box.price)) + '</span>' +
+          (box.locked
+            ? '<span class="case-price need" data-held="' + i + '"></span>'
+            : '<span class="case-price' + (box.price === 0 ? ' free' : '') + '">' +
+                (box.price === 0 ? 'FREE' : fmt(box.price)) + '</span>') +
           '<button class="link-btn" data-contents="' + i + '">Contents</button>' +
           '<button class="btn btn-primary btn-sm" data-open="' + i + '">Open</button>' +
         '</div>' +
@@ -2830,9 +2960,27 @@
     refreshCaseButtons();
   }
 
+  const heldCount = (kind) => state.inventory.filter((it) => it.kind === kind).length;
+
+  function takeOne(kind) {
+    const i = state.inventory.findIndex((it) => it.kind === kind);
+    if (i > -1) state.inventory.splice(i, 1);
+  }
+
   function refreshCaseButtons() {
+    $$('#case-grid [data-held]').forEach((el) => {
+      const c = heldCount('crate'), k = heldCount('key');
+      el.innerHTML = '<b>' + c + '</b> case' + (c === 1 ? '' : 's') + ' · <b>' + k + '</b> key' + (k === 1 ? '' : 's');
+    });
     $$('#case-grid [data-open]').forEach((btn) => {
       const box = CASES[+btn.dataset.open];
+      if (box.locked) {
+        const pairs = Math.min(heldCount('crate'), heldCount('key'));
+        btn.disabled = !pairs;
+        btn.textContent = pairs && openCount > 1 ? 'Open x' + Math.min(openCount, pairs) : 'Open';
+        btn.title = pairs ? '' : 'Needs a Vault Case and a Vault Key';
+        return;
+      }
       const cost = box.price * openCount;
       btn.disabled = state.coins < cost;
       btn.textContent = openCount > 1 ? 'Open x' + openCount : 'Open';
@@ -2862,26 +3010,41 @@
 
   let opening = null;
 
-  function startOpening(box) {
+  function startOpening(box, forceCount) {
     if (opening) return;
-    const cost = box.price * openCount;
+    let count = forceCount || openCount;
+    if (box.locked) {
+      count = Math.min(count, heldCount('crate'), heldCount('key'));
+      if (!count) { toast(heldCount('crate') ? 'Need a Vault Key' : 'Need a Vault Case', 'bad'); return; }
+    }
+    const cost = box.price * count;
     if (state.coins < cost) { toast('Not enough coins', 'bad'); return; }
 
     SFX.unlock();
     state.coins -= cost;
-    state.opened += openCount;
+    if (box.locked) {
+      for (let i = 0; i < count; i++) { takeOne('crate'); takeOne('key'); }
+      renderInventory();
+    }
+    state.opened += count;
     renderBalance();
     refreshCaseButtons();
 
     const winners = [];
-    for (let i = 0; i < openCount; i++) winners.push(rollItem(box));
+    for (let i = 0; i < count; i++) winners.push(rollItem(box));
 
-    opening = { winners, box, reels: [], finished: 0, settled: false, timers: [] };
+    const bonus = [];
+    const chance = bonusChance(box);
+    for (let i = 0; i < count; i++) {
+      if (Math.random() < chance) bonus.push(instantiate(VAULT_KEY));
+      if (Math.random() < chance) bonus.push(instantiate(VAULT_CRATE));
+    }
+
+    opening = { winners, bonus, box, reels: [], finished: 0, settled: false, timers: [] };
 
     $('#open-title').textContent = box.name;
-    $('#open-sub').textContent = openCount > 1
-      ? 'Opening ' + openCount + ' cases · ' + (cost === 0 ? 'free' : fmt(cost) + ' coins')
-      : (cost === 0 ? 'Free pull' : fmt(cost) + ' coins');
+    $('#open-sub').textContent = (count > 1 ? count + ' cases · ' : '') +
+      (box.locked ? count + ' key' + (count > 1 ? 's' : '') : cost === 0 ? 'Free' : fmt(cost) + ' coins');
     $('#open-results').style.display = 'none';
     $('#skip-btn').style.display = '';
     $('#reels').innerHTML = '';
@@ -2986,15 +3149,25 @@
     const total = winners.reduce((s, it) => s + it.value, 0);
     const spent = opening.box.price * winners.length;
 
-    winners.forEach((it) => {
-      if (!state.best || it.value > state.best.value) {
-        state.best = { name: it.name, value: it.value, rarity: it.rarity };
+    // Into the inventory now, so a reload on this screen never loses a pull.
+    opening.added = winners.map((it) => {
+      const made = addItem(it);
+      if (!state.best || made.value > state.best.value) {
+        state.best = { name: made.name, value: made.value, rarity: made.rarity };
       }
+      return made.uid;
     });
+    opening.bonus.forEach(addItem);
 
     $('#result-grid').innerHTML = winners.map((it, i) =>
       itemMarkup(it).replace('class="item ', 'style="animation-delay:' + (i * 75) + 'ms" class="item ')
+    ).join('') + opening.bonus.map((it, i) =>
+      itemMarkup(it, 'bonus').replace('class="item ', 'style="animation-delay:' + ((winners.length + i) * 75 + 250) + 'ms" class="item ')
     ).join('');
+    if (opening.bonus.length) {
+      opening.timers.push(setTimeout(() => SFX.win('legendary'), 450));
+      toast('Bonus: ' + opening.bonus.map((it) => it.name).join(' + '), 'good');
+    }
 
     const diff = total - spent;
     $('#open-payout').innerHTML = 'Pulled <b>' + fmt(total) + '</b> from <b>' + fmt(spent) + '</b> · ' +
@@ -3007,13 +3180,17 @@
   function closeOpening(sellAll) {
     if (!opening || !opening.settled) return;
     if (sellAll) {
-      const total = opening.winners.reduce((s, it) => s + it.value, 0);
+      // Bonus keys and cases always stay; only the pulls are sold.
+      const sold = new Set(opening.added || []);
+      let total = 0;
+      state.inventory = state.inventory.filter((it) => {
+        if (!sold.has(it.uid)) return true;
+        total += it.value;
+        return false;
+      });
       state.coins += total;
       SFX.coin();
-      toast('Sold ' + opening.winners.length + ' for ' + fmt(total), 'good');
-    } else {
-      opening.winners.forEach(addItem);
-      toast('Added to inventory');
+      toast('Sold for ' + fmt(total), 'good');
     }
     opening = null;
     $('#open-overlay').classList.remove('open');
@@ -3059,9 +3236,7 @@
     const body = $('#inv-body');
 
     if (!list.length) {
-      body.innerHTML = '<div class="empty"><h3>Nothing here yet</h3><p>' +
-        (state.inventory.length ? 'No items match these filters.' : 'Open a case to start your collection.') +
-        '</p></div>';
+      body.innerHTML = '<div class="empty"><h3>' + (state.inventory.length ? 'No matches' : 'No items') + '</h3></div>';
       $('#sell-filtered').disabled = true;
       $('#sell-filtered').textContent = 'Sell shown';
       return;
@@ -3071,9 +3246,13 @@
     $('#sell-filtered').textContent = 'Sell shown (' + fmt(list.reduce((s, it) => s + it.value, 0)) + ')';
     body.innerHTML = '<div class="inv-grid">' + list.map((it) =>
       itemMarkup(it).replace(/<\/div>$/,
+        (it.kind === 'crate' ? '<button class="open-crate" data-opencrate="1">Open</button>' : '') +
         '<button class="sell" data-sell="' + it.uid + '">Sell ' + fmt(it.value) + '</button></div>')
     ).join('') + '</div>';
 
+    $$('#inv-body [data-opencrate]').forEach((btn) => btn.addEventListener('click', () => {
+      startOpening(CASES.find((c) => c.locked), 1);
+    }));
     $$('#inv-body [data-sell]').forEach((btn) =>
       btn.addEventListener('click', () => sellItems([+btn.dataset.sell])));
   }
@@ -3118,7 +3297,7 @@
   // multiplier is one the game can actually pay out.
   function pickTarget(stake, mult) {
     const wanted = stake * mult;
-    const candidates = ALL_ITEMS.filter((it) => it.value > stake * 1.05);
+    const candidates = ALL_ITEMS.filter((it) => it.value > stake * 1.05 && it.kind !== 'key' && it.kind !== 'crate');
     if (!candidates.length) return null;
     return candidates.reduce((best, it) =>
       Math.abs(it.value - wanted) < Math.abs(best.value - wanted) ? it : best, candidates[0]);
@@ -3140,8 +3319,7 @@
 
     const body = $('#stake-body');
     if (!state.inventory.length) {
-      body.innerHTML = '<div class="empty"><h3>No items to stake</h3>' +
-        '<p>Open a case first, then bring the drops here.</p></div>';
+      body.innerHTML = '<div class="empty"><h3>No items</h3></div>';
     } else {
       const list = state.inventory.slice().sort((a, b) => b.value - a.value);
       body.innerHTML = '<div class="pick-grid">' + list.map((it) =>
@@ -3164,8 +3342,8 @@
 
     const count = upgrade.selected.size;
     $('#stake-hint').textContent = count
-      ? count + ' item' + (count > 1 ? 's' : '') + ' staked · worth ' + fmt(stakeValue())
-      : 'Select one or more items to put on the line.';
+      ? count + ' selected · ' + fmt(stakeValue())
+      : 'Select items';
 
     updateWheel();
   }
@@ -3202,9 +3380,9 @@
 
     const btn = $('#spin-btn');
     if (upgrade.spinning) { btn.disabled = true; btn.textContent = 'Spinning'; }
-    else if (!stake) { btn.disabled = true; btn.textContent = 'Select items to spin'; }
-    else if (!target) { btn.disabled = true; btn.textContent = 'No higher target left'; }
-    else { btn.disabled = false; btn.textContent = 'Spin the wheel'; }
+    else if (!stake) { btn.disabled = true; btn.textContent = 'Select items'; }
+    else if (!target) { btn.disabled = true; btn.textContent = 'No target'; }
+    else { btn.disabled = false; btn.textContent = 'Upgrade'; }
   }
 
   function spin() {
@@ -3268,7 +3446,7 @@
         $('#wheel-pct').textContent = 'LOST';
         $('#wheel-label').textContent = staked.length + ' item' + (staked.length > 1 ? 's' : '') + ' gone';
         SFX.lose();
-        toast('Wheel missed — stake lost', 'bad');
+        toast('Upgrade failed', 'bad');
       }
 
       upgrade.result = { won: won };
@@ -3405,18 +3583,18 @@
 
   async function parseTradeV2(code) {
     const parts = code.split('.');
-    if (parts.length !== 3) return { error: 'That trade code is incomplete.' };
+    if (parts.length !== 3) return { error: 'Invalid code' };
     if ((await tradeTag(parts[1])) !== parts[2]) {
-      return { error: 'Checksum failed. The code was mistyped, truncated or altered.' };
+      return { error: 'Invalid code' };
     }
     let payload;
     try { payload = JSON.parse(unutf8.decode(scramble(unb64u(parts[1]), await tradeKeystream()))); }
-    catch (e) { return { error: 'That trade code could not be read.' }; }
+    catch (e) { return { error: 'Invalid code' }; }
     if (!payload || !Array.isArray(payload.i) || !payload.i.length || payload.i.length > 50) {
-      return { error: 'That code carries no items.' };
+      return { error: 'Invalid code' };
     }
     const items = payload.i.map(tupleToItem);
-    if (items.some((it) => !it)) return { error: 'That code describes an item that cannot exist.' };
+    if (items.some((it) => !it)) return { error: 'Invalid code' };
     return { type: 'trade', items: items, code: code };
   }
 
@@ -3449,39 +3627,39 @@
 
   async function parseGift(code) {
     const parts = code.split('.');
-    if (parts.length !== 3) return { error: 'That gift code is incomplete.' };
+    if (parts.length !== 3) return { error: 'Invalid gift code' };
     let genuine = false;
     try {
       genuine = await crypto.subtle.verify(SIGN, await adminVerifyKey(), unb64u(parts[2]), utf8.encode(parts[1]));
     } catch (e) { genuine = false; }
     if (!genuine) {
-      return { error: 'This gift code is not signed by the admin. It was altered, truncated or forged.' };
+      return { error: 'Invalid gift code' };
     }
     let p;
-    try { p = JSON.parse(unutf8.decode(unb64u(parts[1]))); } catch (e) { return { error: 'That gift code could not be read.' }; }
+    try { p = JSON.parse(unutf8.decode(unb64u(parts[1]))); } catch (e) { return { error: 'Invalid gift code' }; }
     if (!p || p.t !== 'gift' || !Number.isInteger(p.c) || p.c < 0 || !Array.isArray(p.i) || p.i.length > 50) {
-      return { error: 'That gift code is malformed.' };
+      return { error: 'Invalid gift code' };
     }
     if (p.x && Date.now() / 1000 > p.x) {
-      return { error: 'This gift expired on ' + new Date(p.x * 1000).toLocaleString() + '.' };
+      return { error: 'Gift expired' };
     }
     const items = p.i.map(tupleToItem);
-    if (items.some((it) => !it)) return { error: 'That gift describes an item this game does not have.' };
-    if (!p.c && !items.length) return { error: 'That gift is empty.' };
+    if (items.some((it) => !it)) return { error: 'Invalid gift code' };
+    if (!p.c && !items.length) return { error: 'Invalid gift code' };
     return { type: 'gift', coins: p.c, items: items, message: String(p.m || ''),
              code: 'gift:' + p.id, issued: p.ts, expires: p.x };
   }
 
   async function parseAnyCode(raw) {
     const clean = String(raw || '').trim().replace(/\s+/g, '');
-    if (!clean) return { error: 'Paste a code first.' };
+    if (!clean) return { error: 'Enter a code' };
     if (clean.indexOf('GIFT.') === 0) return parseGift(clean);
     if (clean.indexOf('TRD2.') === 0) return parseTradeV2(clean);
     if (clean.indexOf('TRD1-') === 0) {
       const legacy = parseCode(clean);
       return legacy.error ? legacy : { type: 'trade', items: legacy.items, code: legacy.code };
     }
-    return { error: 'That does not look like a code from this game.' };
+    return { error: 'Invalid code' };
   }
 
   /* ---------- the admin key ----------
@@ -3549,21 +3727,21 @@
 
   function parseCode(raw) {
     const clean = String(raw || '').trim().replace(/\s+/g, '');
-    if (!clean) return { error: 'Paste a code first.' };
+    if (!clean) return { error: 'Enter a code' };
     const parts = clean.split('-');
     if (parts.length < 4 || parts[0] !== TRADE_VERSION) {
-      return { error: 'That does not look like a trade code from this game.' };
+      return { error: 'Invalid code' };
     }
     const sum = parts[parts.length - 1];
     const body = parts.slice(0, -1);
     if (tradeSum(body) !== sum) {
-      return { error: 'Checksum failed. The code was mistyped, truncated or altered.' };
+      return { error: 'Invalid code' };
     }
     const blobs = body.slice(1, -1);
-    if (!blobs.length) return { error: 'That code carries no items.' };
+    if (!blobs.length) return { error: 'Invalid code' };
     const items = blobs.map(blobToItem);
     if (items.some((it) => !it)) {
-      return { error: 'That code refers to an item this version of the game does not have.' };
+      return { error: 'Invalid code' };
     }
     return { items: items, code: clean };
   }
@@ -3585,8 +3763,7 @@
 
     const body = $('#send-body');
     if (!state.inventory.length) {
-      body.innerHTML = '<div class="empty"><h3>Nothing to send</h3>' +
-        '<p>Open a case first, then come back.</p></div>';
+      body.innerHTML = '<div class="empty"><h3>No items</h3></div>';
     } else {
       const list = state.inventory.slice().sort((a, b) => b.value - a.value);
       body.innerHTML = '<div class="pick-grid">' + list.map((it) =>
@@ -3608,14 +3785,12 @@
     const picked = state.inventory.filter((it) => trade.selected.has(it.uid));
     const worth = picked.reduce((sum, it) => sum + it.value, 0);
     $('#send-hint').textContent = picked.length
-      ? picked.length + ' item' + (picked.length > 1 ? 's' : '') + ' selected · worth ' + fmt(worth)
-      : 'Pick the items you want to send.';
+      ? picked.length + ' selected · ' + fmt(worth)
+      : 'Select items';
 
     const btn = $('#make-code');
     btn.disabled = !picked.length;
-    btn.textContent = picked.length
-      ? 'Create a code for ' + picked.length + ' item' + (picked.length > 1 ? 's' : '')
-      : 'Select items to send';
+    btn.textContent = picked.length ? 'Create code' : 'Select items';
 
     renderOutbox();
   }
@@ -3626,10 +3801,7 @@
     trade.pending = picked;
 
     $('#send-preview').innerHTML = picked.map((it) => itemMarkup(it)).join('');
-    $('#send-warn').innerHTML =
-      'Once you create the code these items are <b>gone from your inventory</b>. ' +
-      'Whoever pastes the code gets them, so treat it like cash — anyone you send ' +
-      'it to can redeem it. You cannot redeem your own code.';
+    $('#send-warn').innerHTML = 'Anyone with the code can redeem it. You can\'t redeem your own code.';
     $('#send-total').innerHTML = 'Sending <b>' + picked.length + '</b> item' +
       (picked.length > 1 ? 's' : '') + ' worth <b>' +
       fmt(picked.reduce((sum, it) => sum + it.value, 0)) + '</b>';
@@ -3643,10 +3815,10 @@
     let code = null;
     try { code = await makeTradeCode(picked); } catch (e) { code = null; }
     trade.busy = false;
-    if (!code) { toast('Could not build a code for those items', 'bad'); return; }
+    if (!code) { toast('Couldn\'t create code', 'bad'); return; }
     // Items could have been sold or spent while the code was being built.
     const held = new Set(state.inventory.map((it) => it.uid));
-    if (!picked.every((it) => held.has(it.uid))) { toast('Those items changed — try again', 'bad'); return; }
+    if (!picked.every((it) => held.has(it.uid))) { toast('Items changed, try again', 'bad'); return; }
 
     const uids = new Set(picked.map((it) => it.uid));
     state.inventory = state.inventory.filter((it) => !uids.has(it.uid));
@@ -3665,7 +3837,7 @@
     $('#send-overlay').classList.remove('open');
 
     SFX.coin();
-    toast('Code created for ' + picked.length + ' item' + (picked.length > 1 ? 's' : ''), 'good');
+    toast('Code created', 'good');
     renderBalance();
     renderInventory();
     renderTrade();
@@ -3683,8 +3855,7 @@
   function renderOutbox() {
     const host = $('#outbox');
     if (!state.outbox.length) {
-      host.innerHTML = '<div class="empty" style="padding:28px"><h3>No codes yet</h3>' +
-        '<p>Codes you create will be listed here.</p></div>';
+      host.innerHTML = '<div class="empty" style="padding:28px"><h3>No codes yet</h3></div>';
       return;
     }
     host.innerHTML = state.outbox.map((row) =>
@@ -3723,7 +3894,7 @@
       document.execCommand('copy');
       ta.remove();
       done();
-    } catch (e) { toast('Copy failed — select the code manually', 'bad'); }
+    } catch (e) { toast('Copy failed', 'bad'); }
   }
 
   /* ---------- Receive ---------- */
@@ -3741,13 +3912,12 @@
     }
     if (isRedeemed(res.code)) {
       host.innerHTML = '<div class="err-box">' + (res.type === 'gift'
-        ? 'This gift has already been claimed on this save.'
-        : 'This code has already been redeemed on this save, or it is one you created yourself.') + '</div>';
+        ? 'Already claimed' : 'Code already used') + '</div>';
       return;
     }
 
     if (res.type === 'gift') {
-      host.innerHTML = '<div class="ok-box">Genuine admin gift — signature verified.</div>';
+      host.innerHTML = '<div class="ok-box">Gift found</div>';
       openGift(res, false);
       return;
     }
@@ -3755,11 +3925,10 @@
     trade.incoming = res;
     const total = res.items.reduce((sum, it) => sum + it.value, 0);
     host.innerHTML =
-      '<div class="ok-box">Valid code. You are about to receive ' + res.items.length +
-        ' item' + (res.items.length > 1 ? 's' : '') + ' worth ' + fmt(total) + ' coins.</div>' +
+      '<div class="ok-box">' + res.items.length + ' item' + (res.items.length > 1 ? 's' : '') + ' · ' + fmt(total) + ' coins</div>' +
       '<div class="result-grid" style="margin-top:13px">' +
         res.items.map((it) => itemMarkup(it)).join('') + '</div>' +
-      '<button class="btn btn-primary" id="accept-code" style="width:100%">Accept these items</button>';
+      '<button class="btn btn-primary" id="accept-code" style="width:100%">Accept</button>';
 
     $('#accept-code').addEventListener('click', acceptCode);
     SFX.blip();
@@ -3770,7 +3939,7 @@
     if (!res) return;
     // Re-check at the moment of acceptance, not just at preview.
     if (isRedeemed(res.code)) {
-      $('#code-preview').innerHTML = '<div class="err-box">That code has already been redeemed.</div>';
+      $('#code-preview').innerHTML = '<div class="err-box">Code already used</div>';
       trade.incoming = null;
       return;
     }
@@ -3785,7 +3954,7 @@
     trade.incoming = null;
 
     $('#code-in').value = '';
-    $('#code-preview').innerHTML = '<div class="ok-box">Items added to your inventory.</div>';
+    $('#code-preview').innerHTML = '<div class="ok-box">Added to inventory</div>';
     SFX.win(res.items.reduce((best, it) =>
       RARITIES.indexOf(it.rarity) > RARITIES.indexOf(best) ? it.rarity : best, 'common'));
     toast('Received ' + res.items.length + ' item' + (res.items.length > 1 ? 's' : ''), 'good');
@@ -3824,7 +3993,9 @@
     if (!sel.options.length) {
       sel.innerHTML = CASES.map((c) => '<optgroup label="' + escHtml(c.name) + '">' +
         c.items.map((it) => '<option value="' + ITEM_INDEX[it.name] + '">' + escHtml(it.name) +
-          ' · ' + it.rarity + '</option>').join('') + '</optgroup>').join('');
+          ' · ' + it.rarity + '</option>').join('') + '</optgroup>').join('') +
+        '<optgroup label="Keys and cases">' + SPECIAL_ITEMS.map((it) =>
+          '<option value="' + ITEM_INDEX[it.name] + '">' + it.name + '</option>').join('') + '</optgroup>';
     }
     renderStaged();
     renderGiftLog();
@@ -3838,9 +4009,7 @@
     } catch (e) {
       adminState.key = null;
       if (!quiet) {
-        msg.innerHTML = '<div class="err-box">' + (e.message === 'format'
-          ? 'That is not an admin key — it should start with ADMK- followed by 43 characters.'
-          : 'Wrong key. It does not match the key this game was built with.') + '</div>';
+        msg.innerHTML = '<div class="err-box">' + (e.message === 'format' ? 'Invalid key' : 'Wrong key') + '</div>';
         SFX.lose();
       }
       return false;
@@ -3876,7 +4045,7 @@
   }
 
   function addStaged() {
-    if (adminState.staged.length >= 20) { toast('A gift holds up to 20 items', 'bad'); return; }
+    if (adminState.staged.length >= 20) { toast('Max 20 items', 'bad'); return; }
     const base = ALL_ITEMS[+$('#gift-item-sel').value];
     if (!base) return;
     adminState.staged.push(stagedItem(base, $('#gift-wear-sel').value, $('#gift-trk').checked));
@@ -3902,7 +4071,7 @@
   async function createGift() {
     if (!adminState.key || adminState.busy) return;
     const coins = Math.floor(Number($('#gift-coins-in').value) || 0);
-    if (coins < 0 || coins > 1e9) { toast('Coins must be between 0 and 1,000,000,000', 'bad'); return; }
+    if (coins < 0 || coins > 1e9) { toast('Invalid coin amount', 'bad'); return; }
     if (!coins && !adminState.staged.length) { toast('Add coins or items first', 'bad'); return; }
     const ttl = Number($('#gift-exp').value) || 0;
     const spec = {
@@ -3928,7 +4097,7 @@
       '<div class="code-out"><code>' + code + '</code>' +
       '<div class="code-actions"><button class="btn btn-primary btn-sm" id="gift-copy">Copy code</button>' +
       '<span class="hint" style="margin:0;align-self:center">' + summary +
-      (spec.expires ? ' · expires ' + new Date(spec.expires * 1000).toLocaleString() : ' · never expires') +
+      (spec.expires ? ' · expires ' + new Date(spec.expires * 1000).toLocaleString() : '') +
       '</span></div></div>';
     $('#gift-copy').addEventListener('click', function () { copyText(code, this); });
     $('#gift-preview').disabled = false;
@@ -3950,7 +4119,7 @@
     const host = $('#gift-log');
     const log = adminLog();
     if (!log.length) {
-      host.innerHTML = '<div class="empty" style="padding:24px"><h3>No gifts yet</h3><p>Gift codes you create appear here.</p></div>';
+      host.innerHTML = '<div class="empty" style="padding:24px"><h3>No gifts yet</h3></div>';
       return;
     }
     host.innerHTML = log.map((row) =>
@@ -3988,8 +4157,7 @@
       ? '<b id="gift-coin-count">0</b><span>coins</span>' : '';
     $('#gift-items').innerHTML = res.items.map((it, i) =>
       itemMarkup(it).replace('class="item ', 'style="animation-delay:' + (i * 90) + 'ms" class="item ')).join('');
-    $('#gift-meta').textContent = (res.issued ? 'Issued ' + new Date(res.issued * 1000).toLocaleDateString() : '') +
-      (res.expires ? ' · expires ' + new Date(res.expires * 1000).toLocaleString() : ' · never expires');
+    $('#gift-meta').textContent = res.expires ? 'Expires ' + new Date(res.expires * 1000).toLocaleString() : '';
 
     const claim = $('#gift-claim');
     claim.disabled = !!preview;
@@ -4043,9 +4211,7 @@
     save();
 
     $('#code-in').value = '';
-    $('#code-preview').innerHTML = '<div class="ok-box">Gift claimed' +
-      (res.coins ? ' · ' + fmt(res.coins) + ' coins' : '') +
-      (res.items.length ? ' · ' + res.items.length + ' item' + (res.items.length > 1 ? 's' : '') : '') + '.</div>';
+    $('#code-preview').innerHTML = '<div class="ok-box">Claimed</div>';
     SFX.coin();
     toast('Gift claimed', 'good');
     closeGift();
@@ -4129,7 +4295,7 @@
   function renderBattleSetup() {
     const sel = $('#bt-case');
     if (!sel.options.length) {
-      sel.innerHTML = CASES.map((c, i) =>
+      sel.innerHTML = CASES.map((c, i) => c.locked ? '' :
         '<option value="' + i + '">' + c.name + ' · ' +
         (c.price === 0 ? 'FREE' : fmt(c.price)) + '</option>').join('');
       sel.value = String(battle.caseIndex);
@@ -4287,18 +4453,16 @@
     const banner = document.createElement('div');
     banner.className = 'bt-banner ' + (youWon ? 'won' : 'lost');
     banner.innerHTML =
-      '<h3>' + (youWon ? 'You win the table' : winner.name + ' takes it') + '</h3>' +
+      '<h3>' + (youWon ? 'You win' : winner.name + ' wins') + '</h3>' +
       '<p>' + (youWon
-        ? 'All ' + pool.length + ' items are yours — ' + fmt(poolValue) +
-          ' coins of loot for a ' + (cost === 0 ? 'free' : fmt(cost) + ' coin') + ' entry.'
-        : 'Their total was ' + fmt(winner.total) + ' against your ' + fmt(live.players[0].total) +
-          '. You lose your ' + (cost === 0 ? 'free entry' : fmt(cost) + ' coin entry') + '.') +
+        ? pool.length + ' items · ' + fmt(poolValue) + ' coins'
+        : winner.name + ' ' + fmt(winner.total) + ' · You ' + fmt(live.players[0].total)) +
       '</p>' +
       '<button class="btn btn-primary" id="bt-again">New battle</button>';
     $('#battle-view').appendChild(banner);
     $('#bt-again').addEventListener('click', resetBattle);
 
-    toast(youWon ? 'Battle won · ' + fmt(poolValue) + ' in loot' : 'Battle lost', youWon ? 'good' : 'bad');
+    toast(youWon ? 'Battle won' : 'Battle lost', youWon ? 'good' : 'bad');
     renderBalance();
     renderInventory();
     save();
@@ -4318,7 +4482,7 @@
      ========================================================= */
 
   function resetAll() {
-    if (!confirm('Reset all progress? Your coins and inventory will be wiped.')) return;
+    if (!confirm('Reset all progress?')) return;
     state.coins = START_COINS;
     state.inventory = [];
     state.opened = 0;
@@ -4358,10 +4522,10 @@
     if (!splash) return;
 
     const steps = [
-      [18, 'Loading item models'],
-      [42, 'Building drop tables'],
-      [66, 'Priming the audio engine'],
-      [88, 'Restoring your inventory'],
+      [18, 'Loading'],
+      [42, 'Loading'],
+      [66, 'Loading'],
+      [88, 'Loading'],
       [100, 'Ready']
     ];
     let i = 0;
