@@ -6,31 +6,34 @@
 <title>Case Opening Sim</title>
 <style>
   :root {
-    --bg: #14171c;
-    --bg-2: #101317;
-    --surface: #1c2027;
-    --surface-2: #232830;
-    --surface-3: #2c323c;
-    --line: #2e353f;
-    --line-strong: #414a57;
-    --ink: #e9ecf0;
-    --ink-2: #a5adb8;
-    --ink-3: #6f7985;
+    --bg: #121820;
+    --bg-2: rgba(9,13,18,.74);
+    --surface: rgba(29,37,47,.72);
+    --surface-2: rgba(42,52,65,.66);
+    --surface-3: rgba(70,84,100,.5);
+    --line: rgba(255,255,255,.075);
+    --line-strong: rgba(255,255,255,.15);
+    --ink: #e9eef3;
+    --ink-2: #a7b2be;
+    --ink-3: #6f7c8a;
     --orange: #f26a1b;
     --orange-dark: #d4550c;
-    --orange-soft: rgba(242,106,27,.14);
+    --orange-soft: rgba(242,106,27,.16);
+    --gold: #f0a62a;
+    --good: #5fc274;
 
-    --common: #b0bac6;
-    --uncommon: #5fc274;
-    --rare: #4f9bf0;
-    --epic: #a964f0;
-    --legendary: #f0a62a;
-    --mythic: #ef4d52;
+    --common: #b0c3d9;
+    --uncommon: #5e98d9;
+    --rare: #4b69ff;
+    --epic: #8847ff;
+    --legendary: #d32ce6;
+    --mythic: #eb4b4b;
 
     --shadow-sm: 0 1px 2px rgba(0,0,0,.4);
-    --shadow: 0 8px 26px rgba(0,0,0,.45);
-    --shadow-lg: 0 26px 70px rgba(0,0,0,.6);
+    --shadow: 0 10px 30px rgba(0,0,0,.45);
+    --shadow-lg: 0 30px 80px rgba(0,0,0,.65);
 
+    --rail: 82px;
     --cond: 'Oswald', 'Roboto Condensed', 'Arial Narrow', 'Segoe UI', sans-serif;
   }
 
@@ -204,7 +207,7 @@
   .case-top b { color: var(--ink-2); font-weight: 700; }
   .case-foot { margin-top: auto; display: flex; align-items: center; gap: 8px; }
   .case-price { font-size: 16px; font-weight: 800; font-variant-numeric: tabular-nums; margin-right: auto; }
-  .case-price.free { color: var(--uncommon); font-family: var(--cond); letter-spacing: 1.5px; }
+  .case-price.free { color: var(--good); font-family: var(--cond); letter-spacing: 1.5px; }
 
   /* ---------- Item tile ---------- */
   .item {
@@ -305,7 +308,7 @@
   .sheet-actions { display: flex; gap: 10px; align-items: center; justify-content: flex-end; flex-wrap: wrap; }
   .payout { margin-right: auto; font-size: 13px; color: var(--ink-2); }
   .payout b { color: var(--ink); font-variant-numeric: tabular-nums; }
-  .payout .up { color: var(--uncommon); }
+  .payout .up { color: var(--good); }
   .payout .down { color: var(--mythic); }
 
   /* ---------- Inventory ---------- */
@@ -399,7 +402,7 @@
     text-transform: uppercase; color: var(--ink-3); display: block;
     max-width: 150px; margin: 2px auto 0; line-height: 1.3;
   }
-  .wheel-center.win b { color: var(--uncommon); }
+  .wheel-center.win b { color: var(--good); }
   .wheel-center.lose b { color: var(--mythic); }
 
   .mult-row { display: flex; gap: 5px; margin-bottom: 13px; }
@@ -453,7 +456,7 @@
   .code-out .code-actions { display: flex; gap: 8px; margin-top: 10px; }
 
   .warn-box {
-    border-left: 3px solid var(--legendary); background: rgba(240,166,42,.08);
+    border-left: 3px solid var(--gold); background: rgba(240,166,42,.08);
     padding: 10px 13px; font-size: 12.5px; color: var(--ink-2); margin-bottom: 16px;
   }
   .err-box {
@@ -461,7 +464,7 @@
     padding: 10px 13px; font-size: 12.5px; color: var(--ink-2); margin-top: 13px;
   }
   .ok-box {
-    border-left: 3px solid var(--uncommon); background: rgba(95,194,116,.09);
+    border-left: 3px solid var(--good); background: rgba(95,194,116,.09);
     padding: 10px 13px; font-size: 12.5px; color: var(--ink-2); margin-top: 13px;
   }
 
@@ -503,7 +506,7 @@
     transition: border-color .2s ease, box-shadow .2s ease;
   }
   .bt-col.you { border-color: var(--orange); }
-  .bt-col.winner { border-color: var(--legendary); box-shadow: 0 0 0 1px var(--legendary), 0 0 30px rgba(240,166,42,.25); }
+  .bt-col.winner { border-color: var(--gold); box-shadow: 0 0 0 1px var(--gold), 0 0 30px rgba(240,166,42,.25); }
   .bt-col.loser { opacity: .55; }
 
   .bt-name {
@@ -535,7 +538,7 @@
     margin: 0 0 6px; font-family: var(--cond); font-size: 24px; font-weight: 700;
     letter-spacing: 2.4px; text-transform: uppercase;
   }
-  .bt-banner.won h3 { color: var(--legendary); }
+  .bt-banner.won h3 { color: var(--gold); }
   .bt-banner.lost h3 { color: var(--mythic); }
   .bt-banner p { margin: 0 0 14px; font-size: 13px; color: var(--ink-2); }
 
@@ -585,7 +588,7 @@
   }
   .splash-bar i {
     display: block; height: 100%; width: 0;
-    background: linear-gradient(90deg, var(--orange), var(--legendary));
+    background: linear-gradient(90deg, var(--orange), var(--gold));
     transition: width .2s linear;
   }
   .splash-status {
@@ -612,6 +615,148 @@
   .toast.bad { background: #6b1f22; border-color: #932b30; color: #f8dcdd; }
   @keyframes toast-in { from { opacity: 0; transform: translateY(14px); } }
   @keyframes toast-out { to { opacity: 0; transform: translateY(-8px); } }
+
+  /* =========================================================
+     Inventory-style shell: atmospheric scene, icon rail, glass panels
+     ========================================================= */
+  html { background: #0c1015; }
+  body { background: transparent; background-image: none; padding-left: var(--rail); }
+
+  .scene { position: fixed; inset: 0; z-index: -1; overflow: hidden;
+    background:
+      radial-gradient(1100px 620px at 72% -12%, rgba(132,160,190,.26), transparent 62%),
+      radial-gradient(900px 700px at 4% 108%, rgba(36,58,82,.62), transparent 62%),
+      radial-gradient(700px 480px at 96% 96%, rgba(242,106,27,.06), transparent 70%),
+      linear-gradient(180deg, #1c2530 0%, #131a22 52%, #0b0f14 100%);
+  }
+  .scene::before { content: ''; position: absolute; inset: -20%;
+    background:
+      repeating-linear-gradient(112deg, rgba(255,255,255,.022) 0 2px, transparent 2px 170px),
+      radial-gradient(ellipse 60% 40% at 64% 18%, rgba(190,210,230,.08), transparent 70%);
+    transform: rotate(-2deg);
+  }
+  .scene::after { content: ''; position: absolute; inset: 0;
+    background:
+      url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='180' height='180'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 .07 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>"),
+      radial-gradient(ellipse at 50% 42%, transparent 52%, rgba(0,0,0,.62) 100%);
+  }
+
+  /* ---- icon rail ---- */
+  .rail {
+    position: fixed; left: 0; top: 0; bottom: 0; width: var(--rail); z-index: 50;
+    background: linear-gradient(180deg, rgba(14,19,26,.92), rgba(9,12,17,.94));
+    border-right: 1px solid var(--line);
+    backdrop-filter: blur(14px);
+    display: flex; flex-direction: column; align-items: stretch;
+  }
+  .rail-mark {
+    width: 40px; height: 40px; margin: 16px auto 18px;
+    background: linear-gradient(140deg, var(--orange), var(--orange-dark));
+    clip-path: polygon(22% 0, 100% 0, 100% 78%, 78% 100%, 0 100%, 0 22%);
+    display: grid; place-items: center; box-shadow: 0 6px 18px rgba(242,106,27,.4);
+  }
+  .rail-mark svg { width: 22px; height: 22px; }
+  .rail-nav { display: flex; flex-direction: column; gap: 2px; }
+  .rail .tab {
+    position: relative; display: flex; flex-direction: column; align-items: center; gap: 5px;
+    padding: 12px 4px 11px; margin: 0; border-radius: 0;
+    color: var(--ink-3); background: none;
+    font-family: var(--cond); font-size: 9.5px; letter-spacing: 1.3px;
+    transition: color .15s ease, background .15s ease;
+  }
+  .rail .tab svg { width: 23px; height: 23px; }
+  .rail .tab:hover { color: var(--ink); background: rgba(255,255,255,.035); }
+  .rail .tab.active { color: #fff; background: linear-gradient(90deg, rgba(255,255,255,.09), rgba(255,255,255,.02)); }
+  .rail .tab.active::after { left: 0; right: auto; top: 8px; bottom: 8px; width: 3px; height: auto; }
+  .rail .tab .pill {
+    position: absolute; top: 7px; right: 12px; margin: 0; font-style: normal;
+    font-size: 9px; padding: 1px 5px; min-width: 16px; text-align: center;
+  }
+  .rail-foot { margin-top: auto; display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 14px 0 18px; }
+
+  /* ---- top bar ---- */
+  header.topbar {
+    position: sticky; top: 0; z-index: 40;
+    display: flex; align-items: center; gap: 16px;
+    padding: 12px 28px;
+    background: linear-gradient(180deg, rgba(14,19,26,.86), rgba(14,19,26,.62));
+    backdrop-filter: blur(14px);
+    border-bottom: 1px solid var(--line);
+  }
+  .topbar .brand { margin-right: auto; }
+  .topbar .brand h1 { font-size: 15px; letter-spacing: 3px; color: var(--ink-2); }
+  .topbar .brand small { font-size: 21px; letter-spacing: 3px; color: var(--ink); font-family: var(--cond); margin-top: 1px; }
+  .balance { background: rgba(9,13,18,.6); border-color: var(--line-strong); }
+
+  main { max-width: 1440px; padding: 22px 28px 90px; }
+  .section-head h2 { font-size: 22px; letter-spacing: 3px; color: var(--ink); }
+
+  /* ---- glass panels ---- */
+  .card, .case-card, .stat, .empty {
+    background: linear-gradient(180deg, rgba(40,50,63,.6), rgba(22,29,37,.7));
+    border-color: var(--line);
+  }
+  .card { backdrop-filter: blur(10px); }
+  .sheet { background: rgba(16,21,28,.96); border-color: var(--line-strong); }
+  .overlay { background: rgba(4,6,9,.72); }
+  .reel-wrap { background: rgba(6,9,13,.78); }
+  .reel-wrap::before { background: linear-gradient(90deg, rgba(6,9,13,.96) 10%, transparent); }
+  .reel-wrap::after { background: linear-gradient(270deg, rgba(6,9,13,.96) 10%, transparent); }
+  select.control, input.control, textarea.code-box { background: rgba(9,13,18,.66); border-color: var(--line-strong); }
+  .chip { background: rgba(9,13,18,.55); border-color: var(--line-strong); }
+  .btn-ghost { background: rgba(9,13,18,.55); border-color: var(--line-strong); }
+
+  /* ---- item tiles: rarity rising from the bottom edge ---- */
+  .item {
+    background:
+      linear-gradient(0deg, color-mix(in srgb, var(--rc) 58%, transparent) 0%,
+                            color-mix(in srgb, var(--rc) 18%, transparent) 34%, transparent 64%),
+      linear-gradient(180deg, rgba(64,77,92,.55), rgba(24,31,40,.82));
+    border: 1px solid rgba(255,255,255,.07);
+    padding: 8px 9px 9px;
+    transition: border-color .15s ease, filter .15s ease, transform .15s ease;
+  }
+  .item::before { height: 3px; }
+  .inv-grid .item:hover, .pick-grid .item:hover, .result-grid .item:hover { filter: brightness(1.12); border-color: rgba(255,255,255,.2); }
+  .item-art { height: 96px; }
+  .item-art svg, .item-art img { filter: drop-shadow(0 5px 6px rgba(0,0,0,.45)); }
+  .item-name { display: flex; flex-direction: column; gap: 1px; white-space: normal; }
+  .item-name small {
+    font-size: 10px; font-weight: 600; color: var(--ink-2); letter-spacing: .2px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .item-name b {
+    font-size: 12px; font-weight: 700; color: #fff;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .item-sub { margin-top: 2px; }
+  .item-wear { color: var(--ink-2); }
+  .float-bar { background: rgba(0,0,0,.35); }
+  .inv-grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
+  .reel-track .item { width: 128px; flex-basis: 128px; }
+  .bt-slot { background: rgba(6,9,13,.6); }
+
+  /* ---- splash matches the scene ---- */
+  #splash { background:
+      radial-gradient(900px 520px at 60% 30%, rgba(132,160,190,.2), transparent 64%),
+      radial-gradient(circle at 50% 42%, rgba(242,106,27,.12), transparent 50%),
+      linear-gradient(180deg, #1a222c, #0b0f14); }
+
+  /* ---- small screens: rail becomes a bottom bar ---- */
+  @media (max-width: 760px) {
+    body { padding-left: 0; padding-bottom: 70px; }
+    .rail { top: auto; right: 0; bottom: 0; width: auto; height: 64px; flex-direction: row; border-right: 0; border-top: 1px solid var(--line); }
+    .rail-mark, .rail-foot { display: none; }
+    .rail-nav { flex-direction: row; flex: 1; }
+    .rail .tab { flex: 1; padding: 9px 2px; }
+    .rail .tab.active::after { top: 0; bottom: auto; left: 18%; right: 18%; width: auto; height: 3px; }
+    header.topbar { padding: 10px 16px; }
+    .topbar .brand { min-width: 0; }
+    .topbar .brand h1 { display: none; }
+    .topbar .brand small { font-size: 18px; }
+    .toast-host { bottom: 82px; }
+    main { padding: 18px 16px 90px; }
+  }
 </style>
 </head>
 <body>
@@ -632,42 +777,41 @@
 </div>
 
 
-<header>
-  <div class="header-inner">
-    <div class="brand">
-      <div class="brand-mark">
-        <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M3 8l9-4 9 4v8l-9 4-9-4z"/><path d="M3 8l9 4 9-4"/><path d="M12 12v8"/>
-        </svg>
-      </div>
-      <div>
-        <h1>Case Opening Sim</h1>
-        <small>Open · Collect · Upgrade</small>
-      </div>
-    </div>
+<div class="scene" aria-hidden="true"></div>
 
-    <div class="balance" id="balance"><b id="balance-value">0</b><i>coins</i></div>
-
+<aside class="rail">
+  <div class="rail-mark" title="Case Opening Sim">
+    <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M3 8l9-4 9 4v8l-9 4-9-4z"/><path d="M3 8l9 4 9-4"/><path d="M12 12v8"/>
+    </svg>
+  </div>
+  <nav class="rail-nav">
+      <button class="tab active" data-tab="cases" title="Cases"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8l9-4 9 4v8l-9 4-9-4z"/><path d="M3 8l9 4 9-4"/><path d="M12 12v8"/></svg><span>Cases</span></button>
+      <button class="tab" data-tab="inventory" title="Inventory"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="3.5" width="7" height="7" rx="1"/><rect x="13.5" y="3.5" width="7" height="7" rx="1"/><rect x="3.5" y="13.5" width="7" height="7" rx="1"/><rect x="13.5" y="13.5" width="7" height="7" rx="1"/></svg><span>Inventory</span><i class="pill" id="inv-count">0</i></button>
+      <button class="tab" data-tab="upgrader" title="Upgrader"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="M12 16V8"/><path d="M8.5 11.5L12 8l3.5 3.5"/></svg><span>Upgrader</span></button>
+      <button class="tab" data-tab="trade" title="Trade"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h14"/><path d="M15 4.5L18.5 8 15 11.5"/><path d="M20 16H6"/><path d="M9 12.5L5.5 16 9 19.5"/></svg><span>Trade</span></button>
+      <button class="tab" data-tab="battles" title="Battles"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4l8.5 8.5"/><path d="M4 5.5L5.5 4"/><path d="M11 15l-2 2 -2.5-.5 -1.5 2L3.5 17l2-1.5L5 13l2-2"/><path d="M19 4l-8.5 8.5"/><path d="M20 5.5L18.5 4"/><path d="M13 15l2 2 2.5-.5 1.5 2 1.5-1.5-2-1.5.5-2.5-2-2"/></svg><span>Battles</span></button>
+  </nav>
+  <div class="rail-foot">
     <button class="icon-btn" id="mute-btn" title="Toggle sound" aria-label="Toggle sound">
       <svg id="mute-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/>
       </svg>
     </button>
-
     <button class="icon-btn" id="reset-btn" title="Reset progress" aria-label="Reset progress">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/>
       </svg>
     </button>
   </div>
+</aside>
 
-  <nav class="tabs">
-    <button class="tab active" data-tab="cases">Cases</button>
-    <button class="tab" data-tab="inventory">Inventory <span class="pill" id="inv-count">0</span></button>
-    <button class="tab" data-tab="upgrader">Upgrader</button>
-    <button class="tab" data-tab="trade">Trade</button>
-    <button class="tab" data-tab="battles">Battles</button>
-  </nav>
+<header class="topbar">
+  <div class="brand">
+    <h1>Case Opening Sim</h1>
+    <small id="topbar-sub">Cases</small>
+  </div>
+  <div class="balance" id="balance"><b id="balance-value">0</b><i>coins</i></div>
 </header>
 
 <main>
@@ -935,273 +1079,838 @@
 (function () {
   'use strict';
 
-  /* Part-based weapon models. viewBox 240 x 96, muzzle points right.
-     mat: 'skin' takes the painted finish, 'metal'/'dark' stay hardware-coloured.
-     tone: <1 darkens the part, >1 lightens it, giving the model depth. */
-  const MODELS = {
-    rifle_ak: [
-      { d: 'M4,38 L48,34 L48,60 L4,64 Z', tone: .78 },
-      { d: 'M44,34 L152,34 L152,58 L44,58 Z', tone: 1 },
-      { d: 'M58,27 L126,27 L126,34 L58,34 Z', tone: 1.1 },
-      { d: 'M126,25 L138,25 L138,34 L126,34 Z', mat: 'metal', tone: .8 },
-      { d: 'M152,38 L198,38 L198,53 L152,53 Z', tone: .84 },
-      { d: 'M152,28 L194,28 L194,38 L152,38 Z', tone: 1.05 },
-      { d: 'M198,41 L230,41 L230,48 L198,48 Z', mat: 'metal', tone: .9 },
-      { d: 'M226,37 L238,37 L238,52 L226,52 Z', mat: 'metal', tone: .7 },
-      { d: 'M210,24 L220,24 L220,41 L210,41 Z', mat: 'metal', tone: .75 },
-      { d: 'M62,58 L86,58 L79,90 L57,90 Z', tone: .72 },
-    { d: 'M160,42 L176,42 L176,48 L160,48 Z', mat: 'dark', tone: 1.3 },
-    { d: 'M180,42 L192,42 L192,48 L180,48 Z', mat: 'dark', tone: 1.3 },
-    { d: 'M132,44 L140,44 L140,52 L132,52 Z', mat: 'metal', tone: 1.4 },
-    { d: 'M108,40 L128,40 L128,45 L108,45 Z', mat: 'dark', tone: 1.25 },
-      { d: 'M102,58 C96,76 102,90 116,98 L136,94 C124,84 120,72 122,58 Z', tone: .82 },
-      { d: 'M86,58 L102,58 L102,64 L94,72 L86,66 Z', mat: 'metal', tone: .62 },
-      { d: 'M89,58 L95,58 L95,66 L89,66 Z', mat: 'dark', tone: .9 }
-    ],
-    rifle_m4: [
-      { d: 'M6,38 L14,34 L36,34 L36,58 L14,62 L6,58 Z', tone: .76 },
-      { d: 'M36,40 L54,40 L54,54 L36,54 Z', mat: 'metal', tone: .7 },
-      { d: 'M52,32 L134,32 L134,56 L52,56 Z', tone: 1 },
-      { d: 'M70,22 L120,22 L120,32 L70,32 Z', mat: 'metal', tone: .8 },
-      { d: 'M134,36 L194,36 L194,52 L134,52 Z', tone: .88 },
-      { d: 'M194,41 L228,41 L228,47 L194,47 Z', mat: 'metal', tone: .9 },
-      { d: 'M198,22 L208,22 L208,41 L198,41 Z', mat: 'metal', tone: .75 },
-      { d: 'M64,56 L86,56 L79,88 L57,88 Z', tone: .72 },
-    { d: 'M142,40 L186,40 L186,43 L142,43 Z', mat: 'dark', tone: 1.3 },
-    { d: 'M142,46 L186,46 L186,49 L142,49 Z', mat: 'dark', tone: 1.3 },
-    { d: 'M118,38 L130,38 L130,44 L118,44 Z', mat: 'metal', tone: 1.4 },
-      { d: 'M98,56 L120,56 L117,90 L99,90 Z', tone: .82 },
-      { d: 'M86,56 L100,56 L100,62 L93,70 L86,64 Z', mat: 'metal', tone: .62 }
-    ],
-    sniper: [
-      { d: 'M6,34 L118,34 L118,60 L6,60 Z M40,37 A11,11 0 0,1 40,59 A11,11 0 0,1 40,37 Z', tone: .8, rule: 'evenodd' },
-      { d: 'M18,24 L76,24 L76,34 L18,34 Z', tone: .88 },
-      { d: 'M116,32 L180,32 L180,58 L116,58 Z', tone: 1 },
-      { d: 'M92,12 L166,12 L166,28 L92,28 Z', mat: 'dark', tone: .9 },
-      { d: 'M100,10 L110,10 L110,32 L100,32 Z', mat: 'dark', tone: .7 },
-      { d: 'M150,10 L160,10 L160,32 L150,32 Z', mat: 'dark', tone: .7 },
-      { d: 'M180,39 L236,39 L236,48 L180,48 Z', mat: 'metal', tone: .9 },
-      { d: 'M228,36 L240,36 L240,51 L228,51 Z', mat: 'metal', tone: .7 },
-      { d: 'M156,28 L172,28 L172,34 L156,34 Z', mat: 'metal', tone: .65 },
-      { d: 'M74,58 L96,58 L89,90 L67,90 Z', tone: .72 },
-    { d: 'M124,8 L136,8 L136,14 L124,14 Z', mat: 'dark', tone: 1.5 },
-    { d: 'M170,30 L182,30 L182,35 L170,35 Z', mat: 'metal', tone: 1.5 },
-    { d: 'M86,10 L172,10 L172,13 L86,13 Z', mat: 'dark', tone: 1.4 },
-      { d: 'M126,58 L150,58 L147,80 L129,80 Z', tone: .82 }
-    ],
-    smg: [
-      { d: 'M8,38 L44,35 L44,53 L8,56 Z', tone: .76 },
-      { d: 'M42,32 L142,32 L142,56 L42,56 Z', tone: 1 },
-      { d: 'M60,25 L74,25 L74,32 L60,32 Z', mat: 'metal', tone: .75 },
-      { d: 'M142,40 L178,40 L178,48 L142,48 Z', mat: 'metal', tone: .88 },
-      { d: 'M172,36 L184,36 L184,52 L172,52 Z', mat: 'metal', tone: .68 },
-      { d: 'M56,56 L78,56 L72,86 L50,86 Z', tone: .72 },
-    { d: 'M108,38 L122,38 L122,44 L108,44 Z', mat: 'dark', tone: 1.3 },
-    { d: 'M126,38 L140,38 L140,44 L126,44 Z', mat: 'dark', tone: 1.3 },
-    { d: 'M46,36 L54,36 L54,42 L46,42 Z', mat: 'metal', tone: 1.4 },
-      { d: 'M94,56 L116,56 L113,92 L96,92 Z', tone: .82 },
-      { d: 'M82,56 L90,56 L90,64 L82,64 Z', mat: 'metal', tone: .6 }
-    ],
-    pistol: [
-      { d: 'M54,24 L198,24 L198,45 L54,45 Z', tone: 1 },
-      { d: 'M186,30 L202,30 L202,40 L186,40 Z', mat: 'metal', tone: .7 },
-      { d: 'M58,45 L152,45 L152,57 L58,57 Z', tone: .9 },
-      { d: 'M58,50 L108,50 L94,94 L46,94 Z', tone: .74 },
-    { d: 'M62,28 L66,28 L66,42 L62,42 Z', mat: 'dark', tone: 1.35 },
-    { d: 'M70,28 L74,28 L74,42 L70,42 Z', mat: 'dark', tone: 1.35 },
-    { d: 'M78,28 L82,28 L82,42 L78,42 Z', mat: 'dark', tone: 1.35 },
-    { d: 'M120,29 L156,29 L156,38 L120,38 Z', mat: 'dark', tone: 1.15 },
-      { d: 'M104,57 L140,57 L140,66 L116,74 L102,66 Z', tone: .85 },
-      { d: 'M110,57 L118,57 L118,66 L110,66 Z', mat: 'metal', tone: .6 },
-      { d: 'M62,28 L72,28 L72,36 L62,36 Z', mat: 'metal', tone: .65 }
-    ],
-    revolver: [
-      { d: 'M62,26 L196,26 L196,42 L62,42 Z', tone: 1 },
-      { d: 'M94,24 Q116,18 138,24 L138,54 Q116,60 94,54 Z', tone: .88 },
-      { d: 'M102,28 L108,28 L108,50 L102,50 Z', mat: 'dark', tone: 1.1 },
-      { d: 'M124,28 L130,28 L130,50 L124,50 Z', mat: 'dark', tone: 1.1 },
-      { d: 'M62,18 L78,18 L78,28 L62,28 Z', mat: 'metal', tone: .65 },
-      { d: 'M186,30 L200,30 L200,38 L186,38 Z', mat: 'metal', tone: .7 },
-      { d: 'M62,42 L100,42 L84,92 L40,92 Z', tone: .74 },
-      { d: 'M100,58 L140,58 L140,67 L118,76 L100,67 Z', tone: .85 },
-      { d: 'M112,58 L120,58 L120,68 L112,68 Z', mat: 'metal', tone: .6 }
-    ],
-    shotgun: [
-      { d: 'M4,38 L46,32 L46,60 L4,66 Z', tone: .78 },
-      { d: 'M44,34 L128,34 L128,58 L44,58 Z', tone: 1 },
-      { d: 'M128,36 L166,36 L166,52 L128,52 Z', tone: .8 },
-      { d: 'M128,39 L234,39 L234,50 L128,50 Z', mat: 'metal', tone: .92 },
-      { d: 'M158,48 L222,48 L222,60 L158,60 Z', tone: .7 },
-      { d: 'M170,48 L176,48 L176,60 L170,60 Z', mat: 'dark', tone: 1.2 },
-      { d: 'M190,48 L196,48 L196,60 L190,60 Z', mat: 'dark', tone: 1.2 },
-      { d: 'M60,58 L84,58 L77,90 L53,90 Z', tone: .72 },
-    { d: 'M96,38 L124,38 L124,46 L96,46 Z', mat: 'dark', tone: 1.15 },
-    { d: 'M204,36 L212,36 L212,52 L204,52 Z', mat: 'metal', tone: 1.4 },
-      { d: 'M88,58 L96,58 L96,67 L88,67 Z', mat: 'metal', tone: .6 }
-    ],
-    knife_bayonet: [
-      { d: 'M72,30 L196,37 L216,48 L196,59 L72,59 Z', tone: 1 },
-      { d: 'M86,42 L182,45 L182,50 L86,50 Z', mat: 'metal', tone: .78 },
-      { d: 'M62,22 L76,22 L76,70 L62,70 Z', mat: 'metal', tone: .72 },
-      { d: 'M18,34 L64,34 L64,58 L18,58 Z', tone: .76 },
-      { d: 'M8,30 L22,30 L22,62 L8,62 Z', mat: 'metal', tone: .68 },
-    { d: 'M30,42 A3,3 0 1,1 30,48 A3,3 0 1,1 30,42 Z', mat: 'metal', tone: 1.5 },
-    { d: 'M50,42 A3,3 0 1,1 50,48 A3,3 0 1,1 50,42 Z', mat: 'metal', tone: 1.5 }
-    ],
-    knife_karambit: [
-      { d: 'M150,18 C196,28 218,58 202,86 C200,62 182,42 152,36 Z', tone: 1 },
-      { d: 'M64,58 C92,48 128,34 152,16 L166,32 C136,54 102,68 76,76 Z', tone: .8 },
-      { d: 'M48,56 A17,17 0 1,0 48,90 A17,17 0 1,0 48,56 Z M48,64 A9,9 0 1,1 48,82 A9,9 0 1,1 48,64 Z', tone: .74, rule: 'evenodd' },
-      { d: 'M158,30 C180,40 194,58 192,74 C188,58 176,44 158,38 Z', mat: 'metal', tone: .85 }
-    ],
-    knife_butterfly: [
-      { d: 'M98,34 L192,41 L210,49 L192,57 L98,57 Z', tone: 1 },
-      { d: 'M14,30 L104,30 L104,42 L14,42 Z', tone: .8 },
-      { d: 'M14,50 L104,50 L104,62 L14,62 Z', tone: .8 },
-      { d: 'M96,28 L108,28 L108,64 L96,64 Z', mat: 'metal', tone: .7 },
-      { d: 'M20,32 L28,32 L28,60 L20,60 Z', mat: 'metal', tone: .65 }
-    ],
-    gloves: [
-      { d: 'M22,30 L64,22 L72,80 L30,88 Z', tone: .78 },
-      { d: 'M62,22 L150,26 Q162,28 162,40 L162,66 Q162,78 150,80 L66,84 Z', tone: 1 },
-      { d: 'M158,26 L206,30 Q214,31 214,38 Q214,45 206,45 L158,42 Z', tone: .95 },
-      { d: 'M158,44 L210,46 Q218,47 218,54 Q218,61 210,60 L158,58 Z', tone: .95 },
-      { d: 'M158,60 L206,64 Q214,65 214,72 Q214,78 206,77 L158,74 Z', tone: .95 },
-      { d: 'M156,76 L192,80 Q200,81 199,87 Q198,93 190,92 L156,88 Z', tone: .9 },
-      { d: 'M70,80 L104,82 Q114,83 115,91 L74,94 Q68,90 70,80 Z', tone: .88 },
-      { d: 'M126,32 L138,33 L138,45 L126,44 Z', mat: 'dark', tone: 1.5 },
-      { d: 'M126,50 L138,51 L138,63 L126,62 Z', mat: 'dark', tone: 1.5 },
-      { d: 'M126,68 L138,69 L138,79 L126,78 Z', mat: 'dark', tone: 1.5 },
-      { d: 'M26,44 L68,38 L70,50 L28,56 Z', mat: 'dark', tone: 1.2 },
-      { d: 'M52,40 L62,39 L63,49 L53,50 Z', mat: 'metal', tone: 1.1 }
-    ],
-    sticker: [
-      { d: 'M120,10 L142,34 L176,26 L170,60 L200,78 L170,96 L176,130 L142,122 L120,146 L98,122 L64,130 L70,96 L40,78 L70,60 L64,26 L98,34 Z', tone: 1 },
-      { d: 'M120,44 L133,70 L161,74 L141,94 L146,122 L120,109 L94,122 L99,94 L79,74 L107,70 Z', tone: 1.45 }
-    ],
-    charm: [
-      { d: 'M120,20 A14,14 0 1,0 120,48 A14,14 0 1,0 120,20 Z M120,28 A6,6 0 1,1 120,40 A6,6 0 1,1 120,28 Z', mat: 'metal', tone: .8, rule: 'evenodd' },
-      { d: 'M114,48 L126,48 L130,58 L110,58 Z', mat: 'metal', tone: .7 },
-      { d: 'M98,58 Q120,50 142,58 Q152,74 146,96 Q120,118 94,96 Q88,74 98,58 Z', tone: 1 },
-      { d: 'M108,74 A7,7 0 1,1 108,88 A7,7 0 1,1 108,74 Z', mat: 'dark', tone: 1.4 },
-      { d: 'M132,74 A7,7 0 1,1 132,88 A7,7 0 1,1 132,74 Z', mat: 'dark', tone: 1.4 }
-    ],
-    agent: [
-      { d: 'M120,16 Q142,16 144,40 Q146,62 120,66 Q94,62 96,40 Q98,16 120,16 Z', tone: .92 },
-      { d: 'M98,34 Q120,26 142,34 L142,42 Q120,36 98,42 Z', mat: 'dark', tone: .8 },
-      { d: 'M104,64 L136,64 L150,76 Q166,84 168,120 L72,120 Q74,84 90,76 Z', tone: 1 },
-      { d: 'M112,66 L128,66 L120,92 L110,78 Z', tone: .8 }
-    ]
-  };
-
-  /* Renders a part-based model with a procedural painted finish. */
-  let __uid = 0;
-  
   function hashString(str) {
     let h = 2166136261;
     for (let i = 0; i < str.length; i++) { h ^= str.charCodeAt(i); h = Math.imul(h, 16777619); }
     return h >>> 0;
   }
-  
-  function renderModel(kind, name, box) {
-    const parts = MODELS[kind] || MODELS.rifle_ak;
-    const seed = hashString(name);
-    const rnd = (n) => ((seed >>> (n * 4)) & 4095) / 4095;
-    const hueA = Math.floor(rnd(0) * 360);
-    const hueB = (hueA + 30 + Math.floor(rnd(1) * 180)) % 360;
-    const sat = 30 + Math.floor(rnd(2) * 38);
-    const id = 'm' + (__uid++);
-    const vb = box || '0 0 240 96';
-  
-    const skinPaths = parts.filter(p => !p.mat || p.mat === 'skin');
-    const clipD = skinPaths.map(p => p.d).join(' ');
-  
-    // Finish families, picked from the name hash, so a skin always looks the same.
-    const FINISHES = ['fade', 'camo', 'marble', 'stripe', 'solid'];
-    const finish = FINISHES[seed % FINISHES.length];
-    const h = (deg) => 'hsl(' + (((hueA + deg) % 360) + 360) % 360 + ',' + sat + '%,';
-  
-    let pattern = '';
-    if (finish === 'camo') {
-      for (let i = 0; i < 4; i++) {
-        const x = rnd(i + 3) * 250 - 20;
-        const w = 26 + rnd(i + 4) * 60;
-        const sk = -34 + rnd(i + 5) * 68;
-        pattern += '<polygon points="' + x + ',-10 ' + (x + w) + ',-10 ' + (x + w + sk) +
-          ',110 ' + (x + sk) + ',110" fill="' + h(-24 + i * 16) + (28 + i * 11) + '%)" opacity="' +
-          (0.3 + i * 0.07).toFixed(2) + '"/>';
-      }
-    } else if (finish === 'marble') {
-      for (let i = 0; i < 5; i++) {
-        const cx = rnd(i + 3) * 260 - 10;
-        const cy = rnd(i + 6) * 100;
-        pattern += '<ellipse cx="' + cx.toFixed(0) + '" cy="' + cy.toFixed(0) + '" rx="' +
-          (24 + rnd(i + 4) * 46).toFixed(0) + '" ry="' + (14 + rnd(i + 5) * 26).toFixed(0) +
-          '" transform="rotate(' + (rnd(i + 7) * 120 - 60).toFixed(0) + ' ' + cx.toFixed(0) + ' ' +
-          cy.toFixed(0) + ')" fill="' + h(-40 + i * 24) + (34 + i * 10) + '%)" opacity="' +
-          (0.42 - i * 0.05).toFixed(2) + '"/>';
-      }
-    } else if (finish === 'stripe') {
-      for (let i = 0; i < 7; i++) {
-        const x = -30 + i * 42;
-        const w = 6 + rnd(i + 3) * 16;
-        pattern += '<polygon points="' + x + ',-10 ' + (x + w) + ',-10 ' + (x + w + 34) +
-          ',110 ' + (x + 34) + ',110" fill="' + h(i % 2 ? 18 : -18) + (i % 2 ? 62 : 26) +
-          '%)" opacity="' + (i % 2 ? 0.3 : 0.4) + '"/>';
-      }
+
+  /* =========================================================
+     Item art — part-based vector models with material shading,
+     name-driven finishes and float-driven wear.
+     ========================================================= */
+
+  const ART = (function () {
+    'use strict';
+
+    /* ---------- small utilities ---------- */
+
+    function hash(str) {
+      let h = 2166136261;
+      for (let i = 0; i < str.length; i++) { h ^= str.charCodeAt(i); h = Math.imul(h, 16777619); }
+      return h >>> 0;
     }
-    // 'fade' and 'solid' rely on the base gradient alone
-  
-    let body = '';
-    // painted parts: gradient + camo, clipped to their silhouette
-    body += '<g clip-path="url(#c' + id + ')">' +
-            '<rect x="-20" y="-20" width="300" height="140" fill="url(#g' + id + ')"/>' +
-            pattern +
-            '<rect x="-20" y="-20" width="300" height="70" fill="url(#s' + id + ')"/>' +
-            '</g>';
-  
-    // hardware parts keep a gunmetal finish
-    parts.filter(p => p.mat === 'metal' || p.mat === 'dark').forEach(p => {
-      const l = Math.round((p.mat === 'dark' ? 26 : 46) * (p.tone == null ? 1 : p.tone));
-      body += '<path d="' + p.d + '" fill="hsl(215,8%,' + l + '%)"' +
-              (p.rule ? ' fill-rule="evenodd"' : '') + '/>';
-    });
-  
-    // per-part shading so the model reads three-dimensionally
-    parts.forEach(p => {
-      const t = p.tone == null ? 1 : p.tone;
-      if (p.mat === 'metal' || p.mat === 'dark' || Math.abs(t - 1) < 0.02) return;
-      const dark = t < 1;
-      body += '<path d="' + p.d + '" fill="' + (dark ? '#000' : '#fff') + '" opacity="' +
-              (Math.abs(1 - t) * (dark ? 0.6 : 0.5)).toFixed(3) + '"' +
-              (p.rule ? ' fill-rule="evenodd"' : '') + '/>';
-    });
-  
-    // outlines last
-    body += '<g fill="none" stroke="rgba(18,15,12,.42)" stroke-width="1.2" stroke-linejoin="round">' +
-            parts.map(p => '<path d="' + p.d + '"' + (p.rule ? ' fill-rule="evenodd"' : '') + '/>').join('') +
-            '</g>';
-  
-    return '<svg viewBox="' + vb + '" xmlns="http://www.w3.org/2000/svg">' +
+
+    // Deterministic PRNG so a given item always renders identically.
+    function rng(seed) {
+      let a = seed >>> 0;
+      return function () {
+        a = (a + 0x6D2B79F5) >>> 0;
+        let t = a;
+        t = Math.imul(t ^ (t >>> 15), t | 1);
+        t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+        return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+      };
+    }
+
+    const n1 = (v) => Math.round(v * 10) / 10;
+
+    function rr(x, y, w, h, r) {
+      r = Math.min(r, w / 2, h / 2);
+      return 'M' + (x + r) + ',' + y + 'H' + (x + w - r) +
+        'Q' + (x + w) + ',' + y + ' ' + (x + w) + ',' + (y + r) + 'V' + (y + h - r) +
+        'Q' + (x + w) + ',' + (y + h) + ' ' + (x + w - r) + ',' + (y + h) + 'H' + (x + r) +
+        'Q' + x + ',' + (y + h) + ' ' + x + ',' + (y + h - r) + 'V' + (y + r) +
+        'Q' + x + ',' + y + ' ' + (x + r) + ',' + y + 'Z';
+    }
+
+    function circ(cx, cy, r) {
+      return 'M' + (cx - r) + ',' + cy + 'a' + r + ',' + r + ' 0 1,0 ' + (2 * r) + ',0' +
+             'a' + r + ',' + r + ' 0 1,0 ' + (-2 * r) + ',0Z';
+    }
+
+    const rep = (n, fn) => { let s = ''; for (let i = 0; i < n; i++) s += fn(i); return s; };
+
+    // Smooth closed blob, used by camo, marble and chips.
+    function blob(r, cx, cy, rad, pts) {
+      pts = pts || 7;
+      const p = [];
+      for (let i = 0; i < pts; i++) {
+        const a = (i / pts) * Math.PI * 2;
+        const k = rad * (0.62 + r() * 0.62);
+        p.push([cx + Math.cos(a) * k, cy + Math.sin(a) * k * 0.72]);
+      }
+      let d = '';
+      for (let i = 0; i < pts; i++) {
+        const a = p[i], b = p[(i + 1) % pts];
+        const mx = (a[0] + b[0]) / 2, my = (a[1] + b[1]) / 2;
+        d += (i === 0 ? 'M' + n1((p[pts - 1][0] + a[0]) / 2) + ',' + n1((p[pts - 1][1] + a[1]) / 2) : '') +
+             'Q' + n1(a[0]) + ',' + n1(a[1]) + ' ' + n1(mx) + ',' + n1(my);
+      }
+      return d + 'Z';
+    }
+
+    /* ---------- shared definitions, injected once per document ---------- */
+
+    const SHARED =
+      '<svg class="mx-defs" width="0" height="0" aria-hidden="true" focusable="false" ' +
+      'style="position:absolute;width:0;height:0;overflow:hidden">' +
       '<defs>' +
-        '<linearGradient id="g' + id + '" x1="0" y1="0" x2="1" y2="0.65">' +
-          (finish === 'fade'
-            ? '<stop offset="0%" stop-color="' + h(0) + '58%)"/>' +
-              '<stop offset="34%" stop-color="' + h(46) + '52%)"/>' +
-              '<stop offset="67%" stop-color="' + h(96) + '46%)"/>' +
-              '<stop offset="100%" stop-color="' + h(150) + '38%)"/>'
-            : '<stop offset="0%" stop-color="hsl(' + hueA + ',' + sat + '%,60%)"/>' +
-              '<stop offset="55%" stop-color="hsl(' + hueA + ',' + sat + '%,45%)"/>' +
-              '<stop offset="100%" stop-color="hsl(' + hueB + ',' + sat + '%,31%)"/>') +
+        // light from above: bright top edge, falling off into a dark underside
+        '<linearGradient id="mx-shade" x1="0" y1="0" x2="0" y2="1">' +
+          '<stop offset="0" stop-color="#fff" stop-opacity=".34"/>' +
+          '<stop offset=".14" stop-color="#fff" stop-opacity=".10"/>' +
+          '<stop offset=".48" stop-color="#000" stop-opacity="0"/>' +
+          '<stop offset="1" stop-color="#000" stop-opacity=".46"/>' +
         '</linearGradient>' +
-        '<linearGradient id="s' + id + '" x1="0" y1="0" x2="0" y2="1">' +
-          '<stop offset="0%" stop-color="#fff" stop-opacity=".34"/>' +
-          '<stop offset="100%" stop-color="#fff" stop-opacity="0"/>' +
+        // for upright parts (grips, magazines): lit from the upper left
+        '<linearGradient id="mx-shade-h" x1="0" y1="0" x2="1" y2=".5">' +
+          '<stop offset="0" stop-color="#fff" stop-opacity=".26"/>' +
+          '<stop offset=".45" stop-color="#000" stop-opacity="0"/>' +
+          '<stop offset="1" stop-color="#000" stop-opacity=".48"/>' +
         '</linearGradient>' +
-        '<clipPath id="c' + id + '">' + skinPaths.map(p =>
-          '<path d="' + p.d + '"' + (p.rule ? ' clip-rule="evenodd"' : '') + '/>').join('') + '</clipPath>' +
-      '</defs>' + body + '</svg>';
-  }
+        '<linearGradient id="mx-metal" x1="0" y1="0" x2="0" y2="1">' +
+          '<stop offset="0" stop-color="#9aa1a9"/><stop offset=".32" stop-color="#626970"/>' +
+          '<stop offset=".62" stop-color="#3b4046"/><stop offset="1" stop-color="#23262a"/>' +
+        '</linearGradient>' +
+        '<linearGradient id="mx-poly" x1="0" y1="0" x2="0" y2="1">' +
+          '<stop offset="0" stop-color="#474b52"/><stop offset=".5" stop-color="#2a2d32"/>' +
+          '<stop offset="1" stop-color="#17191c"/>' +
+        '</linearGradient>' +
+        '<linearGradient id="mx-steel" x1="0" y1="0" x2="0" y2="1">' +
+          '<stop offset="0" stop-color="#f4f7fa"/><stop offset=".42" stop-color="#b9c1c9"/>' +
+          '<stop offset=".58" stop-color="#7d8690"/><stop offset="1" stop-color="#cdd4db"/>' +
+        '</linearGradient>' +
+        '<linearGradient id="mx-glass" x1="0" y1="0" x2="1" y2="1">' +
+          '<stop offset="0" stop-color="#9fd4ff"/><stop offset=".35" stop-color="#2b6db3"/>' +
+          '<stop offset="1" stop-color="#081a33"/>' +
+        '</linearGradient>' +
+        '<linearGradient id="mx-edge" x1="0" y1="0" x2="0" y2="1">' +
+          '<stop offset="0" stop-color="#fff" stop-opacity=".05"/>' +
+          '<stop offset="1" stop-color="#fff" stop-opacity=".55"/>' +
+        '</linearGradient>' +
+        '<linearGradient id="mx-gloss" x1="0" y1="0" x2="0" y2="1">' +
+          '<stop offset="0" stop-color="#fff" stop-opacity=".62"/>' +
+          '<stop offset="1" stop-color="#fff" stop-opacity="0"/>' +
+        '</linearGradient>' +
+        '<linearGradient id="mx-sheen" x1="0" y1="0" x2="1" y2="1">' +
+          '<stop offset=".30" stop-color="#fff" stop-opacity="0"/>' +
+          '<stop offset=".44" stop-color="#fff" stop-opacity=".20"/>' +
+          '<stop offset=".50" stop-color="#fff" stop-opacity=".05"/>' +
+          '<stop offset=".58" stop-color="#fff" stop-opacity="0"/>' +
+        '</linearGradient>' +
+        '<radialGradient id="mx-shadow">' +
+          '<stop offset="0" stop-color="#000" stop-opacity=".55"/>' +
+          '<stop offset="1" stop-color="#000" stop-opacity="0"/>' +
+        '</radialGradient>' +
+        '<pattern id="mx-stipple" patternUnits="userSpaceOnUse" width="3.2" height="3.2">' +
+          '<circle cx="1.6" cy="1.6" r=".7" fill="#000" fill-opacity=".32"/>' +
+        '</pattern>' +
+        '<pattern id="mx-ribs" patternUnits="userSpaceOnUse" width="4" height="4">' +
+          '<rect width="4" height="1.6" fill="#000" fill-opacity=".26"/>' +
+        '</pattern>' +
+        '<pattern id="mx-weave" patternUnits="userSpaceOnUse" width="6" height="6">' +
+          '<rect width="3" height="3" fill="#fff" fill-opacity=".07"/>' +
+          '<rect x="3" y="3" width="3" height="3" fill="#fff" fill-opacity=".07"/>' +
+          '<rect x="3" width="3" height="3" fill="#000" fill-opacity=".18"/>' +
+          '<rect y="3" width="3" height="3" fill="#000" fill-opacity=".18"/>' +
+        '</pattern>' +
+      '</defs></svg>';
+
+    function ensureDefs(doc) {
+      doc = doc || (typeof document !== 'undefined' ? document : null);
+      if (!doc || doc.querySelector('.mx-defs')) return;
+      doc.body.insertAdjacentHTML('afterbegin', SHARED);
+    }
+
+    const MAT = {
+      metal: 'url(#mx-metal)', dark: 'url(#mx-poly)', steel: 'url(#mx-steel)',
+      glass: 'url(#mx-glass)', edge: 'url(#mx-edge)', white: '#f3f1ec'
+    };
+
+    /* ---------- models ----------
+       Parts are listed back to front. m: skin (takes the finish), metal, dark,
+       steel, glass, edge. tex adds stippling or ribs; shade 'h' lights an
+       upright part from the side; rule 1 means evenodd so holes cut through. */
+
+    const TRIGGER_GUARD = (x, y) =>
+      'M' + x + ',' + y + 'L' + (x + 27) + ',' + y + 'L' + (x + 27) + ',' + (y + 4) +
+      'Q' + (x + 27) + ',' + (y + 14) + ' ' + (x + 16) + ',' + (y + 14) + 'L' + (x + 6) + ',' + (y + 14) +
+      'Q' + x + ',' + (y + 14) + ' ' + x + ',' + (y + 8) + 'Z' +
+      'M' + (x + 4) + ',' + (y + 4) + 'L' + (x + 23) + ',' + (y + 4) +
+      'Q' + (x + 22) + ',' + (y + 10) + ' ' + (x + 16) + ',' + (y + 10) + 'L' + (x + 7) + ',' + (y + 10) +
+      'Q' + (x + 4) + ',' + (y + 10) + ' ' + (x + 4) + ',' + (y + 7) + 'Z';
+
+    const TRIGGER = (x, y) =>
+      'M' + (x + 10) + ',' + y + 'Q' + (x + 17) + ',' + (y + 5) + ' ' + (x + 12) + ',' + (y + 11) +
+      'L' + (x + 9) + ',' + (y + 11) + 'Q' + (x + 13) + ',' + (y + 5) + ' ' + (x + 7) + ',' + y + 'Z';
+
+    const MODELS = {
+      rifle_ak: {
+        box: '0 0 320 128', shadow: [160, 119, 150, 5],
+        parts: [
+          { d: 'M10,47 L88,43 L88,64 L16,87 Q7,89 6,82 L6,53 Q6,47 10,47 Z', m: 'skin' },
+          { d: 'M2,52 Q2,48 6,48 L9,48 L9,86 L6,86 Q2,86 2,82 Z', m: 'dark' },
+          { d: 'M86,42 L186,42 L186,66 L86,66 Z', m: 'skin' },
+          { d: 'M92,42 Q92,35 100,35 L168,34 L174,42 Z', m: 'skin' },
+          { d: 'M168,33 L186,33 L189,42 L168,42 Z', m: 'metal' },
+          { d: 'M186,35 L236,35 Q241,35 241,40 L241,45 L186,45 Z', m: 'skin' },
+          { d: 'M186,45 L236,45 Q242,46 239,52 L234,62 Q232,65 227,65 L186,65 Z', m: 'skin' },
+          { d: 'M239,34 L252,34 L252,51 L239,51 Z', m: 'metal' },
+          { d: 'M236,47 L300,47 L300,53 L236,53 Z', m: 'metal' },
+          { d: 'M242,55 L292,55 L292,57.5 L242,57.5 Z', m: 'metal' },
+          { d: 'M276,50 L276,46 L281,46 L284,30 L290,30 L292,46 L296,46 L296,50 Z', m: 'metal' },
+          { d: 'M298,45 L313,44 Q316,44 316,47 L316,53 Q316,55 313,55 L298,55 Z', m: 'metal' },
+          { d: 'M112,66 L131,66 L125,100 Q123,106 116,106 L105,105 Q99,104 100,98 Z', m: 'skin', tex: 'stipple', shade: 'h' },
+          { d: TRIGGER_GUARD(131, 66), m: 'metal', rule: 1 },
+          { d: TRIGGER(131, 66), m: 'dark' },
+          { d: 'M160,66 L184,66 Q187,91 204,114 L183,121 Q164,98 160,66 Z', m: 'skin', shade: 'h' },
+          { d: 'M100,51 L152,49 L153,52.5 L102,55 Z', m: 'metal' },
+          { d: 'M170,51 L182,51 L184,56 L170,57 Z', m: 'metal' }
+        ],
+        holes: 'M300,47.5 L310,47 L310,49 L300,49.5 Z',
+        lines: rep(7, (i) => 'M' + (104 + i * 10) + ',' + (37.2 - i * 0.25) + 'L' + (104 + i * 10) + ',42') +
+               'M192,55 L230,55 M192,60 L227,60 M167,79 Q172,95 188,113 M174,77 Q178,91 194,110',
+        lights: 'M93,42.8 L185,42.8 M187,35.8 L236,35.8 M237,47.8 L299,47.8 M12,47.9 L87,44 M100,35.9 L167,35',
+        pins: [[96, 58, 1.8], [106, 58, 1.8], [178, 60, 1.8]]
+      },
+
+      rifle_m4: {
+        box: '0 0 320 128', shadow: [160, 119, 150, 5],
+        parts: [
+          { d: 'M8,38 L54,40 L60,45 L60,66 L54,70 L18,83 Q8,85 7,78 L6,42 Q6,38 8,38 Z' +
+               'M25,53 L46,51 Q48,51 48,53 L48,60 Q48,62 46,62.6 L27,68 Q24,69 24,66 L24,55 Q24,53 25,53 Z',
+            m: 'skin', rule: 1 },
+          { d: 'M2,41 Q2,37 5,37 L9,37 L9,80 L5,80 Q2,80 2,77 Z', m: 'dark' },
+          { d: 'M58,46 L96,46 L96,57 L58,57 Z', m: 'metal' },
+          { d: 'M92,52 L178,52 L178,68 L170,72 L136,72 L132,75 L97,75 L92,70 Z', m: 'skin' },
+          { d: 'M94,38 L184,38 L184,53 L94,53 Z', m: 'skin' },
+          { d: 'M97,31 L182,31 L182,38 L97,38 Z', m: 'dark' },
+          { d: 'M87,40 L95,40 L95,47 L87,47 Z', m: 'dark' },
+          { d: 'M100,31 L101,23 L112,23 L114,31 Z', m: 'dark' },
+          { d: 'M184,35 L262,35 Q267,35 267,40 L267,59 Q267,63 262,63 L184,63 Z', m: 'skin' },
+          { d: 'M250,35 L254,20 L262,20 L266,35 Z', m: 'dark' },
+          { d: 'M266,46.5 L297,46.5 L297,52.5 L266,52.5 Z', m: 'metal' },
+          { d: 'M295,44 L314,44 Q316,44 316,46 L316,53 Q316,55 314,55 L295,55 Z', m: 'metal' },
+          { d: 'M112,75 L131,75 L125,105 Q123,110 116,110 L106,109 Q100,108 101,102 Z', m: 'skin', tex: 'stipple', shade: 'h' },
+          { d: TRIGGER_GUARD(128, 70), m: 'metal', rule: 1 },
+          { d: TRIGGER(128, 70), m: 'dark' },
+          { d: 'M142,72 L165,72 Q167,96 172,117 L150,119 Q146,96 142,72 Z', m: 'skin', shade: 'h' },
+          { d: circ(174, 45.5, 3.4), m: 'metal' }
+        ],
+        holes: rep(4, (i) => rr(192 + i * 17, 42, 12, 5, 2.5)) + rep(4, (i) => rr(192 + i * 17, 52, 12, 5, 2.5)) +
+               'M140,42 L166,42 L166,49 L140,49 Z' + 'M300,46 L312,46 L312,47.5 L300,47.5 Z M300,51.5 L312,51.5 L312,53 L300,53 Z',
+        lines: rep(17, (i) => 'M' + (100 + i * 4.8) + ',31 L' + (100 + i * 4.8) + ',34.5') +
+               'M147,82 Q149,100 153,114 M155,82 Q157,100 161,114',
+        lights: 'M95,38.8 L183,38.8 M185,35.8 L262,35.8 M267,47.3 L296,47.3 M9,38.9 L53,40.8 M93,52.8 L177,52.8',
+        pins: [[100, 64, 1.7], [170, 60, 1.7]]
+      },
+
+      sniper: {
+        box: '0 0 320 128', shadow: [160, 118, 152, 5],
+        parts: [
+          { d: 'M6,40 L64,37 L80,46 L148,46 L148,66 L118,66 L104,94 Q102,100 96,100 L84,100 Q78,100 80,94 L88,73 L20,83 Q6,85 6,77 Z' +
+               'M62,53 Q73,51 85,57 Q79,67 67,67 Q58,65 62,53 Z', m: 'skin', rule: 1 },
+          { d: 'M1,42 Q1,38 5,38 L9,38 L9,81 L5,81 Q1,81 1,77 Z', m: 'dark' },
+          { d: 'M16,35 L58,32 L63,38 L16,41 Z', m: 'skin' },
+          { d: 'M146,44 L210,44 L210,64 L146,64 Z', m: 'skin' },
+          { d: 'M206,48 L246,48 Q250,48 250,52 L250,58 Q250,62 246,62 L206,64 Z', m: 'skin' },
+          { d: 'M206,46.5 L298,48.5 L298,54 L206,56 Z', m: 'metal' },
+          { d: 'M296,44.5 L314,44.5 Q317,44.5 317,47.5 L317,55 Q317,58 314,58 L296,58 Z', m: 'metal' },
+          { d: 'M150,30 L161,30 L163,44 L148,44 Z', m: 'dark' },
+          { d: 'M190,30 L201,30 L203,44 L188,44 Z', m: 'dark' },
+          { d: 'M126,20 L214,20 L214,32 L126,32 Z', m: 'dark' },
+          { d: 'M106,16 L128,18 L128,34 L106,36 Q101,26 106,16 Z', m: 'dark' },
+          { d: 'M212,18 L232,11 Q236,11 236,15 L236,37 Q236,41 232,41 L212,34 Z', m: 'dark' },
+          { d: 'M233,14 Q238,26 233,38 Q230,26 233,14 Z', m: 'glass', shade: 'none' },
+          { d: 'M164,11 L178,11 L178,20 L164,20 Z', m: 'metal' },
+          { d: 'M168,32 L178,32 L178,37 L168,37 Z', m: 'metal' },
+          { d: 'M186,60 L191,60 L189,74 L184,74 Z', m: 'metal' },
+          { d: circ(185, 77, 5), m: 'metal' },
+          { d: 'M156,64 L177,64 L177,83 L158,83 Z', m: 'dark' },
+          { d: TRIGGER_GUARD(118, 66), m: 'metal', rule: 1 },
+          { d: TRIGGER(118, 66), m: 'dark' }
+        ],
+        holes: rep(3, (i) => rr(300 + i * 5, 47, 3, 8.5, 1.4)),
+        lines: 'M214,51 L292,51.5 M130,26 L210,26 M166,15 L176,15 M18,38 L60,35.5',
+        lights: 'M127,20.8 L213,20.8 M147,44.8 L209,44.8 M207,47.3 L297,49.2 M7,40.8 L63,37.8',
+        pins: [[156, 55, 1.7], [202, 55, 1.7]]
+      },
+
+      smg: {
+        box: '0 0 292 128', shadow: [146, 118, 136, 5],
+        parts: [
+          { d: 'M8,41 L60,42 L64,46 L64,64 L58,68 L14,79 Q8,80 8,75 Z', m: 'skin' },
+          { d: 'M4,43 Q4,40 7,40 L10,40 L10,78 L7,78 Q4,78 4,75 Z', m: 'dark' },
+          { d: 'M62,38 Q62,32 68,32 L196,32 Q203,32 203,38 L203,58 L62,58 Z', m: 'skin' },
+          { d: 'M71,23 L89,23 L89,32 L71,32 Z', m: 'metal' },
+          { d: 'M196,32 L241,32 Q245,32 245,36 L245,42 L196,42 Z', m: 'skin' },
+          { d: 'M188,44 L236,44 Q241,46 238,52 L232,66 Q230,68 226,68 L190,68 Z', m: 'skin', tex: 'ribs' },
+          { d: circ(252, 37, 9) + circ(252, 37, 5), m: 'metal', rule: 1 },
+          { d: 'M236,48 L272,48 L272,54 L236,54 Z', m: 'metal' },
+          { d: 'M270,45 L284,45 Q286,45 286,47 L286,55 Q286,57 284,57 L270,57 Z', m: 'metal' },
+          { d: 'M104,58 L123,58 L117,94 Q115,99 108,99 L98,98 Q92,97 94,92 Z', m: 'skin', tex: 'stipple', shade: 'h' },
+          { d: TRIGGER_GUARD(123, 58), m: 'metal', rule: 1 },
+          { d: TRIGGER(123, 58), m: 'dark' },
+          { d: 'M152,58 L172,58 Q174,84 184,108 L166,113 Q156,86 152,58 Z', m: 'skin', shade: 'h' },
+          { d: 'M214,37 L223,37 L223,49 L214,49 Z', m: 'dark' },
+          { d: 'M84,46 L100,46 L100,50 L84,50 Z', m: 'metal' }
+        ],
+        holes: rep(4, (i) => rr(146 + i * 11, 36, 7, 4, 2)),
+        lines: 'M157,66 Q162,88 172,106 M164,64 Q168,86 178,104',
+        lights: 'M68,32.8 L196,32.8 M197,32.8 L241,32.8 M237,48.7 L271,48.7 M9,41.8 L59,42.8',
+        pins: [[72, 50, 1.7], [182, 50, 1.7]]
+      },
+
+      pistol: {
+        box: '0 0 240 170', shadow: [118, 162, 102, 5],
+        parts: [
+          { d: 'M30,86 L106,88 L94,150 Q92,158 84,158 L32,158 Q22,158 23,149 L27,112 Q28,99 20,95 Q18,88 30,86 Z',
+            m: 'skin', tex: 'stipple', shade: 'h' },
+          { d: 'M23,154 L91,154 Q93,154 93,157 L93,163 Q93,166 90,166 L24,166 Q21,166 21,163 L21,157 Q21,154 23,154 Z', m: 'dark' },
+          { d: 'M24,70 L206,70 L206,82 L156,82 L152,86 L108,88 L40,90 Z', m: 'skin' },
+          { d: 'M104,84 L152,84 Q156,84 156,90 L154,108 Q152,115 143,115 L118,115 Q111,115 111,108 L111,84 Z' +
+               'M118,88 L148,88 L147,104 Q146,109 141,109 L122,109 Q118,109 118,104 Z', m: 'skin', rule: 1 },
+          { d: 'M124,86 Q135,94 129,105 L125,105 Q131,95 120,86 Z', m: 'dark' },
+          { d: 'M20,40 L214,40 Q222,40 222,48 L222,70 L20,70 Q15,70 15,65 L15,45 Q15,40 20,40 Z', m: 'skin' },
+          { d: 'M205,32 L214,32 L214,40 L205,40 Z', m: 'dark' },
+          { d: 'M23,31 L40,31 L40,40 L23,40 Z M29,31 L34,31 L34,35 L29,35 Z', m: 'dark', rule: 1 }
+        ],
+        holes: 'M96,44 L146,44 L146,54 L96,54 Z' + circ(218, 56, 3.2),
+        lines: rep(6, (i) => 'M' + (26 + i * 5) + ',44 L' + (26 + i * 5) + ',66') +
+               rep(6, (i) => 'M' + (160 + i * 7) + ',72 L' + (160 + i * 7) + ',80') +
+               'M101,100 Q96,108 99,116 M98,120 Q93,128 96,136 M95,140 Q91,146 93,152',
+        lights: 'M20,40.9 L214,40.9 M25,70.9 L205,70.9',
+        pins: [[64, 78, 1.8], [120, 78, 1.8]]
+      },
+
+      revolver: {
+        box: '0 0 250 170', shadow: [128, 162, 112, 5],
+        parts: [
+          { d: 'M50,80 L98,82 Q93,110 85,140 Q81,156 66,156 L42,156 Q29,156 30,143 Q34,108 50,80 Z',
+            m: 'skin', tex: 'stipple', shade: 'h' },
+          { d: 'M60,36 L114,36 L114,78 L102,88 L60,88 Z', m: 'skin' },
+          { d: 'M40,26 L55,19 Q59,17 62,21 L64,40 L50,40 Z', m: 'metal' },
+          { d: 'M94,84 L132,84 Q137,110 118,114 L106,114 Q95,110 94,97 Z' +
+               'M100,88 L126,88 Q128,106 116,108 L108,108 Q101,106 100,96 Z', m: 'metal', rule: 1 },
+          { d: 'M106,86 Q116,95 111,105 L107,105 Q112,95 102,86 Z', m: 'dark' },
+          { d: 'M112,40 L238,40 Q243,40 243,45 L243,72 L112,72 Z', m: 'skin' },
+          { d: 'M112,33 L241,33 L241,40 L112,40 Z', m: 'skin' },
+          { d: 'M228,22 L238,22 L241,33 L226,33 Z', m: 'metal' },
+          { d: 'M66,40 Q66,33 73,33 L106,33 Q113,33 113,40 L113,81 Q113,88 106,88 L73,88 Q66,88 66,81 Z', m: 'skin' },
+          { d: 'M116,74 L220,74 L220,79 L116,79 Z', m: 'metal' }
+        ],
+        holes: 'M73,42 Q89,39.5 106,42 Q89,44.5 73,42 Z' + 'M71,60.5 Q89,54 108,60.5 Q89,67 71,60.5 Z' +
+               'M73,79 Q89,76.5 106,79 Q89,81.5 73,79 Z' + circ(240, 48, 3),
+        lines: 'M118,56 L236,56 M60,58 L66,58',
+        lights: 'M113,33.8 L240,33.8 M113,40.8 L237,40.8 M67,34 L112,34 M70,50.5 L109,50.5',
+        pins: [[88, 60, 2.2], [104, 42, 1.6]]
+      },
+
+      shotgun: {
+        box: '0 0 320 128', shadow: [160, 119, 150, 5],
+        parts: [
+          { d: 'M10,46 L90,41 L92,45 L92,64 L86,67 L16,89 Q7,91 6,84 L6,52 Q6,46 10,46 Z', m: 'skin' },
+          { d: 'M2,51 Q2,47 6,47 L9,47 L9,88 L6,88 Q2,88 2,84 Z', m: 'dark' },
+          { d: 'M104,64 L123,64 L117,95 Q115,100 108,100 L99,99 Q93,98 95,93 Z', m: 'skin', tex: 'stipple', shade: 'h' },
+          { d: 'M88,38 L178,38 Q182,38 182,42 L182,64 L88,66 Z', m: 'skin' },
+          { d: TRIGGER_GUARD(123, 64), m: 'metal', rule: 1 },
+          { d: TRIGGER(123, 64), m: 'dark' },
+          { d: 'M180,40 L313,40 L313,48 L180,48 Z', m: 'metal' },
+          { d: 'M180,50 L300,50 L300,58 L180,58 Z', m: 'metal' },
+          { d: 'M284,39 L294,39 L294,60 L284,60 Z', m: 'metal' },
+          { d: 'M196,47 L268,47 Q273,47 273,52 L273,65 Q273,70 268,70 L196,70 Q191,70 191,65 L191,52 Q191,47 196,47 Z',
+            m: 'skin', tex: 'ribs' },
+          { d: circ(308, 38, 2.4), m: 'steel' }
+        ],
+        holes: 'M120,44 L162,44 L162,52 L120,52 Z',
+        lines: rep(8, (i) => 'M' + (202 + i * 8.5) + ',50 L' + (202 + i * 8.5) + ',67'),
+        lights: 'M89,38.8 L181,38.8 M181,40.8 L312,40.8 M181,50.8 L299,50.8 M12,46.9 L89,42',
+        pins: [[100, 56, 1.8], [170, 56, 1.8]]
+      },
+
+      knife_bayonet: {
+        box: '-4 -16 320 144', shadow: [160, 122, 140, 4], rot: [-16, 160, 55],
+        parts: [
+          { d: 'M104,40 L236,40 Q270,42 310,53 Q282,68 244,68 L104,68 Z', m: 'skin' },
+          { d: 'M104,60 L244,60 Q274,60 303,54 Q282,68 244,68 L104,68 Z', m: 'edge', shade: 'none' },
+          { d: 'M126,40 ' + rep(9, (i) => 'L' + (129 + i * 6) + ',34 L' + (132 + i * 6) + ',40 ') + 'Z', m: 'skin' },
+          { d: 'M93,31 Q93,29 95,29 L105,29 Q107,29 107,31 L107,79 Q107,81 105,81 L95,81 Q93,81 93,79 Z', m: 'metal' },
+          { d: 'M18,42 L95,44 L95,66 L18,68 Q13,55 18,42 Z', m: 'skin', tex: 'ribs' },
+          { d: 'M8,41 Q2,55 8,69 L20,69 L20,41 Z', m: 'metal' }
+        ],
+        holes: 'M112,46 L222,46 L216,51 L112,51 Z' + rr(128, 50, 22, 8, 4),
+        lines: rep(7, (i) => 'M' + (30 + i * 9) + ',45 L' + (30 + i * 9) + ',66'),
+        lights: 'M105,40.8 L236,40.8 Q268,42.8 306,53',
+        pins: [[36, 55, 2.2], [76, 55, 2.2]]
+      },
+
+      knife_karambit: {
+        box: '0 0 250 180', shadow: [130, 170, 104, 5],
+        parts: [
+          { d: circ(46, 132, 24) + circ(46, 132, 13), m: 'skin', rule: 1 },
+          { d: 'M60,114 Q100,90 150,64 L163,83 Q116,108 74,138 Z', m: 'skin', tex: 'ribs' },
+          { d: 'M156,56 Q200,24 234,60 Q256,97 238,153 Q228,110 206,88 Q184,70 168,81 Z', m: 'skin' },
+          { d: 'M168,81 Q190,73 210,91 Q231,113 238,153 Q221,116 200,97 Q185,85 171,87 Z', m: 'edge', shade: 'none' },
+          { d: 'M145,58 L160,51 L173,78 L159,85 Z', m: 'metal' }
+        ],
+        holes: '',
+        lines: 'M168,48 Q206,38 226,66',
+        lights: 'M160,54 Q200,27 232,60 Q250,90 240,140',
+        pins: [[92, 108, 2.6], [128, 88, 2.6]]
+      },
+
+      knife_butterfly: {
+        box: '-2 -10 320 132', shadow: [160, 116, 140, 4], rot: [-16, 160, 54],
+        parts: [
+          { d: rr(6, 40, 146, 13, 4) + rep(5, (i) => rr(22 + i * 22, 43.5, 15, 6, 3)), m: 'skin', rule: 1 },
+          { d: rr(6, 55, 146, 13, 4) + rep(5, (i) => rr(22 + i * 22, 58.5, 15, 6, 3)), m: 'skin', rule: 1 },
+          { d: 'M152,42 L270,42 Q296,44 313,54 Q296,63 270,65 L152,65 Z', m: 'skin' },
+          { d: 'M152,58 L270,58 Q294,58 308,55 Q296,63 270,65 L152,65 Z', m: 'edge', shade: 'none' },
+          { d: 'M145,38 L160,38 L160,70 L145,70 Z', m: 'metal' },
+          { d: 'M2,44 L10,44 L10,64 L2,64 Z', m: 'metal' }
+        ],
+        holes: '',
+        lines: 'M166,49 L252,49',
+        lights: 'M153,42.8 L270,42.8 Q294,44.8 310,53.5 M8,40.8 L150,40.8',
+        pins: [[152, 47, 2.4], [152, 61, 2.4], [8, 54, 1.8]]
+      },
+
+      gloves: {
+        box: '0 0 270 170', shadow: [138, 162, 118, 5],
+        parts: [
+          { d: 'M10,72 Q12,56 28,54 L72,50 L80,118 L32,124 Q14,124 12,110 Z', m: 'skin' },
+          { d: 'M92,106 Q130,114 160,126 Q177,133 175,145 Q171,156 156,152 L104,134 Q89,128 92,106 Z', m: 'skin', shade: 'h' },
+          { d: 'M68,48 Q112,35 172,40 Q192,42 198,56 L202,100 Q200,116 182,120 L80,122 Z', m: 'skin' },
+          { d: 'M170,40 Q202,30 238,34 Q250,36 248,46 Q246,55 234,53 L196,57 Z', m: 'skin' },
+          { d: 'M192,58 L248,56 Q260,57 259,67 Q258,77 246,76 L194,79 Z', m: 'skin' },
+          { d: 'M194,81 L242,81 Q254,82 252,92 Q250,100 239,99 L194,101 Z', m: 'skin' },
+          { d: 'M188,103 L228,107 Q238,109 236,117 Q234,123 224,122 L186,119 Z', m: 'skin' },
+          { d: 'M20,75 L76,68 L78,90 L22,97 Z', m: 'dark' },
+          { d: 'M54,70 L68,68 L70,92 L56,94 Z', m: 'metal' },
+          { d: rr(168, 46, 20, 16, 5), m: 'dark' },
+          { d: rr(172, 66, 20, 16, 5), m: 'dark' },
+          { d: rr(172, 86, 20, 16, 5), m: 'dark' },
+          { d: rr(168, 104, 18, 13, 5), m: 'dark' }
+        ],
+        holes: '',
+        lines: 'M88,56 Q140,48 186,50 M90,114 Q140,112 182,112 M212,40 L212,54 M222,58 L222,76 M218,82 L218,100 M208,106 L207,120',
+        dash: 'M84,62 Q130,54 160,56 M86,108 Q130,106 160,106',
+        lights: 'M72,49.5 Q112,37 170,41 M172,41 Q202,31.5 236,35',
+        pins: []
+      }
+    };
+
+    /* ---------- stickers, charms and agents vary by name ---------- */
+
+    const EMBLEMS = {
+      star: 'M100,22 L121,72 L176,76 L134,111 L148,164 L100,135 L52,164 L66,111 L24,76 L79,72 Z',
+      skull: 'M100,28 Q156,28 158,86 Q158,112 138,122 L136,146 Q134,158 122,158 L78,158 Q66,158 64,146 L62,122 ' +
+             'Q42,112 42,86 Q44,28 100,28 Z' + circ(76, 92, 14) + circ(124, 92, 14) +
+             'M100,112 L110,128 L90,128 Z',
+      flame: 'M104,20 Q126,58 146,78 Q170,106 158,138 Q146,172 100,174 Q52,172 42,136 Q34,104 60,82 ' +
+             'Q62,106 80,110 Q70,72 104,20 Z',
+      crown: 'M30,70 L64,104 L100,46 L136,104 L170,70 L160,150 L40,150 Z',
+      bolt: 'M118,18 L52,108 L94,108 L78,182 L150,84 L106,84 Z',
+      heart: 'M100,170 Q30,120 30,74 Q30,36 66,36 Q88,36 100,58 Q112,36 134,36 Q170,36 170,74 Q170,120 100,170 Z',
+      shield: 'M100,20 L164,40 Q164,128 100,178 Q36,128 36,40 Z',
+      diamond: 'M100,18 L170,80 L100,182 L30,80 Z'
+    };
+    const EMBLEM_WORDS = [
+      [/skull|fang|bone/i, 'skull'], [/flame|phoenix|fire|ember|hazard/i, 'flame'],
+      [/crown|king|royal/i, 'crown'], [/bolt|volt|static|signal/i, 'bolt'],
+      [/heart|love/i, 'heart'], [/shield|guard/i, 'shield'], [/diamond|drift|holo|gem/i, 'diamond'],
+      [/star|crane|owl|nail/i, 'star']
+    ];
+
+    function stickerModel(item) {
+      let key = null;
+      for (const w of EMBLEM_WORDS) if (w[0].test(item.name)) { key = w[1]; break; }
+      const keys = Object.keys(EMBLEMS);
+      if (!key) key = keys[hash(item.name) % keys.length];
+      const d = EMBLEMS[key];
+      return {
+        box: '0 0 200 200', shadow: [100, 190, 70, 5], sticker: true,
+        parts: [{ d: d, m: 'skin', border: 14, rule: key === 'skull' ? 1 : 0 }],
+        gloss: 'M20,20 L180,20 L180,70 Q100,92 20,70 Z', glossClip: d, glossRule: key === 'skull'
+      };
+    }
+
+    const PENDANTS = {
+      skull: 'M80,96 Q118,96 118,132 Q118,150 106,156 L104,170 Q103,176 96,176 L64,176 Q57,176 56,170 L54,156 ' +
+             'Q42,150 42,132 Q42,96 80,96 Z' + circ(66, 134, 8) + circ(94, 134, 8),
+      gem: 'M80,96 L112,112 L118,144 L80,184 L42,144 L48,112 Z',
+      duck: 'M56,120 Q56,98 78,98 Q98,98 98,118 L112,114 Q120,116 112,124 L100,128 Q128,132 124,158 ' +
+            'Q118,180 84,180 Q48,180 44,158 Q42,138 60,130 Q56,126 56,120 Z' + circ(78, 114, 3.6),
+      die: rr(46, 104, 68, 68, 12) + circ(64, 122, 5) + circ(96, 154, 5) + circ(80, 138, 5),
+      coin: circ(80, 140, 38) + circ(80, 140, 28),
+      tag: 'M52,98 L108,98 Q116,98 116,106 L116,170 Q116,178 108,178 L52,178 Q44,178 44,170 L44,106 Q44,98 52,98 Z' +
+           circ(80, 112, 5),
+      bolt: 'M92,98 L56,146 L78,146 L68,186 L106,132 L84,132 Z'
+    };
+    const PENDANT_WORDS = [
+      [/skull/i, 'skull'], [/duck/i, 'duck'], [/marble|glass|gem/i, 'gem'], [/tag/i, 'tag'],
+      [/pin|coin|gold/i, 'coin'], [/bolt|lucky/i, 'bolt'], [/dice|die/i, 'die']
+    ];
+
+    function charmModel(item) {
+      let key = null;
+      for (const w of PENDANT_WORDS) if (w[0].test(item.name)) { key = w[1]; break; }
+      const keys = Object.keys(PENDANTS);
+      if (!key) key = keys[hash(item.name) % keys.length];
+      const holed = key === 'skull' || key === 'die' || key === 'coin' || key === 'tag' || key === 'duck';
+      return {
+        box: '14 40 132 154', shadow: [80, 188, 44, 4],
+        parts: [
+          { d: circ(80, 22, 14) + circ(80, 22, 9), m: 'steel', rule: 1 },
+          { d: rr(76, 34, 8, 16, 4) + rr(77.5, 37, 5, 10, 2.5), m: 'steel', rule: 1 },
+          { d: rr(75, 48, 10, 18, 5) + rr(77, 51, 6, 12, 3), m: 'steel', rule: 1 },
+          { d: rr(76, 64, 8, 16, 4) + rr(77.5, 67, 5, 10, 2.5), m: 'steel', rule: 1 },
+          { d: rr(72, 80, 16, 18, 6), m: 'metal' },
+          { d: PENDANTS[key], m: 'skin', rule: holed ? 1 : 0 }
+        ],
+        gloss: key === 'gem' ? 'M80,100 L108,114 L80,130 L52,114 Z' : ''
+      };
+    }
+
+    const HEADGEAR = {
+      helmet: 'M56,64 Q58,22 100,20 Q142,22 144,64 L150,74 L50,74 Z',
+      beanie: 'M60,66 Q58,26 100,24 Q142,26 140,66 Z',
+      cap: 'M58,60 Q62,28 100,26 Q134,28 140,54 L172,60 Q170,68 140,66 L58,66 Z',
+      beret: 'M52,56 Q66,26 108,28 Q148,32 146,52 Q120,62 70,64 Q54,64 52,56 Z',
+      hood: 'M46,110 Q40,30 100,22 Q160,30 154,110 L140,112 Q136,60 100,56 Q64,60 60,112 Z',
+      hair: 'M60,64 Q60,28 100,26 Q140,28 140,64 Q126,50 100,50 Q74,50 60,64 Z'
+    };
+
+    function agentModel(item) {
+      const n = item.name;
+      const hg = /diver/i.test(n) ? 'hood' : /ghost/i.test(n) ? 'beanie' : /quartermaster/i.test(n) ? 'beret'
+               : /broker|cipher/i.test(n) ? 'hair' : /sapper/i.test(n) ? 'cap' : 'helmet';
+      const suit = /broker|cipher/i.test(n);
+      const visor = /diver|ghost|sapper|recruit/i.test(n);
+      const parts = [
+        { d: 'M14,200 Q18,142 60,128 L140,128 Q182,142 186,200 Z', m: 'skin' },
+        { d: 'M82,108 L118,108 L122,134 L78,134 Z', m: suit ? 'white' : 'dark', shade: 'v' },
+        { d: 'M64,66 Q64,42 100,40 Q136,42 136,66 Q136,104 100,112 Q64,104 64,66 Z', m: 'dark' }
+      ];
+      if (suit) {
+        parts.push({ d: 'M82,132 L100,170 L118,132 L112,128 L100,150 L88,128 Z', m: 'white' });
+        parts.push({ d: 'M96,136 L104,136 L106,176 L100,184 L94,176 Z', m: 'dark' });
+        parts.push({ d: 'M70,70 L96,70 Q98,82 84,84 Q70,84 70,70 Z M104,70 L130,70 Q130,84 116,84 Q102,82 104,70 Z', m: 'dark' });
+      } else {
+        parts.push({ d: 'M40,150 L160,150 L166,200 L34,200 Z', m: 'dark' });
+        parts.push({ d: rr(52, 160, 26, 30, 4), m: 'skin' });
+        parts.push({ d: rr(122, 160, 26, 30, 4), m: 'skin' });
+        parts.push({ d: rr(87, 158, 26, 22, 4), m: 'skin' });
+      }
+      if (visor) parts.push({ d: 'M66,62 Q100,52 134,62 L132,80 Q100,72 68,80 Z', m: 'glass', shade: 'none' });
+      parts.push({ d: HEADGEAR[hg], m: 'skin' });
+      return { box: '0 0 200 200', shadow: [100, 196, 84, 4], parts: parts, lights: 'M62,132 Q100,124 138,132' };
+    }
+
+    /* ---------- finishes ---------- */
+
+    // Words in a skin's name steer its colour and finish, so names and art agree.
+    const COLOR_WORDS = [
+      [/duck|banana|lemon|yellow/i, [48, 90, 56]],
+      [/birch|walnut|\boak\b|timber|maple|cedar|\bwood\b/i, [27, 48, 40]],
+      [/ruby|crimson|redline|slaughter|blood|red\b|deadline|kill/i, [352, 72, 44]],
+      [/gold|gilded|brass|solar|sun|crown jewel|imperial/i, [42, 78, 50]],
+      [/blue steel|sapphire|signal blue|cathode|coolant|ice|frost|arctic|night diver|cold/i, [208, 66, 50]],
+      [/emerald|jade|toxic|acid|isotope/i, [148, 62, 42]],
+      [/neon|synth|arcade|laser|voltage|pulse|strobe|hyperdrive|city lights|antimatter/i, [292, 82, 55]],
+      [/black|onyx|obsidian|tar pit|soot|charcoal|ash|basalt|blackout|eclipse|shadow|signet|silent|horizon|issue black|broker/i, [224, 10, 22]],
+      [/sand|desert|dust|safari|clay|sandbag|sandstorm|field drab|canvas|khaki|sand rider/i, [36, 32, 56]],
+      [/forest|boreal|ranger|bramble|woodland|jungle|recruit|ghost company|overwatch/i, [98, 26, 38]],
+      [/ember|molten|magma|fire|flare|scorched|volcanic|lava|phoenix|breach/i, [16, 86, 50]],
+      [/chrome|titan|steel|primer|meter grey|iron|slate|stonewash|grey|silver|vault|clean room|reagent|test batch/i, [212, 7, 60]],
+      [/pink|rose|block party/i, [330, 70, 60]],
+      [/violet|purple|lore|cipher|oracle/i, [272, 58, 52]],
+      [/rust|copper|junkyard|scrap|shed|tape|bent nail|workshop|duct/i, [22, 52, 40]],
+      [/teal|aqua|cyan|lightfall|vapor/i, [182, 62, 48]],
+      [/ranger|olive|sapper|quartermaster/i, [72, 28, 38]]
+    ];
+    const FINISH_WORDS = [
+      [/solid|gold standard|gilded|chrom|polished|anodi[sz]ed|rubber/i, 'solid'],
+      [/birch|walnut|\boak\b|timber|maple|cedar|\bwood\b/i, 'wood'],
+      [/doppler/i, 'doppler'], [/fade|aurora|spectrum|prism|chroma|kaleidoscope|holo|foil|refraction|iridium|lightbender|facet/i, 'fade'],
+      [/marble|opal|crown glass|diamond|fissure|supercritical/i, 'marble'], [/case hardened/i, 'hardened'],
+      [/tiger|slaughter/i, 'tiger'], [/camo|masked|mesh|woodland|boreal|safari|overwatch|patrol|sandbag|field drab/i, 'camo'],
+      [/grid|circuit|laser|hex|matrix|lattice|pixel|arcade/i, 'digital'], [/carbon|polymer|weave|black tie/i, 'carbon'],
+      [/tape|stripe|hazard|redline|transit/i, 'stripe'], [/splat|spray|tag over|graffiti|block party|paint|scrapyard/i, 'splatter']
+    ];
+
+    const RARITY_FINISHES = {
+      common: ['solid', 'camo', 'camo', 'digital', 'carbon', 'stripe'],
+      uncommon: ['camo', 'digital', 'stripe', 'tiger', 'carbon', 'splatter'],
+      rare: ['tiger', 'digital', 'splatter', 'fade', 'stripe', 'hardened'],
+      epic: ['fade', 'marble', 'tiger', 'splatter', 'hardened'],
+      legendary: ['fade', 'marble', 'doppler', 'hardened'],
+      mythic: ['doppler', 'fade', 'marble']
+    };
+    const RARITY_SAT = { common: .55, uncommon: .75, rare: .9, epic: 1, legendary: 1.08, mythic: 1.15 };
+
+    function lookFor(item) {
+      const h = hash(item.name);
+      const skinName = item.name.split('|').pop();
+      let hsl = null, finish = null;
+      for (const w of COLOR_WORDS) if (w[0].test(skinName)) { hsl = w[1].slice(); break; }
+      for (const w of FINISH_WORDS) if (w[0].test(skinName)) { finish = w[1]; break; }
+      const rar = item.rarity || 'common';
+      if (!hsl) hsl = [h % 360, 40 + (h >>> 9) % 30, 44 + (h >>> 13) % 14];
+      if (!finish) { const list = RARITY_FINISHES[rar] || RARITY_FINISHES.common; finish = list[(h >>> 5) % list.length]; }
+      hsl[1] = Math.min(96, Math.round(hsl[1] * (RARITY_SAT[rar] || 1)));
+      return { h: hsl[0], s: hsl[1], l: hsl[2], finish: finish, seed: h };
+    }
+
+    const col = (h, s, l, a) => 'hsl' + (a != null ? 'a' : '') + '(' + (((Math.round(h) % 360) + 360) % 360) + ',' +
+      Math.max(0, Math.min(100, Math.round(s))) + '%,' + Math.max(4, Math.min(96, Math.round(l))) + '%' +
+      (a != null ? ',' + a : '') + ')';
+
+    function finishPattern(pid, gid, W, H, look, item, BX, BY) {
+      const r = rng(look.seed);
+      const { h, s, l } = look;
+      let g = '', body = '';
+
+      const grad = (stops, x2, y2) => '<linearGradient id="' + gid + '" x1="0" y1="0" x2="' + (x2 || 1) +
+        '" y2="' + (y2 || 1) + '">' + stops.map((st) =>
+          '<stop offset="' + st[0] + '" stop-color="' + st[1] + '"/>').join('') + '</linearGradient>';
+
+      switch (look.finish) {
+        case 'fade':
+          g = grad([[0, col(h, s, l + 10)], [.35, col(h + 55, s, l + 4)], [.7, col(h + 130, s, l)], [1, col(h + 200, s, l - 6)]], 1, .35);
+          break;
+        case 'doppler':
+          g = grad([[0, col(h, s, l - 18)], [.5, col(h + 20, s, l - 26)], [1, col(h - 20, s, l - 22)]]);
+          for (let i = 0; i < 7; i++) {
+            const x = r() * W, y = r() * H;
+            body += '<path d="' + blob(r, x, y, 18 + r() * 40, 8) + '" fill="' +
+              col(h + (r() - .5) * 60, s, l + 8 + r() * 18) + '" opacity="' + (.45 + r() * .35).toFixed(2) + '"/>';
+          }
+          body += '<path d="' + rep(26, () => circ(n1(r() * W), n1(r() * H), n1(.6 + r() * 1.3))) + '" fill="#fff" opacity=".75"/>';
+          break;
+        case 'marble':
+          g = grad([[0, col(h, s * .6, l + 22)], [1, col(h + 30, s * .6, l + 6)]]);
+          for (let i = 0; i < 6; i++) {
+            const y = r() * H, a = r() * H * .6;
+            body += '<path d="M-20,' + n1(y) + ' C' + n1(W * .3) + ',' + n1(y - a) + ' ' + n1(W * .6) + ',' + n1(y + a) + ' ' +
+              (W + 20) + ',' + n1(y + (r() - .5) * a) + '" fill="none" stroke="' + col(h + i * 40, s, l - 6 + i * 4) +
+              '" stroke-width="' + n1(4 + r() * 14) + '" opacity="' + (.35 + r() * .35).toFixed(2) + '"/>';
+          }
+          break;
+        case 'hardened': {
+          g = grad([[0, '#c9ccd0'], [1, '#7c828a']]);
+          const tints = [[212, 70, 42], [44, 80, 52], [268, 50, 44], [196, 60, 48]];
+          for (let i = 0; i < 14; i++) {
+            const t = tints[Math.floor(r() * tints.length)];
+            body += '<path d="' + blob(r, r() * W, r() * H, 10 + r() * 26, 7) + '" fill="' + col(t[0], t[1], t[2]) +
+              '" opacity="' + (.35 + r() * .4).toFixed(2) + '"/>';
+          }
+          break;
+        }
+        case 'camo': {
+          g = grad([[0, col(h, s, l + 6)], [1, col(h, s, l - 6)]]);
+          const tones = [[h + 18, s * .9, l - 14], [h - 22, s * .8, l + 10], [h + 6, s * .6, l - 26]];
+          tones.forEach((t, i) => {
+            let d = '';
+            for (let k = 0; k < 7; k++) d += blob(r, r() * W, r() * H, 10 + r() * 18, 7);
+            body += '<path d="' + d + '" fill="' + col(t[0], t[1], t[2]) + '" opacity="' + (.85 - i * .08).toFixed(2) + '"/>';
+          });
+          break;
+        }
+        case 'digital': {
+          g = grad([[0, col(h, s, l + 4)], [1, col(h, s, l - 6)]]);
+          const cell = Math.max(W, H) / 26;
+          const paths = ['', '', ''];
+          for (let y = 0; y < H; y += cell) for (let x = 0; x < W; x += cell) {
+            const v = (Math.sin(x * .07 + look.seed % 7) + Math.cos(y * .11 + (look.seed >>> 3) % 5) + r() * 1.3);
+            const k = v > 1.4 ? 0 : v < -.6 ? 1 : (r() < .18 ? 2 : -1);
+            if (k >= 0) paths[k] += 'M' + n1(x) + ',' + n1(y) + 'h' + n1(cell) + 'v' + n1(cell) + 'h' + n1(-cell) + 'Z';
+          }
+          const tints = [col(h + 20, s, l - 16), col(h - 12, s * .8, l + 14), col(h, s * .5, l - 30)];
+          paths.forEach((d, i) => { if (d) body += '<path d="' + d + '" fill="' + tints[i] + '"/>'; });
+          break;
+        }
+        case 'tiger': {
+          g = grad([[0, col(h, s, l + 12)], [1, col(h + 10, s, l)]]);
+          let d = '';
+          for (let i = 0; i < 13; i++) {
+            const x = (i / 13) * W + r() * 8, w = 3 + r() * 6, sw = (r() - .5) * 30;
+            d += 'M' + n1(x) + ',-6 Q' + n1(x + sw) + ',' + n1(H / 2) + ' ' + n1(x + sw * .4) + ',' + (H + 6) +
+                 ' L' + n1(x + sw * .4 + w) + ',' + (H + 6) + ' Q' + n1(x + sw + w * 1.6) + ',' + n1(H / 2) + ' ' +
+                 n1(x + w) + ',-6 Z';
+          }
+          body += '<path d="' + d + '" fill="' + col(h + 10, s * .7, Math.max(8, l - 34)) + '" opacity=".88"/>';
+          break;
+        }
+        case 'wood': {
+          g = grad([[0, col(h, s, l + 8)], [.5, col(h - 4, s, l)], [1, col(h - 6, s + 4, l - 12)]], 1, .25);
+          let d = '';
+          for (let i = 0; i < 22; i++) {
+            const y = i * H / 22 + r() * 3, a = (r() - .5) * 9, b = (r() - .5) * 9;
+            d += 'M-10,' + n1(y) + ' C' + n1(W * .3) + ',' + n1(y + a) + ' ' + n1(W * .62) + ',' + n1(y + b) + ' ' + (W + 10) + ',' + n1(y + (r() - .5) * 5);
+          }
+          body += '<path d="' + d + '" fill="none" stroke="' + col(h - 8, s + 6, l - 20) + '" stroke-width="1.1" opacity=".5"/>';
+          body += '<path d="' + blob(r, r() * W, r() * H, 5, 8) + blob(r, r() * W, r() * H, 4, 8) + '" fill="' + col(h - 8, s, l - 24) + '" opacity=".55"/>';
+          break;
+        }
+        case 'carbon':
+          g = grad([[0, col(h, s * .35, 26)], [1, col(h, s * .35, 12)]]);
+          body += '<rect width="' + W + '" height="' + H + '" fill="url(#mx-weave)"/>' +
+            '<path d="M' + n1(W * .55) + ',-5 L' + n1(W * .62) + ',-5 L' + n1(W * .5) + ',' + (H + 5) + ' L' + n1(W * .43) + ',' + (H + 5) + ' Z" fill="' +
+            col(h, s, l + 8) + '" opacity=".85"/>';
+          break;
+        case 'stripe': {
+          g = grad([[0, col(h, s, l + 6)], [1, col(h, s, l - 8)]]);
+          const alt = col(h + 180 * (look.seed % 2) + 20, s * .4, l > 50 ? 18 : 82);
+          let d = '';
+          const step = W / 9;
+          for (let i = -2; i < 12; i++) {
+            const x = i * step;
+            d += 'M' + n1(x) + ',-4 L' + n1(x + step * .42) + ',-4 L' + n1(x + step * .42 + H * .55) + ',' + (H + 4) +
+                 ' L' + n1(x + H * .55) + ',' + (H + 4) + 'Z';
+          }
+          body += '<path d="' + d + '" fill="' + alt + '" opacity=".78"/>';
+          break;
+        }
+        case 'splatter': {
+          g = grad([[0, col(h, s * .4, l + 20)], [1, col(h, s * .4, l + 4)]]);
+          const tints = [col(h + 150, s, l), col(h - 40, s, l - 10), col(h + 60, s, l + 8)];
+          tints.forEach((c) => {
+            let d = '';
+            for (let k = 0; k < 5; k++) {
+              const x = r() * W, y = r() * H, rad = 5 + r() * 11;
+              d += circ(n1(x), n1(y), n1(rad));
+              for (let j = 0; j < 6; j++) {
+                const a = r() * Math.PI * 2, dist = rad * (1.2 + r() * 1.3);
+                d += circ(n1(x + Math.cos(a) * dist), n1(y + Math.sin(a) * dist), n1(.8 + r() * 2.2));
+              }
+            }
+            body += '<path d="' + d + '" fill="' + c + '" opacity=".9"/>';
+          });
+          break;
+        }
+        default: // solid, brushed
+          g = grad([[0, col(h, s, l + 10)], [.55, col(h, s, l)], [1, col(h, s, l - 12)]], .3, 1);
+          body += '<path d="' + rep(18, (i) => 'M0,' + n1(i * H / 18 + r() * 3) + 'H' + W) +
+            '" stroke="#fff" stroke-width=".5" opacity=".10"/>';
+      }
+
+      // Wear, driven by float. Factory New stays clean; from there the paint
+      // dulls, picks up scratches, then chips through to bare metal, and
+      // Battle-Scarred loses whole patches.
+      const f = item.float;
+      if (f != null && f > 0.03) {
+        const w = rng(hash(item.name + ':' + f));
+        body += '<rect width="' + W + '" height="' + H + '" fill="#5d6166" opacity="' + Math.min(.42, f * .5).toFixed(3) + '"/>';
+
+        let sc = '';
+        const ns = Math.round(8 + f * 90);
+        for (let i = 0; i < ns; i++) {
+          const x = w() * W, y = w() * H, len = 4 + w() * 26 * (0.35 + f), a = (w() - .5) * 1.1;
+          sc += 'M' + n1(x) + ',' + n1(y) + 'l' + n1(Math.cos(a) * len) + ',' + n1(Math.sin(a) * len);
+        }
+        body += '<path d="' + sc + '" stroke="#e1e5ea" stroke-width="' + (0.7 + f * 1.3).toFixed(2) +
+          '" stroke-linecap="round" fill="none" opacity="' + Math.min(.85, 0.3 + f * 0.6).toFixed(2) + '"/>';
+
+        if (f > 0.07) {
+          let ch = '';
+          const nc = Math.round(f * 70);
+          for (let i = 0; i < nc; i++) ch += blob(w, w() * W, w() * H, 1.6 + w() * 9 * f, 6);
+          body += '<path d="' + ch + '" fill="#a3a9b0" opacity="' + Math.min(.95, 0.6 + f * 0.4).toFixed(2) + '"/>';
+        }
+        if (f > 0.44) {
+          let pt = '';
+          const np = Math.round((f - 0.4) * 16);
+          for (let i = 0; i < np; i++) pt += blob(w, w() * W, w() * H, 10 + w() * 20, 8);
+          body += '<path d="' + pt + '" fill="#8c9299" opacity=".72"/>';
+        }
+      }
+
+      // gloss streak across the paint
+      body += '<rect width="' + W + '" height="' + H + '" fill="url(#mx-sheen)"/>';
+
+      return {
+        defs: g + '<pattern id="' + pid + '" patternUnits="userSpaceOnUse" x="' + (BX || 0) + '" y="' + (BY || 0) +
+              '" width="' + W + '" height="' + H + '">' +
+              '<rect width="' + W + '" height="' + H + '" fill="url(#' + gid + ')"/>' + body + '</pattern>'
+      };
+    }
+
+    /* ---------- render ---------- */
+
+    let uid = 0;
+
+    const cache = {};
+
+    function render(item) {
+      const clean = item.float == null;
+      const key = clean ? item.kind + '|' + item.name + '|' + item.rarity : null;
+      if (key && cache[key]) return cache[key];
+      const out = draw(item, key ? 'n' + hash(key).toString(36) : null);
+      if (key) cache[key] = out;
+      return out;
+    }
+
+    function draw(item, fixedId) {
+      let M = MODELS[item.kind];
+      if (item.kind === 'sticker') M = stickerModel(item);
+      else if (item.kind === 'charm') M = charmModel(item);
+      else if (item.kind === 'agent') M = agentModel(item);
+      if (!M) M = MODELS.rifle_ak;
+
+      const box = M.box.split(' ').map(Number);
+      const BX = box[0], BY = box[1], W = box[2], H = box[3];
+      const id = fixedId || 'x' + (uid++).toString(36);
+      const look = lookFor(item);
+      const fin = finishPattern('p' + id, 'g' + id, W, H, look, item, BX, BY);
+      const paint = 'url(#p' + id + ')';
+
+      let out = '<svg viewBox="' + M.box + '" xmlns="http://www.w3.org/2000/svg"><defs>' + fin.defs + '</defs>';
+
+      if (M.shadow) {
+        out += '<ellipse cx="' + M.shadow[0] + '" cy="' + M.shadow[1] + '" rx="' + M.shadow[2] + '" ry="' +
+          M.shadow[3] + '" fill="url(#mx-shadow)"/>';
+      }
+
+      if (M.rot) out += '<g transform="rotate(' + M.rot.join(' ') + ')">';
+
+      M.parts.forEach((p) => {
+        const rule = p.rule ? ' fill-rule="evenodd"' : '';
+        if (p.border) {
+          out += '<path d="' + p.d + '" fill="#f2f0eb" stroke="#f2f0eb" stroke-width="' + p.border +
+            '" stroke-linejoin="round"' + rule + '/>';
+        }
+        const fill = p.m === 'skin' ? paint : MAT[p.m] || MAT.metal;
+        out += '<path d="' + p.d + '" fill="' + fill + '"' + rule + '/>';
+        if (p.tex) out += '<path d="' + p.d + '" fill="url(#mx-' + p.tex + ')"' + rule + '/>';
+        const shade = p.shade === 'none' ? 'none' : p.shade === 'h' ? 'url(#mx-shade-h)' : 'url(#mx-shade)';
+        out += '<path d="' + p.d + '" fill="' + shade + '"' + rule +
+          ' stroke="rgba(8,9,11,.62)" stroke-width="' + (M.sticker ? 2 : 1.1) + '" stroke-linejoin="round"/>';
+      });
+
+      if (M.holes) out += '<path d="' + M.holes + '" fill="#0b0c0f" opacity=".82"/>';
+      if (M.lines) out += '<path d="' + M.lines + '" fill="none" stroke="rgba(0,0,0,.42)" stroke-width="1" stroke-linecap="round"/>';
+      if (M.dash) out += '<path d="' + M.dash + '" fill="none" stroke="rgba(255,255,255,.28)" stroke-width=".9" stroke-dasharray="2.5 2"/>';
+      if (M.lights) out += '<path d="' + M.lights + '" fill="none" stroke="rgba(255,255,255,.34)" stroke-width="1.1" stroke-linecap="round"/>';
+      if (M.pins && M.pins.length) {
+        out += '<path d="' + M.pins.map((q) => circ(q[0], q[1], q[2])).join('') + '" fill="url(#mx-steel)" stroke="rgba(0,0,0,.5)" stroke-width=".6"/>';
+      }
+      if (M.gloss) {
+        if (M.glossClip) {
+          out += '<clipPath id="k' + id + '"><path d="' + M.glossClip + '"' + (M.glossRule ? ' clip-rule="evenodd"' : '') + '/></clipPath>' +
+            '<path d="' + M.gloss + '" fill="url(#mx-gloss)" opacity=".6" clip-path="url(#k' + id + ')"/>';
+        } else {
+          out += '<path d="' + M.gloss + '" fill="url(#mx-gloss)" opacity=".6"/>';
+        }
+      }
+      if (M.rot) out += '</g>';
+
+      return out + '</svg>';
+    }
+
+    return { render: render, ensureDefs: ensureDefs, lookFor: lookFor, MODELS: MODELS };
+  })();
 
   /* =========================================================
      Audio — everything is synthesised, no sample files
@@ -1438,8 +2147,8 @@
 
   const RARITIES = ['common', 'uncommon', 'rare', 'epic', 'legendary', 'mythic'];
   const RARITY_COLOR = {
-    common: '#93a0ad', uncommon: '#4f9b5e', rare: '#3b7fd4',
-    epic: '#8b46d6', legendary: '#dd8a12', mythic: '#d2373c'
+    common: '#b0c3d9', uncommon: '#5e98d9', rare: '#4b69ff',
+    epic: '#8847ff', legendary: '#d32ce6', mythic: '#eb4b4b'
   };
 
   // Odds are tuned so every paid case returns ~93% of its price on average.
@@ -1832,20 +2541,16 @@
                     .replace(/</g, '&lt;').replace(/>/g, '&gt;');
   }
 
-  function artFor(kind, name, vb) {
-    const src = ITEM_IMAGES[name];
-    return src
-      ? '<img src="' + escAttr(src) + '" alt="' + escAttr(name) + '" loading="lazy">'
-      : renderModel(kind, name, vb);
+  function artFor(item, lite) {
+    const src = ITEM_IMAGES[item.name];
+    if (src) return '<img src="' + escAttr(src) + '" alt="' + escAttr(item.name) + '" loading="lazy">';
+    return ART.render(lite ? { kind: item.kind, name: item.name, rarity: item.rarity } : item);
   }
 
-  function itemMarkup(item, extra) {
+  function itemMarkup(item, extra, lite) {
     const wear = item.wear ? WEAR_BY_KEY[item.wear] : null;
     const sub = wear ? wear.short : (KIND_LABEL[item.kind] || 'Weapon');
     const subTitle = wear ? wear.name : sub;
-    const vb = item.kind === 'sticker' ? '0 0 240 156'
-             : (item.kind === 'charm' || item.kind === 'agent') ? '0 0 240 130'
-             : '0 0 240 96';
     // Rarity reads from the tile glow and the strip along the bottom, so the
     // text stays minimal and the artwork gets the room.
     const tip = item.name + ' · ' + subTitle + ' · ' + item.rarity +
@@ -1853,8 +2558,10 @@
     return '<div class="item ' + (extra || '') + '" style="--rc:' + RARITY_COLOR[item.rarity] +
         '" title="' + tip + '">' +
       (item.tracker ? '<span class="st-badge">TRK</span>' : '') +
-      '<div class="item-art">' + artFor(item.kind, item.name, vb) + '</div>' +
-      '<div class="item-name">' + item.name + '</div>' +
+      '<div class="item-art">' + artFor(item, lite) + '</div>' +
+      '<div class="item-name">' + (item.name.indexOf(' | ') > -1
+        ? '<small>' + item.name.split(' | ')[0] + '</small><b>' + item.name.split(' | ')[1] + '</b>'
+        : '<small>' + (KIND_LABEL[item.kind] || 'Item') + '</small><b>' + item.name + '</b>') + '</div>' +
       '<div class="item-sub">' +
         '<span class="item-wear">' + sub + '</span>' +
         '<span class="item-value">' + fmt(item.value) + '</span>' +
@@ -1880,6 +2587,8 @@
 
   function setTab(name) {
     $$('.tab').forEach((t) => t.classList.toggle('active', t.dataset.tab === name));
+    const sub = $('#topbar-sub');
+    if (sub) sub.textContent = name.charAt(0).toUpperCase() + name.slice(1);
     $$('.panel').forEach((p) => p.classList.toggle('active', p.id === 'panel-' + name));
     if (name === 'inventory') renderInventory();
     if (name === 'upgrader') renderUpgrader();
@@ -1910,13 +2619,10 @@
         '<span style="flex:' + ((box.odds[r] || 0) * 1000) + ';background:' + RARITY_COLOR[r] + '"></span>'
       ).join('');
       const top = box.items.reduce((a, b) => (b.value > a.value ? b : a), box.items[0]);
-      const vb = top.kind === 'sticker' ? '0 0 240 156'
-               : (top.kind === 'charm' || top.kind === 'agent') ? '0 0 240 130'
-               : '0 0 240 96';
       return '<article class="case-card">' +
         '<div class="case-art" style="background:radial-gradient(ellipse at 50% 56%,' +
           box.accent + '30,' + box.accent + '0c 58%,transparent 76%)">' +
-          '<div class="case-hero">' + artFor(top.kind, top.name, vb) + '</div>' +
+          '<div class="case-hero">' + artFor(top) + '</div>' +
           '<span class="case-badge">' + caseArt(box.accent) + '</span>' +
         '</div>' +
         '<div class="case-name">' + box.name + '</div>' +
@@ -1965,7 +2671,7 @@
      Opening
      ========================================================= */
 
-  const TILE = 122, GAP = 10, PITCH = TILE + GAP;
+  const TILE = 128, GAP = 10, PITCH = TILE + GAP;
   const STRIP_LEN = 74, WIN_INDEX = 62;
   const SPIN_MS = 5600;
 
@@ -2007,7 +2713,7 @@
       const track = wrap.querySelector('.reel-track');
       let html = '';
       for (let i = 0; i < STRIP_LEN; i++) {
-        html += itemMarkup(i === WIN_INDEX ? winner : rollItem(box), i === WIN_INDEX ? 'win' : '');
+        html += i === WIN_INDEX ? itemMarkup(winner, 'win') : itemMarkup(rollItem(box), '', true);
       }
       track.innerHTML = html;
 
@@ -2302,10 +3008,7 @@
 
     $('#target-slot').innerHTML = target
       ? '<div class="target-preview" style="--rc:' + RARITY_COLOR[target.rarity] + '">' +
-          '<div class="tp-art">' + artFor(target.kind, target.name,
-            target.kind === 'sticker' ? '0 0 240 156'
-              : (target.kind === 'charm' || target.kind === 'agent') ? '0 0 240 130'
-              : '0 0 240 96') + '</div>' +
+          '<div class="tp-art">' + artFor(target) + '</div>' +
           '<div><div class="tp-name">' + target.name + '</div>' +
             '<div class="tp-val">' + fmt(target.value) + ' coins · ' +
               (target.value / stake).toFixed(2) + 'x your stake</div></div>' +
@@ -2833,7 +3536,7 @@
           }
           return;
         }
-        slot.innerHTML = itemMarkup(rollItem(live.box));
+        slot.innerHTML = itemMarkup(rollItem(live.box), '', true);
         if (pi === 0) SFX.tick();
       }, 85);
     });
@@ -2985,6 +3688,7 @@
   }
 
   function init() {
+    ART.ensureDefs();
     load();
     SFX.setMuted(state.muted);
 
