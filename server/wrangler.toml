@@ -1,0 +1,16 @@
+name = "case-sim-leaderboard"
+main = "src/worker.js"
+compatibility_date = "2025-06-01"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "case-sim-leaderboard"
+# Paste the id printed by `npx wrangler d1 create case-sim-leaderboard`.
+database_id = "REPLACE_WITH_YOUR_DATABASE_ID"
+
+[vars]
+# Public half of the admin key, the same one the game carries. It lets the
+# server check admin moderation requests. It is safe to publish; the private
+# half never goes anywhere near the server.
+ADMIN_X = "FlmySf715vkyc4vayPgbDNLuTV4r0ewWrdDQIN-sDfk"
+ADMIN_Y = "Sx2xiZcEaH71oDjHa2bYR9eNGFJoSaUy8Is_qu_tRIE"
