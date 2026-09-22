@@ -428,6 +428,174 @@
   .target-preview .tp-name { font-size: 12.5px; font-weight: 700; line-height: 1.25; }
   .target-preview .tp-val { font-size: 11.5px; color: var(--ink-2); margin-top: 2px; font-variant-numeric: tabular-nums; }
 
+
+  /* ---------- Trade ---------- */
+  .trade-layout { grid-template-columns: 1fr 1fr; }
+  @media (max-width: 900px) { .trade-layout { grid-template-columns: 1fr; } }
+
+  textarea.code-box {
+    width: 100%; resize: vertical; min-height: 74px;
+    font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', monospace;
+    font-size: 12.5px; letter-spacing: .4px; line-height: 1.5;
+    background: var(--bg-2); border: 1px solid var(--line); color: var(--ink);
+    padding: 10px 12px;
+  }
+  textarea.code-box:focus { outline: none; border-color: var(--orange); }
+
+  .code-out {
+    margin-top: 13px; background: var(--bg-2); border: 1px solid var(--line-strong);
+    padding: 12px; position: relative;
+  }
+  .code-out code {
+    display: block; font-family: 'SFMono-Regular', Consolas, monospace;
+    font-size: 12.5px; line-height: 1.6; word-break: break-all; color: var(--orange);
+  }
+  .code-out .code-actions { display: flex; gap: 8px; margin-top: 10px; }
+
+  .warn-box {
+    border-left: 3px solid var(--legendary); background: rgba(240,166,42,.08);
+    padding: 10px 13px; font-size: 12.5px; color: var(--ink-2); margin-bottom: 16px;
+  }
+  .err-box {
+    border-left: 3px solid var(--mythic); background: rgba(239,77,82,.09);
+    padding: 10px 13px; font-size: 12.5px; color: var(--ink-2); margin-top: 13px;
+  }
+  .ok-box {
+    border-left: 3px solid var(--uncommon); background: rgba(95,194,116,.09);
+    padding: 10px 13px; font-size: 12.5px; color: var(--ink-2); margin-top: 13px;
+  }
+
+  .outbox-row {
+    display: flex; align-items: center; gap: 12px;
+    padding: 10px 0; border-bottom: 1px dashed var(--line); font-size: 12.5px;
+  }
+  .outbox-row:last-child { border-bottom: 0; }
+  .outbox-row .ob-names { flex: 1; min-width: 0; }
+  .outbox-row .ob-names b { font-weight: 600; }
+  .outbox-row .ob-names span { display: block; color: var(--ink-3); font-size: 11px; margin-top: 2px; }
+  .outbox-row code {
+    font-family: 'SFMono-Regular', Consolas, monospace; font-size: 11px;
+    color: var(--ink-3); word-break: break-all; max-width: 320px;
+  }
+
+  /* ---------- Battles ---------- */
+  .battle-form {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+    gap: 16px; margin-bottom: 16px;
+  }
+  .chip-row { display: flex; gap: 5px; margin-top: 6px; flex-wrap: wrap; }
+  .chip-row .chip { flex: 1; text-align: center; padding: 8px 4px; }
+
+  .battle-head {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 12px; margin-bottom: 14px; flex-wrap: wrap;
+  }
+  .battle-head h3 {
+    margin: 0; font-family: var(--cond); font-size: 17px; font-weight: 700;
+    letter-spacing: 1.8px; text-transform: uppercase;
+  }
+  .battle-head .rnd { font-size: 12.5px; color: var(--ink-2); }
+
+  .battle-grid { display: grid; gap: 12px; }
+  .bt-col {
+    background: linear-gradient(180deg, var(--surface-2), var(--surface));
+    border: 1px solid var(--line); padding: 12px;
+    transition: border-color .2s ease, box-shadow .2s ease;
+  }
+  .bt-col.you { border-color: var(--orange); }
+  .bt-col.winner { border-color: var(--legendary); box-shadow: 0 0 0 1px var(--legendary), 0 0 30px rgba(240,166,42,.25); }
+  .bt-col.loser { opacity: .55; }
+
+  .bt-name {
+    display: flex; align-items: baseline; justify-content: space-between; gap: 8px;
+    font-family: var(--cond); font-size: 13px; font-weight: 700;
+    letter-spacing: 1.3px; text-transform: uppercase; margin-bottom: 10px;
+  }
+  .bt-name .bt-total { font-family: inherit; font-size: 15px; color: var(--ink); font-variant-numeric: tabular-nums; }
+  .bt-col.you .bt-name { color: var(--orange); }
+
+  .bt-slots { display: flex; flex-direction: column; gap: 8px; }
+  .bt-slot {
+    min-height: 118px; background: var(--bg-2); border: 1px solid var(--line);
+    display: grid; place-items: center; position: relative; overflow: hidden;
+  }
+  .bt-slot.pending::after {
+    content: ''; position: absolute; inset: 0;
+    background: repeating-linear-gradient(135deg, rgba(255,255,255,.02) 0 8px, transparent 8px 16px);
+  }
+  .bt-slot .item { width: 100%; border: 0; background: none; }
+  .bt-slot .item::before { display: none; }
+  .bt-slot.spin .item { filter: blur(.4px); opacity: .85; }
+
+  .bt-banner {
+    margin-top: 16px; padding: 18px; text-align: center;
+    border: 1px solid var(--line-strong); background: var(--surface);
+  }
+  .bt-banner h3 {
+    margin: 0 0 6px; font-family: var(--cond); font-size: 24px; font-weight: 700;
+    letter-spacing: 2.4px; text-transform: uppercase;
+  }
+  .bt-banner.won h3 { color: var(--legendary); }
+  .bt-banner.lost h3 { color: var(--mythic); }
+  .bt-banner p { margin: 0 0 14px; font-size: 13px; color: var(--ink-2); }
+
+  /* ---------- Loading menu ---------- */
+  #splash {
+    position: fixed; inset: 0; z-index: 300;
+    background:
+      radial-gradient(circle at 50% 38%, rgba(242,106,27,.16), transparent 58%),
+      var(--bg-2);
+    display: grid; place-items: center; text-align: center;
+    transition: opacity .5s ease, visibility .5s ease;
+  }
+  #splash.gone { opacity: 0; visibility: hidden; pointer-events: none; }
+
+  .splash-inner { animation: splash-rise .6s cubic-bezier(.2,.9,.3,1) both; }
+  @keyframes splash-rise { from { opacity: 0; transform: translateY(16px); } }
+
+  .splash-mark {
+    width: 74px; height: 74px; margin: 0 auto 22px;
+    background: linear-gradient(140deg, var(--orange), var(--orange-dark));
+    clip-path: polygon(22% 0, 100% 0, 100% 78%, 78% 100%, 0 100%, 0 22%);
+    display: grid; place-items: center;
+    box-shadow: 0 10px 38px rgba(242,106,27,.45);
+    animation: splash-pulse 2.4s ease-in-out infinite;
+  }
+  .splash-mark svg { width: 40px; height: 40px; }
+  @keyframes splash-pulse {
+    0%, 100% { transform: translateY(0); box-shadow: 0 10px 38px rgba(242,106,27,.45); }
+    50% { transform: translateY(-5px); box-shadow: 0 18px 46px rgba(242,106,27,.6); }
+  }
+
+  #splash h1 {
+    margin: 0; font-family: var(--cond);
+    font-size: clamp(38px, 9vw, 66px); font-weight: 700;
+    letter-spacing: 12px; text-transform: uppercase;
+    color: var(--ink); text-indent: 12px;
+  }
+  .splash-by {
+    margin: 6px 0 30px; font-family: var(--cond);
+    font-size: 13px; font-weight: 700; letter-spacing: 4px;
+    text-transform: lowercase; color: var(--orange);
+  }
+
+  .splash-bar {
+    width: min(280px, 72vw); height: 3px; margin: 0 auto 12px;
+    background: var(--surface-3); overflow: hidden;
+  }
+  .splash-bar i {
+    display: block; height: 100%; width: 0;
+    background: linear-gradient(90deg, var(--orange), var(--legendary));
+    transition: width .2s linear;
+  }
+  .splash-status {
+    font-family: var(--cond); font-size: 10.5px; font-weight: 700;
+    letter-spacing: 2.4px; text-transform: uppercase; color: var(--ink-3);
+    margin-bottom: 22px; min-height: 14px;
+  }
+  #splash-enter { min-width: 168px; padding: 12px 24px; font-size: 14px; }
+  #splash-enter:disabled { opacity: .3; }
+
   .toast-host {
     position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%);
     z-index: 200; display: flex; flex-direction: column; gap: 8px; align-items: center; pointer-events: none;
@@ -447,6 +615,22 @@
 </style>
 </head>
 <body>
+
+<div id="splash">
+  <div class="splash-inner">
+    <div class="splash-mark">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M3 8l9-4 9 4v8l-9 4-9-4z"/><path d="M3 8l9 4 9-4"/><path d="M12 12v8"/>
+      </svg>
+    </div>
+    <h1>Case Sim</h1>
+    <p class="splash-by">made by lilbean</p>
+    <div class="splash-bar"><i id="splash-fill"></i></div>
+    <div class="splash-status" id="splash-status">Loading</div>
+    <button class="btn btn-primary" id="splash-enter" disabled>Enter</button>
+  </div>
+</div>
+
 
 <header>
   <div class="header-inner">
@@ -481,6 +665,8 @@
     <button class="tab active" data-tab="cases">Cases</button>
     <button class="tab" data-tab="inventory">Inventory <span class="pill" id="inv-count">0</span></button>
     <button class="tab" data-tab="upgrader">Upgrader</button>
+    <button class="tab" data-tab="trade">Trade</button>
+    <button class="tab" data-tab="battles">Battles</button>
   </nav>
 </header>
 
@@ -596,6 +782,91 @@
       </div>
     </div>
   </section>
+
+  <section class="panel" id="panel-trade">
+    <div class="section-head">
+      <div>
+        <h2>Trade</h2>
+        <p>Turn items into a code, send the code however you like, and whoever pastes it gets the items.</p>
+      </div>
+    </div>
+
+    <div class="up-layout trade-layout">
+      <div class="card">
+        <h4>Send</h4>
+        <p class="hint" id="send-hint">Pick the items you want to send.</p>
+        <div id="send-body"></div>
+        <button class="btn btn-primary" id="make-code" style="width:100%;margin-top:13px" disabled>Select items to send</button>
+      </div>
+
+      <div class="card">
+        <h4>Receive</h4>
+        <p class="hint">Paste a code someone sent you.</p>
+        <textarea class="control code-box" id="code-in" rows="3" spellcheck="false"
+                  placeholder="TRD1-..." autocomplete="off"></textarea>
+        <div style="display:flex;gap:8px;margin-top:10px">
+          <button class="btn btn-ghost btn-sm" id="check-code" style="flex:1">Check code</button>
+          <button class="btn btn-ghost btn-sm" id="clear-code">Clear</button>
+        </div>
+        <div id="code-preview"></div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:18px">
+      <h4>Codes you have sent</h4>
+      <p class="hint">Kept locally so you can copy a code again if you lose it. The items have already left your inventory.</p>
+      <div id="outbox"></div>
+    </div>
+  </section>
+
+  <section class="panel" id="panel-battles">
+    <div class="section-head">
+      <div>
+        <h2>Case Battles</h2>
+        <p>Everyone opens the same cases at the same time. Best total takes every item on the table.</p>
+      </div>
+    </div>
+
+    <div class="card" id="battle-setup">
+      <div class="battle-form">
+        <div>
+          <span class="label">Case</span>
+          <select class="control" id="bt-case" style="width:100%;margin-top:6px"></select>
+        </div>
+        <div>
+          <span class="label">Rounds</span>
+          <div class="chip-row" id="bt-rounds">
+            <button class="chip" data-rounds="1">1</button>
+            <button class="chip active" data-rounds="3">3</button>
+            <button class="chip" data-rounds="5">5</button>
+            <button class="chip" data-rounds="10">10</button>
+          </div>
+        </div>
+        <div>
+          <span class="label">Players</span>
+          <div class="chip-row" id="bt-players">
+            <button class="chip active" data-players="2">2</button>
+            <button class="chip" data-players="3">3</button>
+            <button class="chip" data-players="4">4</button>
+          </div>
+        </div>
+        <div>
+          <span class="label">Mode</span>
+          <div class="chip-row" id="bt-mode">
+            <button class="chip active" data-mode="high">Highest wins</button>
+            <button class="chip" data-mode="low">Lowest wins</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="kv"><span>Cases you open</span><b id="bt-count">3</b></div>
+      <div class="kv"><span>Your entry cost</span><b id="bt-cost">0</b></div>
+      <div class="kv"><span>Items on the table</span><b id="bt-pool">6</b></div>
+      <button class="btn btn-primary" id="bt-start" style="width:100%;margin-top:13px">Start battle</button>
+    </div>
+
+    <div id="battle-view" style="display:none"></div>
+  </section>
 </main>
 
 <div class="overlay" id="open-overlay">
@@ -629,6 +900,26 @@
       <button class="link-btn" id="contents-close">Close</button>
     </div>
     <div class="inv-grid" id="contents-grid"></div>
+  </div>
+</div>
+
+
+<div class="overlay" id="send-overlay">
+  <div class="sheet" style="max-width:640px">
+    <div class="sheet-head">
+      <div>
+        <h3>Confirm send</h3>
+        <p>These items leave your inventory now and live in the code instead.</p>
+      </div>
+      <button class="link-btn" id="send-cancel">Cancel</button>
+    </div>
+    <div class="result-grid" id="send-preview"></div>
+    <div class="warn-box" id="send-warn"></div>
+    <div class="sheet-actions">
+      <div class="payout" id="send-total"></div>
+      <button class="btn btn-ghost" id="send-cancel-2">Keep them</button>
+      <button class="btn btn-primary" id="send-confirm">Create the code</button>
+    </div>
   </div>
 </div>
 
@@ -1423,14 +1714,16 @@
   const START_COINS = 500;
 
   const state = {
-    coins: START_COINS, inventory: [], opened: 0, best: null, muted: false, uid: 1
+    coins: START_COINS, inventory: [], opened: 0, best: null, muted: false, uid: 1,
+    redeemed: [], outbox: []
   };
 
   function save() {
     try {
       localStorage.setItem(SAVE_KEY, JSON.stringify({
         coins: state.coins, inventory: state.inventory, opened: state.opened,
-        best: state.best, muted: state.muted, uid: state.uid
+        best: state.best, muted: state.muted, uid: state.uid,
+        redeemed: state.redeemed, outbox: state.outbox
       }));
     } catch (e) { /* storage unavailable — play on without persistence */ }
   }
@@ -1446,6 +1739,8 @@
       if (d.best) state.best = d.best;
       state.muted = !!d.muted;
       state.uid = d.uid || (state.inventory.length + 1);
+      if (Array.isArray(d.redeemed)) state.redeemed = d.redeemed;
+      if (Array.isArray(d.outbox)) state.outbox = d.outbox;
     } catch (e) { /* corrupt save — start clean */ }
   }
 
@@ -1588,6 +1883,8 @@
     $$('.panel').forEach((p) => p.classList.toggle('active', p.id === 'panel-' + name));
     if (name === 'inventory') renderInventory();
     if (name === 'upgrader') renderUpgrader();
+    if (name === 'trade') renderTrade();
+    if (name === 'battles') renderBattleSetup();
   }
 
   function caseArt(accent) {
@@ -2095,6 +2392,515 @@
   }
 
   /* =========================================================
+     Trading by code
+
+     A code is a bearer token: the items leave your inventory when you make
+     one and exist only in the code until someone redeems it. There is no
+     server here, so this trusts the people using it — the checksum catches
+     typos and tampering, and the ledger stops a code being redeemed twice on
+     the same machine, but nothing can stop a determined player editing their
+     own save. That is the deal with an offline game.
+     ========================================================= */
+
+  const TRADE_VERSION = 'TRD1';
+  const TRADE_SALT = 'case-opening-sim/trade/v1';
+  const LEDGER_CAP = 2000;
+
+  // Items are referenced by their position in the drop tables, so a code can
+  // never conjure an item that does not exist, and value is always recomputed
+  // from the base rather than carried in the code.
+  const ITEM_INDEX = {};
+  ALL_ITEMS.forEach((it, i) => { if (ITEM_INDEX[it.name] == null) ITEM_INDEX[it.name] = i; });
+
+  const b36 = (n) => Math.round(n).toString(36);
+  const un36 = (v) => parseInt(v, 36);
+
+  const trade = { selected: new Set(), pending: null, incoming: null };
+
+  function itemBlob(it) {
+    const idx = ITEM_INDEX[it.name];
+    if (idx == null) return null;
+    const w = it.wear ? WEARS.findIndex((x) => x.key === it.wear) + 1 : 0;
+    const f = it.float != null ? Math.round(it.float * 10000) : 0;
+    return [b36(idx), b36(w), b36(f), it.tracker ? '1' : '0'].join('.');
+  }
+
+  function blobToItem(blob) {
+    const pieces = blob.split('.');
+    if (pieces.length !== 4) return null;
+    const base = ALL_ITEMS[un36(pieces[0])];
+    if (!base) return null;
+
+    const out = { name: base.name, kind: base.kind, rarity: base.rarity,
+                  base: base.value, value: base.value };
+    const w = un36(pieces[1]);
+    if (w > 0) {
+      const wear = WEARS[w - 1];
+      if (!wear) return null;
+      out.wear = wear.key;
+      out.float = Math.min(1, Math.max(0, un36(pieces[2]) / 10000));
+      out.value *= wear.mult;
+    }
+    if (pieces[3] === '1') { out.tracker = true; out.value *= TRACKER_MULT; }
+    out.value = Math.max(1, Math.round(out.value));
+    return out;
+  }
+
+  function tradeSum(parts) {
+    return hashString(parts.join('-') + TRADE_SALT).toString(36).slice(0, 6);
+  }
+
+  function makeCode(items) {
+    const blobs = items.map(itemBlob);
+    if (!blobs.length || blobs.some((b) => !b)) return null;
+    const nonce = b36(Math.floor(Math.random() * 2176782335));
+    const body = [TRADE_VERSION].concat(blobs, [nonce]);
+    return body.concat([tradeSum(body)]).join('-');
+  }
+
+  function parseCode(raw) {
+    const clean = String(raw || '').trim().replace(/\s+/g, '');
+    if (!clean) return { error: 'Paste a code first.' };
+    const parts = clean.split('-');
+    if (parts.length < 4 || parts[0] !== TRADE_VERSION) {
+      return { error: 'That does not look like a trade code from this game.' };
+    }
+    const sum = parts[parts.length - 1];
+    const body = parts.slice(0, -1);
+    if (tradeSum(body) !== sum) {
+      return { error: 'Checksum failed. The code was mistyped, truncated or altered.' };
+    }
+    const blobs = body.slice(1, -1);
+    if (!blobs.length) return { error: 'That code carries no items.' };
+    const items = blobs.map(blobToItem);
+    if (items.some((it) => !it)) {
+      return { error: 'That code refers to an item this version of the game does not have.' };
+    }
+    return { items: items, code: clean };
+  }
+
+  const isRedeemed = (code) => state.redeemed.indexOf(code) !== -1;
+
+  function markRedeemed(code) {
+    state.redeemed.push(code);
+    if (state.redeemed.length > LEDGER_CAP) {
+      state.redeemed = state.redeemed.slice(-LEDGER_CAP);
+    }
+  }
+
+  /* ---------- Send ---------- */
+
+  function renderTrade() {
+    const alive = new Set(state.inventory.map((it) => it.uid));
+    trade.selected.forEach((uid) => { if (!alive.has(uid)) trade.selected.delete(uid); });
+
+    const body = $('#send-body');
+    if (!state.inventory.length) {
+      body.innerHTML = '<div class="empty"><h3>Nothing to send</h3>' +
+        '<p>Open a case first, then come back.</p></div>';
+    } else {
+      const list = state.inventory.slice().sort((a, b) => b.value - a.value);
+      body.innerHTML = '<div class="pick-grid">' + list.map((it) =>
+        itemMarkup(it, trade.selected.has(it.uid) ? 'sel' : '')
+          .replace('class="item ', 'data-send="' + it.uid + '" class="item ')
+      ).join('') + '</div>';
+
+      $$('#send-body [data-send]').forEach((el) => {
+        el.addEventListener('click', () => {
+          const uid = +el.dataset.send;
+          if (trade.selected.has(uid)) trade.selected.delete(uid);
+          else trade.selected.add(uid);
+          SFX.blip();
+          renderTrade();
+        });
+      });
+    }
+
+    const picked = state.inventory.filter((it) => trade.selected.has(it.uid));
+    const worth = picked.reduce((sum, it) => sum + it.value, 0);
+    $('#send-hint').textContent = picked.length
+      ? picked.length + ' item' + (picked.length > 1 ? 's' : '') + ' selected · worth ' + fmt(worth)
+      : 'Pick the items you want to send.';
+
+    const btn = $('#make-code');
+    btn.disabled = !picked.length;
+    btn.textContent = picked.length
+      ? 'Create a code for ' + picked.length + ' item' + (picked.length > 1 ? 's' : '')
+      : 'Select items to send';
+
+    renderOutbox();
+  }
+
+  function openSendConfirm() {
+    const picked = state.inventory.filter((it) => trade.selected.has(it.uid));
+    if (!picked.length) return;
+    trade.pending = picked;
+
+    $('#send-preview').innerHTML = picked.map((it) => itemMarkup(it)).join('');
+    $('#send-warn').innerHTML =
+      'Once you create the code these items are <b>gone from your inventory</b>. ' +
+      'Whoever pastes the code gets them, so treat it like cash — anyone you send ' +
+      'it to can redeem it. You cannot redeem your own code.';
+    $('#send-total').innerHTML = 'Sending <b>' + picked.length + '</b> item' +
+      (picked.length > 1 ? 's' : '') + ' worth <b>' +
+      fmt(picked.reduce((sum, it) => sum + it.value, 0)) + '</b>';
+    $('#send-overlay').classList.add('open');
+  }
+
+  function confirmSend() {
+    const picked = trade.pending;
+    if (!picked || !picked.length) return;
+
+    const code = makeCode(picked);
+    if (!code) { toast('Could not build a code for those items', 'bad'); return; }
+
+    const uids = new Set(picked.map((it) => it.uid));
+    state.inventory = state.inventory.filter((it) => !uids.has(it.uid));
+    // Ledger our own code so it cannot be redeemed back into this save.
+    markRedeemed(code);
+    state.outbox.unshift({
+      code: code,
+      names: picked.map((it) => it.name),
+      total: picked.reduce((sum, it) => sum + it.value, 0),
+      at: Date.now()
+    });
+    if (state.outbox.length > 60) state.outbox = state.outbox.slice(0, 60);
+
+    trade.selected.clear();
+    trade.pending = null;
+    $('#send-overlay').classList.remove('open');
+
+    SFX.coin();
+    toast('Code created for ' + picked.length + ' item' + (picked.length > 1 ? 's' : ''), 'good');
+    renderBalance();
+    renderInventory();
+    renderTrade();
+    save();
+    showLatestCode(code);
+  }
+
+  function showLatestCode(code) {
+    const host = $('#outbox');
+    host.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    const row = host.querySelector('[data-code="' + code + '"]');
+    if (row) { row.classList.add('sel'); setTimeout(() => row.classList.remove('sel'), 1600); }
+  }
+
+  function renderOutbox() {
+    const host = $('#outbox');
+    if (!state.outbox.length) {
+      host.innerHTML = '<div class="empty" style="padding:28px"><h3>No codes yet</h3>' +
+        '<p>Codes you create will be listed here.</p></div>';
+      return;
+    }
+    host.innerHTML = state.outbox.map((row) =>
+      '<div class="outbox-row" data-code="' + row.code + '">' +
+        '<div class="ob-names"><b>' + row.names.join(', ') + '</b>' +
+          '<span>' + fmt(row.total) + ' coins · ' + new Date(row.at).toLocaleString() + '</span></div>' +
+        '<code>' + row.code + '</code>' +
+        '<button class="btn btn-ghost btn-sm" data-copy="' + row.code + '">Copy</button>' +
+      '</div>'
+    ).join('');
+
+    $$('#outbox [data-copy]').forEach((btn) => {
+      btn.addEventListener('click', () => copyText(btn.dataset.copy, btn));
+    });
+  }
+
+  function copyText(text, btn) {
+    const done = () => {
+      SFX.blip();
+      if (btn) { const old = btn.textContent; btn.textContent = 'Copied'; setTimeout(() => { btn.textContent = old; }, 1200); }
+      else toast('Code copied', 'good');
+    };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(done, () => fallbackCopy(text, done));
+    } else fallbackCopy(text, done);
+  }
+
+  function fallbackCopy(text, done) {
+    try {
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      ta.style.position = 'fixed';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      ta.remove();
+      done();
+    } catch (e) { toast('Copy failed — select the code manually', 'bad'); }
+  }
+
+  /* ---------- Receive ---------- */
+
+  function checkCode() {
+    const raw = $('#code-in').value;
+    const res = parseCode(raw);
+    const host = $('#code-preview');
+    trade.incoming = null;
+
+    if (res.error) {
+      host.innerHTML = '<div class="err-box">' + res.error + '</div>';
+      return;
+    }
+    if (isRedeemed(res.code)) {
+      host.innerHTML = '<div class="err-box">This code has already been redeemed on this ' +
+        'save, or it is one you created yourself.</div>';
+      return;
+    }
+
+    trade.incoming = res;
+    const total = res.items.reduce((sum, it) => sum + it.value, 0);
+    host.innerHTML =
+      '<div class="ok-box">Valid code. You are about to receive ' + res.items.length +
+        ' item' + (res.items.length > 1 ? 's' : '') + ' worth ' + fmt(total) + ' coins.</div>' +
+      '<div class="result-grid" style="margin-top:13px">' +
+        res.items.map((it) => itemMarkup(it)).join('') + '</div>' +
+      '<button class="btn btn-primary" id="accept-code" style="width:100%">Accept these items</button>';
+
+    $('#accept-code').addEventListener('click', acceptCode);
+    SFX.blip();
+  }
+
+  function acceptCode() {
+    const res = trade.incoming;
+    if (!res) return;
+    // Re-check at the moment of acceptance, not just at preview.
+    if (isRedeemed(res.code)) {
+      $('#code-preview').innerHTML = '<div class="err-box">That code has already been redeemed.</div>';
+      trade.incoming = null;
+      return;
+    }
+
+    res.items.forEach((it) => {
+      const made = addItem(it);
+      if (!state.best || made.value > state.best.value) {
+        state.best = { name: made.name, value: made.value, rarity: made.rarity };
+      }
+    });
+    markRedeemed(res.code);
+    trade.incoming = null;
+
+    $('#code-in').value = '';
+    $('#code-preview').innerHTML = '<div class="ok-box">Items added to your inventory.</div>';
+    SFX.win(res.items.reduce((best, it) =>
+      RARITIES.indexOf(it.rarity) > RARITIES.indexOf(best) ? it.rarity : best, 'common'));
+    toast('Received ' + res.items.length + ' item' + (res.items.length > 1 ? 's' : ''), 'good');
+    renderBalance();
+    renderInventory();
+    renderTrade();
+    save();
+  }
+
+  /* =========================================================
+     Case battles
+
+     Everyone opens the same cases at the same time and the best total takes
+     every item. You pay only your own seat, and with N players you win about
+     1 in N battles for N times the items, so the long-run return matches
+     opening the cases yourself — it just arrives in far bigger lumps.
+     ========================================================= */
+
+  const BOT_NAMES = ['Rival A', 'Rival B', 'Rival C'];
+
+  const battle = {
+    caseIndex: 1, rounds: 3, players: 2, mode: 'high',
+    running: false, live: null
+  };
+
+  function battleCost() {
+    return CASES[battle.caseIndex].price * battle.rounds;
+  }
+
+  function renderBattleSetup() {
+    const sel = $('#bt-case');
+    if (!sel.options.length) {
+      sel.innerHTML = CASES.map((c, i) =>
+        '<option value="' + i + '">' + c.name + ' · ' +
+        (c.price === 0 ? 'FREE' : fmt(c.price)) + '</option>').join('');
+      sel.value = String(battle.caseIndex);
+    }
+    const cost = battleCost();
+    $('#bt-count').textContent = fmt(battle.rounds);
+    $('#bt-cost').textContent = cost === 0 ? 'FREE' : fmt(cost);
+    $('#bt-pool').textContent = fmt(battle.rounds * battle.players);
+
+    const btn = $('#bt-start');
+    const broke = state.coins < cost;
+    btn.disabled = broke || battle.running;
+    btn.textContent = broke ? 'Not enough coins' : 'Start battle';
+  }
+
+  function startBattle() {
+    if (battle.running) return;
+    const box = CASES[battle.caseIndex];
+    const cost = battleCost();
+    if (state.coins < cost) { toast('Not enough coins', 'bad'); return; }
+
+    SFX.unlock();
+    state.coins -= cost;
+    state.opened += battle.rounds;
+    renderBalance();
+    refreshCaseButtons();
+
+    const players = [];
+    for (let i = 0; i < battle.players; i++) {
+      players.push({
+        name: i === 0 ? 'You' : BOT_NAMES[i - 1],
+        you: i === 0,
+        pulls: [],
+        total: 0
+      });
+    }
+    battle.live = { box: box, players: players, round: 0 };
+    battle.running = true;
+
+    $('#battle-setup').style.display = 'none';
+    $('#battle-view').style.display = '';
+    drawBattle();
+    SFX.whoosh();
+    setTimeout(runRound, 500);
+  }
+
+  function drawBattle(finished) {
+    const live = battle.live;
+    if (!live) return;
+    const cols = live.players.length;
+
+    let html =
+      '<div class="battle-head">' +
+        '<h3>' + live.box.name + '</h3>' +
+        '<div class="rnd">' + (finished
+          ? 'Finished · ' + battle.rounds + ' round' + (battle.rounds > 1 ? 's' : '')
+          : 'Round ' + Math.min(live.round + 1, battle.rounds) + ' of ' + battle.rounds) +
+          ' · ' + (battle.mode === 'high' ? 'Highest total wins' : 'Lowest total wins') + '</div>' +
+      '</div>' +
+      '<div class="battle-grid" style="grid-template-columns:repeat(' + cols + ',1fr)">';
+
+    live.players.forEach((pl, pi) => {
+      const cls = 'bt-col' + (pl.you ? ' you' : '') +
+        (finished ? (pl.won ? ' winner' : ' loser') : '');
+      html += '<div class="' + cls + '">' +
+        '<div class="bt-name"><span>' + pl.name + '</span>' +
+          '<span class="bt-total" id="bt-total-' + pi + '">' + fmt(pl.total) + '</span></div>' +
+        '<div class="bt-slots">';
+      for (let r = 0; r < battle.rounds; r++) {
+        const pulled = pl.pulls[r];
+        html += '<div class="bt-slot' + (pulled ? '' : ' pending') + '" id="bt-slot-' + pi + '-' + r + '">' +
+          (pulled ? itemMarkup(pulled) : '') + '</div>';
+      }
+      html += '</div></div>';
+    });
+
+    html += '</div>';
+    $('#battle-view').innerHTML = html;
+  }
+
+  function runRound() {
+    const live = battle.live;
+    if (!live) return;
+    const r = live.round;
+    if (r >= battle.rounds) return endBattle();
+
+    let pending = live.players.length;
+    live.players.forEach((pl, pi) => {
+      const finalItem = rollItem(live.box);
+      const slot = $('#bt-slot-' + pi + '-' + r);
+      if (!slot) { pending--; return; }
+      slot.classList.remove('pending');
+      slot.classList.add('spin');
+
+      const dur = 1500 + pi * 160;
+      const started = Date.now();
+      const timer = setInterval(() => {
+        if (!battle.live) { clearInterval(timer); return; }
+        if (Date.now() - started >= dur) {
+          clearInterval(timer);
+          slot.classList.remove('spin');
+          slot.innerHTML = itemMarkup(finalItem);
+
+          pl.pulls[r] = finalItem;
+          pl.total += finalItem.value;
+          const tot = $('#bt-total-' + pi);
+          if (tot) tot.textContent = fmt(pl.total);
+          if (RARITIES.indexOf(finalItem.rarity) >= 3) SFX.win(finalItem.rarity);
+          else if (pl.you) SFX.blip();
+
+          if (--pending === 0) {
+            live.round++;
+            setTimeout(live.round >= battle.rounds ? endBattle : runRound, 700);
+          }
+          return;
+        }
+        slot.innerHTML = itemMarkup(rollItem(live.box));
+        if (pi === 0) SFX.tick();
+      }, 85);
+    });
+  }
+
+  function endBattle() {
+    const live = battle.live;
+    if (!live) return;
+    battle.running = false;
+
+    // Best total takes the table; an exact tie is broken at random.
+    const best = live.players.reduce((acc, pl) =>
+      battle.mode === 'high' ? Math.max(acc, pl.total) : Math.min(acc, pl.total),
+      battle.mode === 'high' ? -Infinity : Infinity);
+    const tied = live.players.filter((pl) => pl.total === best);
+    const winner = tied[Math.floor(Math.random() * tied.length)];
+    live.players.forEach((pl) => { pl.won = (pl === winner); });
+
+    const pool = live.players.reduce((acc, pl) => acc.concat(pl.pulls), []);
+    const poolValue = pool.reduce((sum, it) => sum + it.value, 0);
+    const youWon = winner.you;
+
+    if (youWon) {
+      pool.forEach((it) => {
+        const made = addItem(it);
+        if (!state.best || made.value > state.best.value) {
+          state.best = { name: made.name, value: made.value, rarity: made.rarity };
+        }
+      });
+      SFX.win('mythic');
+    } else {
+      SFX.lose();
+    }
+
+    drawBattle(true);
+
+    const cost = battleCost();
+    const banner = document.createElement('div');
+    banner.className = 'bt-banner ' + (youWon ? 'won' : 'lost');
+    banner.innerHTML =
+      '<h3>' + (youWon ? 'You win the table' : winner.name + ' takes it') + '</h3>' +
+      '<p>' + (youWon
+        ? 'All ' + pool.length + ' items are yours — ' + fmt(poolValue) +
+          ' coins of loot for a ' + (cost === 0 ? 'free' : fmt(cost) + ' coin') + ' entry.'
+        : 'Their total was ' + fmt(winner.total) + ' against your ' + fmt(live.players[0].total) +
+          '. You lose your ' + (cost === 0 ? 'free entry' : fmt(cost) + ' coin entry') + '.') +
+      '</p>' +
+      '<button class="btn btn-primary" id="bt-again">New battle</button>';
+    $('#battle-view').appendChild(banner);
+    $('#bt-again').addEventListener('click', resetBattle);
+
+    toast(youWon ? 'Battle won · ' + fmt(poolValue) + ' in loot' : 'Battle lost', youWon ? 'good' : 'bad');
+    renderBalance();
+    renderInventory();
+    save();
+  }
+
+  function resetBattle() {
+    battle.live = null;
+    battle.running = false;
+    $('#battle-view').style.display = 'none';
+    $('#battle-view').innerHTML = '';
+    $('#battle-setup').style.display = '';
+    renderBattleSetup();
+  }
+
+  /* =========================================================
      Wiring
      ========================================================= */
 
@@ -2105,6 +2911,9 @@
     state.opened = 0;
     state.best = null;
     state.uid = 1;
+    state.redeemed = [];
+    state.outbox = [];
+    trade.selected.clear();
     upgrade.selected.clear();
     upgrade.result = null;
     save();
@@ -2119,6 +2928,60 @@
     $('#mute-icon').innerHTML = state.muted
       ? '<polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="22" y1="9" x2="16" y2="15"/><line x1="16" y1="9" x2="22" y2="15"/>'
       : '<polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/>';
+  }
+
+  /* =========================================================
+     Loading menu
+
+     The Enter click doubles as the user gesture browsers require before an
+     AudioContext may start, so the first case you open already has sound.
+     ========================================================= */
+
+  function runSplash() {
+    const splash = $('#splash');
+    const fill = $('#splash-fill');
+    const status = $('#splash-status');
+    const enter = $('#splash-enter');
+    if (!splash) return;
+
+    const steps = [
+      [18, 'Loading item models'],
+      [42, 'Building drop tables'],
+      [66, 'Priming the audio engine'],
+      [88, 'Restoring your inventory'],
+      [100, 'Ready']
+    ];
+    let i = 0;
+
+    (function step() {
+      if (i >= steps.length) {
+        enter.disabled = false;
+        enter.focus();
+        return;
+      }
+      fill.style.width = steps[i][0] + '%';
+      status.textContent = steps[i][1];
+      i++;
+      setTimeout(step, 230 + Math.random() * 150);
+    })();
+
+    function dismiss() {
+      if (splash.classList.contains('gone')) return;
+      SFX.unlock();
+      SFX.blip();
+      splash.classList.add('gone');
+      setTimeout(() => splash.remove(), 600);
+    }
+
+    enter.addEventListener('click', dismiss);
+    document.addEventListener('keydown', function onKey(e) {
+      if (enter.disabled) return;
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        document.removeEventListener('keydown', onKey);
+        dismiss();
+      }
+    });
   }
 
   function init() {
@@ -2174,6 +3037,33 @@
     });
 
     $('#spin-btn').addEventListener('click', spin);
+    $('#bt-case').addEventListener('change', function () {
+      battle.caseIndex = +this.value;
+      renderBattleSetup();
+    });
+    [['#bt-rounds', 'rounds'], ['#bt-players', 'players'], ['#bt-mode', 'mode']].forEach((pair) => {
+      $$(pair[0] + ' .chip').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          if (battle.running) return;
+          const raw = btn.dataset.rounds || btn.dataset.players || btn.dataset.mode;
+          battle[pair[1]] = pair[1] === 'mode' ? raw : +raw;
+          $$(pair[0] + ' .chip').forEach((b) => b.classList.toggle('active', b === btn));
+          SFX.blip();
+          renderBattleSetup();
+        });
+      });
+    });
+    $('#bt-start').addEventListener('click', startBattle);
+    $('#make-code').addEventListener('click', openSendConfirm);
+    $('#send-confirm').addEventListener('click', confirmSend);
+    $('#send-cancel').addEventListener('click', () => $('#send-overlay').classList.remove('open'));
+    $('#send-cancel-2').addEventListener('click', () => $('#send-overlay').classList.remove('open'));
+    $('#check-code').addEventListener('click', checkCode);
+    $('#clear-code').addEventListener('click', () => {
+      $('#code-in').value = '';
+      $('#code-preview').innerHTML = '';
+      trade.incoming = null;
+    });
     $('#reset-btn').addEventListener('click', resetAll);
     $('#mute-btn').addEventListener('click', () => {
       state.muted = !state.muted;
@@ -2187,6 +3077,7 @@
     document.addEventListener('keydown', (e) => {
       if (e.key !== 'Escape') return;
       $('#contents-overlay').classList.remove('open');
+      $('#send-overlay').classList.remove('open');
       if (opening && opening.settled) closeOpening(false);
     });
 
@@ -2195,6 +3086,9 @@
     renderBalance();
     renderInventory();
     renderUpgrader();
+    renderTrade();
+    renderBattleSetup();
+    runSplash();
   }
 
   init();
