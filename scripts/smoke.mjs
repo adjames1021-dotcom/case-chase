@@ -1,5 +1,6 @@
-// Plays the game in a headless browser before every deploy: splash, username,
-// open a case, keep the item, visit every tab. Fails on any script error.
+// Plays the game in a headless browser before every deploy: splash, login
+// screen, guest play, open a case, keep the item, visit every tab. Fails on
+// any script error.
 // Calls to the online server are blocked, so testing never touches real
 // players or the live leaderboard.
 //
@@ -23,11 +24,10 @@ try {
   await page.goto(url);
   await page.waitForSelector('#splash-enter:not([disabled])', { timeout: 15000 });
   await page.click('#splash-enter');
-  await page.waitForSelector('#name-gate.open');
-  await page.fill('#name-in', 'smoketest');
-  await page.click('#name-go');
-  await page.waitForSelector('#name-gate:not(.open)', { state: 'attached' });
-  step('splash and username');
+  await page.waitForSelector('#login-gate.open');
+  await page.click('#login-guest');
+  await page.waitForSelector('#login-gate:not(.open)', { state: 'attached' });
+  step('splash, login screen, play as guest');
 
   const cases = await page.locator('.case-card').count();
   if (cases < 5) throw new Error('only ' + cases + ' cases on the shop page');

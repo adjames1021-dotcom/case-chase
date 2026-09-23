@@ -1,11 +1,12 @@
 # Every push to main is checked, then deployed to Cloudflare:
 #   site/    -> https://case-sim.pages.dev
 #   server/  -> https://case-sim-server.caseopeningsim.workers.dev
-# If a check fails, nothing is deployed and the live site keeps running the
-# last good version.
+# If a check or test fails, nothing is deployed and the live site keeps
+# running the last good version.
 #
-# Needs one repository secret, CLOUDFLARE_API_TOKEN (see README.md). Without
-# it the checks still run and the deploy steps are skipped.
+# Secrets (repo Settings -> Secrets and variables -> Actions):
+#   CLOUDFLARE_API_TOKEN  needed to deploy; without it the checks still run
+#   ADMIN_KEY             optional (ADMK-...); adds the gift and moderation tests
 
 name: Check and deploy
 
@@ -43,8 +44,32 @@ jobs:
       - name: Play the game in a headless browser
         run: node scripts/smoke.mjs
 
+  server-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Start a local copy of the server
+        working-directory: server
+        run: |
+          npm install --no-package-lock
+          node ../scripts/sync-core.mjs
+          npx wrangler d1 execute case-sim --local --file schema.sql
+          npx wrangler dev --local --port 8787 > ../wrangler.log 2>&1 &
+          for i in $(seq 1 60); do curl -fs http://127.0.0.1:8787/ >/dev/null && break; sleep 1; done
+          curl -fs http://127.0.0.1:8787/
+      - name: Test accounts, cases, trades and battles
+        env:
+          ADMIN_KEY: ${{ secrets.ADMIN_KEY }}
+        run: node scripts/api-test.mjs
+      - name: Server log
+        if: failure()
+        run: tail -100 wrangler.log
+
   deploy:
-    needs: check
+    needs: [check, server-test]
     if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     steps:
@@ -76,7 +101,8 @@ jobs:
           changed=$(git diff --name-only "$BEFORE" "$GITHUB_SHA")
           echo "$changed"
           echo "site=$(echo "$changed" | grep -q '^site/' && echo true || echo false)" >> "$GITHUB_OUTPUT"
-          echo "server=$(echo "$changed" | grep -q '^server/' && echo true || echo false)" >> "$GITHUB_OUTPUT"
+          # The server runs the game's CORE block, so a change to the game file redeploys it too.
+          echo "server=$(echo "$changed" | grep -qE '^server/|^site/index.html$|^scripts/sync-core.mjs$' && echo true || echo false)" >> "$GITHUB_OUTPUT"
           echo "schema=$(echo "$changed" | grep -q '^server/schema.sql$' && echo true || echo false)" >> "$GITHUB_OUTPUT"
 
       # Server first, so a new game version never talks to an old server.
@@ -92,7 +118,9 @@ jobs:
         working-directory: server
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-        run: npx --yes wrangler@4 deploy
+        run: |
+          node ../scripts/sync-core.mjs
+          npx --yes wrangler@4 deploy
 
       - name: Deploy game
         if: steps.plan.outputs.site == 'true'

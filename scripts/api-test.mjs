@@ -1,0 +1,251 @@
+// Server tests: accounts, cases, selling, upgrades, trades, battles, gifts,
+// moderation and race conditions, against a local server with an empty
+// database. The deploy workflow runs these before anything goes live.
+//
+// Run with (from server/):
+//   npm run db:init:local && npx wrangler dev --local --port 8787 &
+//   node ../scripts/api-test.mjs
+// Gift and admin tests need the admin key: set ADMIN_KEY=ADMK-... to include them.
+
+import { readFileSync } from 'node:fs';
+import { join, dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
+const root = join(dirname(fileURLToPath(import.meta.url)), '..');
+const core = await import(join(root, 'server/src/core.js'));
+const BASE = (process.env.API_BASE || 'http://127.0.0.1:8787') + '/api';
+const toml = readFileSync(join(root, 'server/wrangler.toml'), 'utf8');
+const ADMIN = {
+  x: /ADMIN_X = "([^"]+)"/.exec(toml)[1], y: /ADMIN_Y = "([^"]+)"/.exec(toml)[1],
+  d: String(process.env.ADMIN_KEY || '').replace(/^ADMK-/, '') || null
+};
+let fails = 0;
+const ok = (label, cond, extra) => { if (!cond) fails++; console.log((cond ? 'PASS ' : 'FAIL ') + label + (extra !== undefined ? '  ' + JSON.stringify(extra) : '')); };
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+const b64u = (buf) => Buffer.from(buf).toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+
+async function call(method, path, body, token) {
+  const headers = {};
+  if (body) headers['Content-Type'] = 'application/json';
+  if (token) headers.Authorization = 'Bearer ' + token;
+  const r = await fetch(BASE + path, { method, headers, body: body ? JSON.stringify(body) : undefined });
+  let data = null; try { data = await r.json(); } catch (e) {}
+  return { status: r.status, data };
+}
+const valueOf = (row) => core.tupleToItem(row.slice(1)).value;
+const sum = (rows) => rows.reduce((s, r) => s + valueOf(r), 0);
+const me = async (t) => (await call('GET', '/me', null, t)).data;
+
+let adminKey;
+async function adminSign(text) {
+  if (!adminKey) adminKey = await crypto.subtle.importKey('jwk', { kty: 'EC', crv: 'P-256', x: ADMIN.x, y: ADMIN.y, d: ADMIN.d, ext: true },
+    { name: 'ECDSA', namedCurve: 'P-256' }, false, ['sign']);
+  return b64u(new Uint8Array(await crypto.subtle.sign({ name: 'ECDSA', hash: 'SHA-256' }, adminKey, new TextEncoder().encode(text))));
+}
+async function giftCode(spec) {
+  const body = b64u(Buffer.from(JSON.stringify(Object.assign({ t: 'gift', v: 1, mv: 1, c: 0, i: [], m: '', id: 'g' + Math.random(), ts: Math.floor(Date.now() / 1000), x: 0 }, spec))));
+  return 'GIFT.' + body + '.' + await adminSign(body);
+}
+const admin = async (p) => { const s = JSON.stringify(Object.assign({ ts: Math.floor(Date.now() / 1000) }, p)); return call('POST', '/admin', { p: s, g: await adminSign(s) }); };
+
+/* ---- accounts ---- */
+const A = await call('POST', '/signup', { name: 'alice', password: 'alicepass' });
+ok('signup', A.status === 200 && A.data.token && A.data.me.coins === 500, A.status);
+const B = await call('POST', '/signup', { name: 'bob', password: 'bobpass1' });
+const C = await call('POST', '/signup', { name: 'carol', password: 'carolpass' });
+ok('duplicate name refused (any case)', (await call('POST', '/signup', { name: 'ALICE', password: 'whatever' })).status === 409);
+ok('bad name refused', (await call('POST', '/signup', { name: 'a!', password: 'whatever' })).status === 400);
+ok('short password refused', (await call('POST', '/signup', { name: 'dave', password: '123' })).status === 400);
+ok('wrong password', (await call('POST', '/login', { name: 'alice', password: 'nope-nope' })).status === 401);
+ok('unknown user', (await call('POST', '/login', { name: 'nobody', password: 'nope-nope' })).status === 401);
+const L = await call('POST', '/login', { name: 'Alice', password: 'alicepass' });
+ok('login (name case-insensitive)', L.status === 200 && L.data.token !== A.data.token);
+let a = A.data.token; const b = B.data.token, c = C.data.token;
+ok('no token -> 401', (await call('GET', '/me')).status === 401);
+ok('garbage token -> 401', (await call('GET', '/me', null, 'x'.repeat(43))).status === 401);
+for (let i = 0; i < 5; i++) await call('POST', '/login', { name: 'carol', password: 'wrongwrong' });
+ok('5 wrong passwords -> locked', (await call('POST', '/login', { name: 'carol', password: 'carolpass' })).status === 429);
+
+/* ---- cases ---- */
+let r = await call('POST', '/open', { case_id: 'starter', count: 5 }, a);
+ok('open x5', r.status === 200 && r.data.items.length === 5 && r.data.me.coins === 375 && r.data.me.opened === 5, r.data.me);
+ok('pulls come from the case', r.data.items.every((row) => core.CASES[1].items.some((it) => it.name === core.ALL_ITEMS[row[1]].name)));
+ok('inventory value matches items', r.data.me.inv_value === sum(r.data.items.concat(r.data.bonus)));
+ok('best drop tracked', r.data.me.best_value === Math.max(...r.data.items.map(valueOf)));
+ok('unknown case refused', (await call('POST', '/open', { case_id: 'nope' }, a)).status === 400);
+ok('cannot afford', (await call('POST', '/open', { case_id: 'vanguard' }, a)).status === 409);
+r = await call('POST', '/open', { case_id: 'scrap' }, b);
+ok('free case', r.status === 200 && r.data.me.coins === 500);
+ok('free case cooldown', (await call('POST', '/open', { case_id: 'scrap' }, b)).status === 429);
+await sleep(3100);
+ok('free case after cooldown', (await call('POST', '/open', { case_id: 'scrap', count: 5 }, b)).status === 200);
+await call('POST', '/open', { case_id: 'starter', count: 5 }, b);
+
+// Racing purchases can never overdraw.
+const poor = (await call('POST', '/signup', { name: 'poor', password: 'poorpass' })).data.token;
+const burst = await Promise.all(Array.from({ length: 8 }, () => call('POST', '/open', { case_id: 'neon' }, poor)));   // 420 each, 500 coins
+const pm = await me(poor);
+ok('parallel purchases never overdraw', burst.filter((x) => x.status === 200).length === 1 && pm.me.coins === 80,
+  { ok: burst.filter((x) => x.status === 200).length, coins: pm.me.coins });
+
+/* ---- selling ---- */
+let inv = (await me(a)).inventory;
+const before = (await me(a)).me.coins;
+r = await call('POST', '/sell', { ids: [inv[0][0], inv[1][0]] }, a);
+ok('sell pays exact value', r.data.me.coins === before + valueOf(inv[0]) + valueOf(inv[1]), [before, r.data.me.coins]);
+r = await call('POST', '/sell', { ids: [inv[0][0]] }, a);
+ok('selling twice pays nothing', r.data.removed.length === 0 && r.data.me.coins === before + valueOf(inv[0]) + valueOf(inv[1]));
+const bInv = (await me(b)).inventory;
+r = await call('POST', '/sell', { ids: [bInv[0][0]] }, a);
+ok('cannot sell someone else\'s item', r.data.removed.length === 0 && (await me(b)).inventory.length === bInv.length);
+
+/* ---- upgrader ---- */
+inv = (await me(a)).inventory;
+r = await call('POST', '/upgrade', { ids: [inv[0][0]], mult: 2 }, a);
+const after = (await me(a)).inventory;
+ok('upgrade resolves', r.status === 200 && typeof r.data.won === 'boolean' && r.data.chance > 0 && r.data.chance <= 0.9, r.data && { won: r.data.won, chance: r.data.chance });
+ok('stake consumed', !after.some((x) => x[0] === inv[0][0]) && after.length === inv.length - 1 + (r.data.won ? 1 : 0));
+if (r.data.won) ok('won the quoted target', core.ALL_ITEMS[r.data.item[1]].name === core.ALL_ITEMS[r.data.target].name);
+ok('upgrade with a gone item refused', (await call('POST', '/upgrade', { ids: [inv[0][0]], mult: 2 }, a)).status === 409);
+
+/* ---- trades ---- */
+inv = (await me(a)).inventory;
+let binv = (await me(b)).inventory;
+const aCoins = (await me(a)).me.coins, bCoins = (await me(b)).me.coins;
+r = await call('POST', '/offers', { to: B.data.me.id, give: [inv[0][0]], give_coins: 10, want: [binv[0][0]], want_coins: 5, message: 'deal?' }, a);
+ok('offer created', r.status === 200 && r.data.me.coins === aCoins - 10, r.data);
+const offerId = r.data.id;
+ok('offered item is locked away', !(await me(a)).inventory.some((x) => x[0] === inv[0][0]));
+ok('locked item cannot be sold', (await call('POST', '/sell', { ids: [inv[0][0]] }, a)).data.removed.length === 0);
+ok('sender cannot accept', (await call('POST', '/offers/' + offerId + '/accept', null, a)).status === 403);
+ok('stranger cannot see it', (await call('POST', '/offers/' + offerId + '/accept', null, c)).status === 404);
+const list = (await call('GET', '/offers', null, b)).data.offers;
+ok('bob sees the offer', list.length === 1 && list[0].message === 'deal?' && list[0].give[0][0] === inv[0][0]);
+r = await call('POST', '/offers/' + offerId + '/accept', null, b);
+ok('bob accepts', r.status === 200, r.data);
+const aAfter = await me(a), bAfter = await me(b);
+ok('items swapped', bAfter.inventory.some((x) => x[0] === inv[0][0]) && aAfter.inventory.some((x) => x[0] === binv[0][0]));
+ok('coins settled', aAfter.me.coins === aCoins - 10 + 5 && bAfter.me.coins === bCoins + 10 - 5, [aAfter.me.coins, bAfter.me.coins]);
+ok('accept is one-shot', (await call('POST', '/offers/' + offerId + '/accept', null, b)).status === 409);
+
+inv = aAfter.inventory;
+const c0 = aAfter.me.coins;
+r = await call('POST', '/offers', { to: B.data.me.id, give: [inv[0][0]], give_coins: 7 }, a);
+await call('POST', '/offers/' + r.data.id + '/cancel', null, a);
+let m = await me(a);
+ok('cancel refunds item and coins', m.me.coins === c0 && m.inventory.some((x) => x[0] === inv[0][0]));
+r = await call('POST', '/offers', { to: B.data.me.id, give: [inv[0][0]], give_coins: 3 }, a);
+await call('POST', '/offers/' + r.data.id + '/decline', null, b);
+m = await me(a);
+ok('decline refunds item and coins', m.me.coins === c0 && m.inventory.some((x) => x[0] === inv[0][0]));
+ok('cancelled offer cannot be accepted', (await call('POST', '/offers/' + r.data.id + '/accept', null, b)).status === 409);
+binv = (await me(b)).inventory;
+r = await call('POST', '/offers', { to: B.data.me.id, want: [binv[0][0]] }, a);
+await call('POST', '/sell', { ids: [binv[0][0]] }, b);
+ok('accept after selling the item is refused', (await call('POST', '/offers/' + r.data.id + '/accept', null, b)).status === 409);
+ok('cannot ask for items they don\'t have', (await call('POST', '/offers', { to: B.data.me.id, want: [inv[0][0]] }, a)).status === 409);
+ok('cannot offer more coins than you have', (await call('POST', '/offers', { to: B.data.me.id, give_coins: 1e9 }, a)).status === 409);
+
+/* ---- battles ---- */
+const coinsA = (await me(a)).me.coins, coinsB = (await me(b)).me.coins;
+const invA = (await me(a)).inventory.length, invB = (await me(b)).inventory.length;
+r = await call('POST', '/battles', { case_id: 'starter', rounds: 1, max_players: 2, mode: 'high', version: 1 }, a);
+ok('lobby created, entry paid', r.status === 200 && r.data.status === 'open' && r.data.me.coins === coinsA - 25, r.data);
+const lob = r.data.id;
+ok('second open lobby refused', (await call('POST', '/battles', { case_id: 'starter', rounds: 1, max_players: 2, mode: 'high', version: 1 }, a)).status === 409);
+ok('listed', (await call('GET', '/battles')).data.battles.some((x) => x.id === lob));
+ok('seed hidden while open', (await call('GET', '/battles/' + lob)).data.seed === null);
+ok('old version cannot join', (await call('POST', '/battles/' + lob + '/join', { version: 0 }, b)).status === 409);
+r = await call('POST', '/battles/' + lob + '/join', { version: 1 }, b);
+ok('join fills it and starts', r.status === 200 && r.data.status === 'running' && r.data.seed && r.data.start_at > Date.now(), r.data.status);
+const plan = core.computeBattle(core.CASES[1], 1, 2, 'high', core.seededRng(core.hashString(r.data.seed + '|' + lob)));
+const winnerIsA = plan.winner === 0;
+const ma = await me(a), mb = await me(b);
+ok('winner got both pulls, loser nothing', winnerIsA ? (ma.inventory.length === invA + 2 && mb.inventory.length === invB)
+  : (mb.inventory.length === invB + 2 && ma.inventory.length === invA), { winner: plan.winner });
+const wonRows = (winnerIsA ? ma : mb).inventory.slice(-2).map((x) => core.ALL_ITEMS[x[1]].name + '/' + x[3]).sort();
+const planRows = plan.pulls.flat().map((it) => it.name + '/' + core.itemTuple(it)[2]).sort();
+ok('server paid exactly what the seed rolls', JSON.stringify(wonRows) === JSON.stringify(planRows), { wonRows, planRows });
+ok('entry charged to both', ma.me.coins === coinsA - 25 && mb.me.coins === coinsB - 25);
+
+r = await call('POST', '/battles', { case_id: 'starter', rounds: 2, max_players: 3, mode: 'low', version: 1 }, a);
+const l2 = r.data.id;
+const cc = (await me(c)).me.coins;
+const race = await Promise.all([call('POST', '/battles/' + l2 + '/join', { version: 1 }, b), call('POST', '/battles/' + l2 + '/join', { version: 1 }, poor)]);
+ok('both joiners seated (3 seats)', race.every((x) => x.status === 200), race.map((x) => x.status));
+ok('it started once full', (await call('GET', '/battles/' + l2)).data.status === 'running');
+
+r = await call('POST', '/battles', { case_id: 'starter', rounds: 1, max_players: 4, mode: 'high', version: 1 }, a);
+const l3 = r.data.id, a3 = r.data.me.coins;
+await call('POST', '/battles/' + l3 + '/join', { version: 1 }, b);
+const b3 = (await me(b)).me.coins;
+await call('POST', '/battles/' + l3 + '/leave', {}, b);
+ok('leaving refunds', (await me(b)).me.coins === b3 + 25);
+await call('POST', '/battles/' + l3 + '/join', { version: 1 }, b);
+await call('POST', '/battles/' + l3 + '/leave', {}, a);
+ok('creator leaving cancels and refunds everyone', (await call('GET', '/battles/' + l3)).data.status === 'cancelled' &&
+  (await me(a)).me.coins === a3 + 25 && (await me(b)).me.coins === b3 + 25);
+r = await call('POST', '/battles', { case_id: 'starter', rounds: 1, max_players: 4, mode: 'high', version: 1 }, a);
+r = await call('POST', '/battles/' + r.data.id + '/start', {}, a);
+ok('start fills bots', r.data.status === 'running' && r.data.players.filter((p) => p.bot).length === 3);
+r = await call('POST', '/battles', { case_id: 'starter', rounds: 2, max_players: 2, mode: 'high', version: 1, bots: true }, a);
+ok('vs bots runs immediately', r.status === 200 && r.data.status === 'running' && r.data.seed, r.data.status);
+
+if (ADMIN.d) {
+/* ---- gifts ---- */
+const kIdx = core.ITEM_INDEX['Vault Key'], cIdx = core.ITEM_INDEX['Vault Case'];
+const code = await giftCode({ c: 1000, i: [[kIdx, 0, 0, 0], [cIdx, 0, 0, 0], [cIdx, 0, 0, 0]], m: 'hi' });
+const g0 = (await me(c)).me.coins;
+r = await call('POST', '/gift', { code }, c);
+ok('gift claimed', r.status === 200 && r.data.me.coins === g0 + 1000 && r.data.items.length === 3 && r.data.message === 'hi', r.data);
+ok('gift cannot be claimed twice', (await call('POST', '/gift', { code }, c)).status === 409);
+ok('another player can claim it', (await call('POST', '/gift', { code }, b)).status === 200);
+const parts = code.split('.');
+const forged = 'GIFT.' + b64u(Buffer.from(Buffer.from(parts[1], 'base64').toString().replace('"c":1000', '"c":9999999'))) + '.' + parts[2];
+ok('edited gift refused', (await call('POST', '/gift', { code: forged }, a)).status === 400);
+ok('expired gift refused', (await call('POST', '/gift', { code: await giftCode({ c: 5, x: 1000 }) }, a)).status === 410);
+
+/* ---- vault ---- */
+r = await call('POST', '/open', { case_id: 'vault', count: 5 }, c);
+ok('vault opens once per key+case pair', r.status === 200 && r.data.items.length === 1 && r.data.removed.length === 2, r.data && r.data.removed);
+ok('no more keys', (await call('POST', '/open', { case_id: 'vault' }, c)).status === 409);
+
+} else console.log('SKIP gifts and vault (no ADMIN_KEY)');
+
+/* ---- leaderboard ---- */
+let lb = (await call('GET', '/leaderboard?sort=opened')).data.players;
+ok('leaderboard sorted by cases', lb.length >= 3 && lb.every((p, i) => i === 0 || lb[i - 1].opened >= p.opened), lb.map((p) => p.name + ':' + p.opened));
+ok('sort cannot inject', (await call('GET', '/leaderboard?sort=' + encodeURIComponent('x; DROP TABLE accounts'))).status === 200);
+r = await call('POST', '/ping', null, a);
+await sleep(1100);
+r = await call('POST', '/ping', null, a);
+ok('ping counts played time', r.data.me.played >= 1, r.data.me.played);
+
+if (ADMIN.d) {
+/* ---- admin ---- */
+ok('forged admin refused', (await call('POST', '/admin', { p: JSON.stringify({ a: 'ban', id: 'bob', ts: Math.floor(Date.now() / 1000) }), g: 'AAAA' })).status === 403);
+r = await admin({ a: 'ban', id: 'bob' });
+ok('admin ban by name', r.status === 200 && r.data.name === 'bob');
+ok('banned session refused', (await call('GET', '/me', null, b)).status === 403);
+ok('banned login refused', (await call('POST', '/login', { name: 'bob', password: 'bobpass1' })).status === 403);
+lb = (await call('GET', '/leaderboard')).data.players;
+ok('banned hidden from board', !lb.some((p) => p.name === 'bob'));
+await admin({ a: 'unban', id: 'bob' });
+ok('unban', (await call('POST', '/login', { name: 'bob', password: 'bobpass1' })).status === 200);
+r = await admin({ a: 'reset', id: 'alice', password: 'newpass99' });
+ok('password reset', r.status === 200 && (await call('GET', '/me', null, a)).status === 401 &&
+  (await call('POST', '/login', { name: 'alice', password: 'newpass99' })).status === 200);
+r = await call('POST', '/logout', null, (a = (await call('POST', '/login', { name: 'alice', password: 'newpass99' })).data.token));
+ok('logout ends the session', (await call('GET', '/me', null, a)).status === 401);
+
+} else console.log('SKIP moderation (no ADMIN_KEY)');
+
+/* ---- consistency ---- */
+const all = [];
+for (const [n, p] of [['alice', ADMIN.d ? 'newpass99' : 'alicepass'], ['bob', 'bobpass1'], ['poor', 'poorpass']]) {
+  const t = (await call('POST', '/login', { name: n, password: p })).data.token;
+  const d = await me(t);
+  all.push(d.me.inv_value === sum(d.inventory) || d.me.inv_value > sum(d.inventory));
+}
+ok('inv_value matches items for everyone', all.every(Boolean));
+console.log(fails ? fails + ' FAILED' : 'ALL PASSED');
+process.exit(fails ? 1 : 0);

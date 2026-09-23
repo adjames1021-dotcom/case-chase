@@ -2,12 +2,16 @@
   "name": "case-sim-server",
   "private": true,
   "scripts": {
+    "sync": "node ../scripts/sync-core.mjs",
+    "predev": "node ../scripts/sync-core.mjs",
     "dev": "wrangler dev",
     "db:init": "wrangler d1 execute case-sim --remote --file schema.sql",
     "db:init:local": "wrangler d1 execute case-sim --local --file schema.sql",
+    "predeploy": "node ../scripts/sync-core.mjs",
     "deploy": "wrangler deploy"
   },
   "devDependencies": {
     "wrangler": "^4.0.0"
-  }
+  },
+  "type": "module"
 }

@@ -6,7 +6,8 @@ import { readFileSync, writeFileSync, mkdtempSync, readdirSync, statSync } from 
 import { execFileSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import { join, dirname } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
+import { buildCore } from './sync-core.mjs';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const tmp = mkdtempSync(join(tmpdir(), 'case-sim-check-'));
@@ -46,6 +47,46 @@ else pass('SAVE_KEY unchanged, saves are safe');
 
 const size = statSync(join(root, 'site/index.html')).size;
 if (size > 20 * 1024 * 1024) fail('site/index.html is over 20 MB');
+
+/* ---------- the shared rules (CORE block) ---------- */
+
+let core = null;
+try {
+  const coreText = buildCore(html);
+  const body = coreText.slice(0, coreText.lastIndexOf('export {'));
+  const dom = /\b(document|window|localStorage|state\.|\$\(|\$\$\()/.exec(body);
+  if (dom) fail('The CORE block uses page code ("' + dom[1] + '"); the server can\'t run that');
+  const file = join(tmp, 'core.mjs');
+  writeFileSync(file, coreText);
+  core = await import(pathToFileURL(file).href);
+  pass('CORE block builds for the server');
+} catch (e) {
+  fail('CORE block does not build: ' + e.message);
+}
+
+if (core) {
+  // Saved items point at their position in ALL_ITEMS, so the list may only grow.
+  const orderFile = join(root, 'scripts/item-order.json');
+  const order = JSON.parse(readFileSync(orderFile, 'utf8'));
+  const names = core.ALL_ITEMS.map((it) => it.name), cases = core.CASES.map((c) => c.id);
+  if (process.argv.includes('--update-order')) {
+    writeFileSync(orderFile, JSON.stringify(Object.assign(order, { items: names, cases: cases }), null, 1) + '\n');
+    pass('item order updated');
+  }
+  const moved = order.items.findIndex((n, i) => names[i] !== n);
+  if (moved >= 0) fail('Item #' + moved + ' was "' + order.items[moved] + '" and is now "' + (names[moved] || 'missing') +
+    '". Existing items must keep their place, or everyone\'s saved items change. Mark new items with the GAME_VERSION that adds them (fifth value of I(...)) so they go after all older ones.');
+  else pass(names.length + ' items in their saved order' + (names.length > order.items.length ? ' (' + (names.length - order.items.length) + ' new at the end)' : ''));
+  const gone = order.cases.filter((id) => !cases.includes(id));
+  if (gone.length) fail('Case ids removed or renamed: ' + gone.join(', '));
+  const worker = readFileSync(join(root, 'server/src/worker.js'), 'utf8');
+  const wanted = (/import \{([^}]+)\} from '\.\/core\.js'/.exec(worker) || ['', ''])[1].split(',').map((x) => x.trim()).filter(Boolean);
+  const missing = wanted.filter((n) => !(n in core));
+  if (missing.length) fail('The server needs these from the CORE block: ' + missing.join(', '));
+  const roll = () => JSON.stringify(core.computeBattle(core.CASES[1], 3, 4, 'high', core.seededRng(core.hashString('check'))));
+  if (roll() !== roll()) fail('Battles are not repeatable from a seed');
+  else pass('battles repeat exactly from a seed');
+}
 
 /* ---------- the server ---------- */
 
