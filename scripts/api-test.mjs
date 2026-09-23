@@ -68,9 +68,11 @@ ok('5 wrong passwords -> locked', (await call('POST', '/login', { name: 'carol',
 /* ---- cases ---- */
 let r = await call('POST', '/open', { case_id: 'starter', count: 5 }, a);
 ok('open x5', r.status === 200 && r.data.items.length === 5 && r.data.me.coins === 375 && r.data.me.opened === 5, r.data.me);
-ok('pulls come from the case', r.data.items.every((row) => core.CASES[1].items.some((it) => it.name === core.ALL_ITEMS[row[1]].name)));
+ok('pulls come from the case', r.data.items.every((row) => core.CASES.find((c) => c.id === 'starter').items.some((it) => it.name === core.ALL_ITEMS[row[1]].name)));
 ok('inventory value matches items', r.data.me.inv_value === sum(r.data.items.concat(r.data.bonus)));
 ok('best drop tracked', r.data.me.best_value === Math.max(...r.data.items.map(valueOf)));
+r = await call('POST', '/open', { case_id: 'pocket', count: 2 }, a);
+ok('a newer case opens too', r.status === 200 && r.data.items.every((row) => core.ALL_ITEMS[row[1]].since >= 2), r.status);
 ok('unknown case refused', (await call('POST', '/open', { case_id: 'nope' }, a)).status === 400);
 ok('cannot afford', (await call('POST', '/open', { case_id: 'vanguard' }, a)).status === 409);
 r = await call('POST', '/open', { case_id: 'scrap' }, b);
@@ -148,16 +150,16 @@ ok('cannot offer more coins than you have', (await call('POST', '/offers', { to:
 /* ---- battles ---- */
 const coinsA = (await me(a)).me.coins, coinsB = (await me(b)).me.coins;
 const invA = (await me(a)).inventory.length, invB = (await me(b)).inventory.length;
-r = await call('POST', '/battles', { case_id: 'starter', rounds: 1, max_players: 2, mode: 'high', version: 1 }, a);
+r = await call('POST', '/battles', { case_id: 'starter', rounds: 1, max_players: 2, mode: 'high', version: core.GAME_VERSION }, a);
 ok('lobby created, entry paid', r.status === 200 && r.data.status === 'open' && r.data.me.coins === coinsA - 25, r.data);
 const lob = r.data.id;
-ok('second open lobby refused', (await call('POST', '/battles', { case_id: 'starter', rounds: 1, max_players: 2, mode: 'high', version: 1 }, a)).status === 409);
+ok('second open lobby refused', (await call('POST', '/battles', { case_id: 'starter', rounds: 1, max_players: 2, mode: 'high', version: core.GAME_VERSION }, a)).status === 409);
 ok('listed', (await call('GET', '/battles')).data.battles.some((x) => x.id === lob));
 ok('seed hidden while open', (await call('GET', '/battles/' + lob)).data.seed === null);
 ok('old version cannot join', (await call('POST', '/battles/' + lob + '/join', { version: 0 }, b)).status === 409);
-r = await call('POST', '/battles/' + lob + '/join', { version: 1 }, b);
+r = await call('POST', '/battles/' + lob + '/join', { version: core.GAME_VERSION }, b);
 ok('join fills it and starts', r.status === 200 && r.data.status === 'running' && r.data.seed && r.data.start_at > Date.now(), r.data.status);
-const plan = core.computeBattle(core.CASES[1], 1, 2, 'high', core.seededRng(core.hashString(r.data.seed + '|' + lob)));
+const plan = core.computeBattle(core.CASES.find((c) => c.id === 'starter'), 1, 2, 'high', core.seededRng(core.hashString(r.data.seed + '|' + lob)));
 const winnerIsA = plan.winner === 0;
 const ma = await me(a), mb = await me(b);
 ok('winner got both pulls, loser nothing', winnerIsA ? (ma.inventory.length === invA + 2 && mb.inventory.length === invB)
@@ -167,27 +169,27 @@ const planRows = plan.pulls.flat().map((it) => it.name + '/' + core.itemTuple(it
 ok('server paid exactly what the seed rolls', JSON.stringify(wonRows) === JSON.stringify(planRows), { wonRows, planRows });
 ok('entry charged to both', ma.me.coins === coinsA - 25 && mb.me.coins === coinsB - 25);
 
-r = await call('POST', '/battles', { case_id: 'starter', rounds: 2, max_players: 3, mode: 'low', version: 1 }, a);
+r = await call('POST', '/battles', { case_id: 'starter', rounds: 2, max_players: 3, mode: 'low', version: core.GAME_VERSION }, a);
 const l2 = r.data.id;
 const cc = (await me(c)).me.coins;
-const race = await Promise.all([call('POST', '/battles/' + l2 + '/join', { version: 1 }, b), call('POST', '/battles/' + l2 + '/join', { version: 1 }, poor)]);
+const race = await Promise.all([call('POST', '/battles/' + l2 + '/join', { version: core.GAME_VERSION }, b), call('POST', '/battles/' + l2 + '/join', { version: core.GAME_VERSION }, poor)]);
 ok('both joiners seated (3 seats)', race.every((x) => x.status === 200), race.map((x) => x.status));
 ok('it started once full', (await call('GET', '/battles/' + l2)).data.status === 'running');
 
-r = await call('POST', '/battles', { case_id: 'starter', rounds: 1, max_players: 4, mode: 'high', version: 1 }, a);
+r = await call('POST', '/battles', { case_id: 'starter', rounds: 1, max_players: 4, mode: 'high', version: core.GAME_VERSION }, a);
 const l3 = r.data.id, a3 = r.data.me.coins;
-await call('POST', '/battles/' + l3 + '/join', { version: 1 }, b);
+await call('POST', '/battles/' + l3 + '/join', { version: core.GAME_VERSION }, b);
 const b3 = (await me(b)).me.coins;
 await call('POST', '/battles/' + l3 + '/leave', {}, b);
 ok('leaving refunds', (await me(b)).me.coins === b3 + 25);
-await call('POST', '/battles/' + l3 + '/join', { version: 1 }, b);
+await call('POST', '/battles/' + l3 + '/join', { version: core.GAME_VERSION }, b);
 await call('POST', '/battles/' + l3 + '/leave', {}, a);
 ok('creator leaving cancels and refunds everyone', (await call('GET', '/battles/' + l3)).data.status === 'cancelled' &&
   (await me(a)).me.coins === a3 + 25 && (await me(b)).me.coins === b3 + 25);
-r = await call('POST', '/battles', { case_id: 'starter', rounds: 1, max_players: 4, mode: 'high', version: 1 }, a);
+r = await call('POST', '/battles', { case_id: 'starter', rounds: 1, max_players: 4, mode: 'high', version: core.GAME_VERSION }, a);
 r = await call('POST', '/battles/' + r.data.id + '/start', {}, a);
 ok('start fills bots', r.data.status === 'running' && r.data.players.filter((p) => p.bot).length === 3);
-r = await call('POST', '/battles', { case_id: 'starter', rounds: 2, max_players: 2, mode: 'high', version: 1, bots: true }, a);
+r = await call('POST', '/battles', { case_id: 'starter', rounds: 2, max_players: 2, mode: 'high', version: core.GAME_VERSION, bots: true }, a);
 ok('vs bots runs immediately', r.status === 200 && r.data.status === 'running' && r.data.seed, r.data.status);
 
 if (ADMIN.d) {

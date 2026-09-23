@@ -1881,8 +1881,27 @@
       flask: 'M15,3 L25,3 L25,14 L35,32 Q37,37 31,37 L9,37 Q3,37 5,32 L15,14 Z',
       crown: 'M3,14 L12,22 L20,6 L28,22 L37,14 L33,34 L7,34 Z',
       shield: 'M20,3 L35,8 Q35,28 20,37 Q5,28 5,8 Z',
-      dial: circ(20, 20, 17) + circ(20, 20, 10) + 'M18.5,1 L21.5,1 L21.5,8 L18.5,8 Z'
+      dial: circ(20, 20, 17) + circ(20, 20, 10) + 'M18.5,1 L21.5,1 L21.5,8 L18.5,8 Z',
+      coin: circ(20, 20, 17) + circ(20, 20, 12) + 'M17,13 L23,13 L23,27 L17,27 Z',
+      target: circ(20, 20, 18) + circ(20, 20, 12.5) + circ(20, 20, 7),
+      pixel: 'M6,6 L16,6 L16,16 L6,16 Z M24,6 L34,6 L34,16 L24,16 Z M6,24 L34,24 L34,34 L6,34 Z',
+      anchor: 'M18,3 L22,3 L22,9 L28,9 L28,13 L22,13 L22,32 Q30,31 33,24 L37,26 Q33,38 20,38 Q7,38 3,26 L7,24 ' +
+        'Q10,31 18,32 L18,13 L12,13 L12,9 L18,9 Z',
+      hat: 'M3,27 Q20,33 37,27 L35,31 Q20,38 5,31 Z M11,26 L13,10 Q20,5 27,10 L29,26 Q20,29 11,26 Z',
+      flake: 'M18,2 L22,2 L22,15 L33,8 L35,11 L24,18 L24,22 L35,29 L33,32 L22,25 L22,38 L18,38 L18,25 L7,32 ' +
+        'L5,29 L16,22 L16,18 L5,11 L7,8 L18,15 Z',
+      leaf: 'M20,2 Q37,12 32,28 Q27,36 21,37 L21,30 L27,24 L25,22 L21,26 L21,14 L19,14 L19,26 L15,22 L13,24 ' +
+        'L19,30 L19,37 Q13,36 8,28 Q3,12 20,2 Z',
+      hex: 'M20,2 L36,11 L36,29 L20,38 L4,29 L4,11 Z' + circ(20, 20, 7),
+      mask: 'M3,13 Q20,7 37,13 Q36,29 26,28 Q22,28 20,23 Q18,28 14,28 Q4,29 3,13 Z',
+      cloud: 'M9,25 Q2,25 3,18 Q4,12 11,13 Q13,5 22,6 Q31,7 31,14 Q38,14 37,21 Q36,25 31,25 Z M20,23 L14,33 L19,33 L16,39 L25,29 L20,29 Z',
+      flame: 'M20,2 Q31,14 31,25 Q31,38 20,38 Q9,38 9,25 Q9,17 15,12 Q15,20 20,22 Q22,13 20,2 Z',
+      moon: 'M25,3 Q11,8 11,20 Q11,32 25,37 Q9,40 4,26 Q0,7 25,3 Z M30,9 L32,14 L37,15 L33,18 L34,23 L30,20 L26,23 L27,18 L23,15 L28,14 Z',
+      diamond: 'M11,5 L29,5 L37,15 L20,37 L3,15 Z'
     };
+
+    // Emblems drawn with cut-out rings or holes (even-odd fill).
+    const HOLED_EMBLEMS = { dial: 1, peel: 1, coin: 1, target: 1, hex: 1 };
 
     const crateInfo = {};
     function registerCrates(list) {
@@ -1911,7 +1930,7 @@
           { d: rr(41, 70, 24, 32, 4) + rr(175, 70, 24, 32, 4), m: 'metal' },
           { d: rr(78, 91, 84, 54, 5), m: 'label', fill: accent },
           { d: CRATE_EMBLEMS[info.emblem] || CRATE_EMBLEMS.star, m: 'label', fill: '#fff', o: .9,
-            tf: 'translate(100,98)', shade: 'none', rule: info.emblem === 'dial' || info.emblem === 'peel' ? 1 : 0 }
+            tf: 'translate(100,98)', shade: 'none', rule: HOLED_EMBLEMS[info.emblem] ? 1 : 0 }
         ],
         holes: rr(47, 84, 12, 7, 2) + rr(181, 84, 12, 7, 2),
         lines: 'M20,81 L220,81 M24,120 L72,120 M168,120 L216,120 M24,134 L72,134 M168,134 L216,134',
@@ -2612,7 +2631,7 @@
      Bump GAME_VERSION whenever items, cases or odds change.
      ====================================================================== */
 
-  const GAME_VERSION = 1;
+  const GAME_VERSION = 2;
 
   function hashString(str) {
     let h = 2166136261;
@@ -2681,6 +2700,25 @@
       ]
     },
     {
+      id: 'pocket', name: 'Pocket Change', sub: 'Loose change, loose odds', price: 10,
+      accent: '#9aa36b', odds: ODDS.t1,
+      items: [
+        I('P-22 | Lint Roller', 'pistol', 'common', 3, 2),
+        I('SP-5 | Paperclip', 'smg', 'common', 3, 2),
+        I('BR-12 | Bottle Cap', 'shotgun', 'common', 4, 2),
+        I('Sticker | Coin Flip', 'sticker', 'uncommon', 7, 2),
+        I('Hand Wraps | Laundry Day', 'gloves', 'uncommon', 7, 2),
+        I('HX-45 | Penny Jar', 'pistol', 'uncommon', 8, 2),
+        I('AR-12 | Vending Slot', 'rifle_m4', 'rare', 16, 2),
+        I('Charm | Loose Button', 'charm', 'rare', 19, 2),
+        I('KR-74 | Piggy Bank', 'rifle_ak', 'rare', 21, 2),
+        I('LR-800 | Couch Cushion', 'sniper', 'epic', 46, 2),
+        I('Bayonet | Spare Key', 'knife_bayonet', 'epic', 53, 2),
+        I('RX-357 | Lucky Penny', 'revolver', 'legendary', 165, 2),
+        I('Karambit | Jackpot', 'knife_karambit', 'mythic', 621, 2)
+      ]
+    },
+    {
       id: 'starter', name: 'Starter Crate', sub: 'Entry level, honest odds', price: 25,
       accent: '#f26a1b', odds: ODDS.t1,
       items: [
@@ -2697,6 +2735,25 @@
         I('Bayonet | Riverstone', 'knife_bayonet', 'epic', 133),
         I('AWS-7 | First Light', 'sniper', 'legendary', 414),
         I('Bayonet | Molten Core', 'knife_bayonet', 'mythic', 1551)
+      ]
+    },
+    {
+      id: 'backyard', name: 'Backyard Brawl', sub: 'Garden-shed arsenal', price: 40,
+      accent: '#7a8f3c', odds: ODDS.t1,
+      items: [
+        I('BR-12 | Garden Hose', 'shotgun', 'common', 12, 2),
+        I('P-22 | Picket Fence', 'pistol', 'common', 13, 2),
+        I('SP-5 | Lawn Mower', 'smg', 'common', 15, 2),
+        I('Hand Wraps | Potting Soil', 'gloves', 'uncommon', 26, 2),
+        I('HX-45 | Weed Whacker', 'pistol', 'uncommon', 30, 2),
+        I('Sticker | Garden Gnome', 'sticker', 'uncommon', 33, 2),
+        I('KR-74 | Compost Heap', 'rifle_ak', 'rare', 66, 2),
+        I('AR-12 | Sprinkler', 'rifle_m4', 'rare', 74, 2),
+        I('Charm | Acorn', 'charm', 'rare', 83, 2),
+        I('LR-800 | Scarecrow', 'sniper', 'epic', 185, 2),
+        I('Bayonet | Hedge Trimmer', 'knife_bayonet', 'epic', 212, 2),
+        I('BR-12 | Rose Thorn', 'shotgun', 'legendary', 662, 2),
+        I('Butterfly Knife | Grill Master', 'knife_butterfly', 'mythic', 2482, 2)
       ]
     },
     {
@@ -2719,6 +2776,25 @@
       ]
     },
     {
+      id: 'arcade', name: 'Arcade Token', sub: 'Insert coin, pray', price: 85,
+      accent: '#c23bd4', odds: ODDS.t2,
+      items: [
+        I('P-22 | Pixel Dust', 'pistol', 'common', 20, 2),
+        I('SP-5 | Joystick', 'smg', 'common', 23, 2),
+        I('AR-12 | High Score', 'rifle_m4', 'common', 26, 2),
+        I('Sticker | Game Over', 'sticker', 'uncommon', 45, 2),
+        I('HX-45 | Button Masher', 'pistol', 'uncommon', 51, 2),
+        I('BR-12 | Claw Machine', 'shotgun', 'uncommon', 58, 2),
+        I('KR-74 | Bonus Stage', 'rifle_ak', 'rare', 113, 2),
+        I('Charm | Power Pellet', 'charm', 'rare', 128, 2),
+        I('MK Vector | Combo Breaker', 'smg', 'rare', 144, 2),
+        I('AWS-7 | Boss Rush', 'sniper', 'epic', 319, 2),
+        I('Moto Gloves | Speedrun', 'gloves', 'epic', 367, 2),
+        I('AR-12 | Continue Screen', 'rifle_m4', 'legendary', 1142, 2),
+        I('Karambit | Extra Life', 'knife_karambit', 'mythic', 4282, 2)
+      ]
+    },
+    {
       id: 'urban', name: 'Urban Cache', sub: 'Street finishes and spray work', price: 110,
       accent: '#3f9a52', odds: ODDS.t2,
       items: [
@@ -2735,6 +2811,44 @@
         I('AR-12 | Block Party', 'rifle_m4', 'epic', 474),
         I('Bayonet | Chain Link', 'knife_bayonet', 'legendary', 1478),
         I('Butterfly Knife | City Lights', 'knife_butterfly', 'mythic', 5542)
+      ]
+    },
+    {
+      id: 'harbor', name: 'Harbor Freight', sub: 'Salt, rust and shipping crates', price: 180,
+      accent: '#2f8f9a', odds: ODDS.t2,
+      items: [
+        I('P-22 | Barnacle', 'pistol', 'common', 43, 2),
+        I('SP-5 | Dockside', 'smg', 'common', 48, 2),
+        I('BR-12 | Rope Burn', 'shotgun', 'common', 54, 2),
+        I('Field Gloves | Deckhand', 'gloves', 'uncommon', 96, 2),
+        I('HX-45 | Tide Chart', 'pistol', 'uncommon', 109, 2),
+        I('Sticker | Lighthouse', 'sticker', 'uncommon', 122, 2),
+        I('KR-74 | Rusted Hull', 'rifle_ak', 'rare', 239, 2),
+        I('AR-12 | Container Yard', 'rifle_m4', 'rare', 272, 2),
+        I('LR-800 | Fog Horn', 'sniper', 'rare', 305, 2),
+        I('RX-357 | Sea Salt', 'revolver', 'epic', 675, 2),
+        I('Bayonet | Anchor Chain', 'knife_bayonet', 'epic', 776, 2),
+        I('AWS-7 | Teal Tidewater', 'sniper', 'legendary', 2418, 2),
+        I('Butterfly Knife | Deep Current', 'knife_butterfly', 'mythic', 9068, 2)
+      ]
+    },
+    {
+      id: 'frontier', name: 'Frontier Post', sub: 'Dust, leather and brass', price: 260,
+      accent: '#b0763c', odds: ODDS.t2,
+      items: [
+        I('RX-357 | Saddle Brown', 'revolver', 'common', 61, 2),
+        I('P-22 | Tumbleweed', 'pistol', 'common', 70, 2),
+        I('BR-12 | Wagon Wheel', 'shotgun', 'common', 78, 2),
+        I('Field Gloves | Rawhide', 'gloves', 'uncommon', 138, 2),
+        I('SP-5 | Prospector', 'smg', 'uncommon', 157, 2),
+        I('Sticker | Wanted Poster', 'sticker', 'uncommon', 176, 2),
+        I('KR-74 | Cattle Drive', 'rifle_ak', 'rare', 346, 2),
+        I('LR-800 | Long Trail', 'sniper', 'rare', 393, 2),
+        I('Charm | Sheriff Star', 'charm', 'rare', 440, 2),
+        I('RX-357 | Silver Spur', 'revolver', 'epic', 975, 2),
+        I('Bayonet | Canyon Walnut', 'knife_bayonet', 'epic', 1121, 2),
+        I('AWS-7 | High Noon Sun', 'sniper', 'legendary', 3493, 2),
+        I('Karambit | Gold Nugget', 'knife_karambit', 'mythic', 13099, 2)
       ]
     },
     {
@@ -2757,6 +2871,25 @@
       ]
     },
     {
+      id: 'glacier', name: 'Glacier Drop', sub: 'Cold finishes from the far north', price: 600,
+      accent: '#6fb7e0', odds: ODDS.t3,
+      items: [
+        I('P-22 | Snowdrift', 'pistol', 'common', 121, 2),
+        I('SP-5 | Frostbite', 'smg', 'common', 137, 2),
+        I('AR-12 | Whiteout', 'rifle_m4', 'common', 154, 2),
+        I('Moto Gloves | Ice Climber', 'gloves', 'uncommon', 272, 2),
+        I('HX-45 | Cold Snap', 'pistol', 'uncommon', 309, 2),
+        I('Sticker | Snow Angel', 'sticker', 'uncommon', 346, 2),
+        I('KR-74 | Permafrost', 'rifle_ak', 'rare', 679, 2),
+        I('LR-800 | Crevasse', 'sniper', 'rare', 772, 2),
+        I('MK Vector | Polar Night', 'smg', 'rare', 865, 2),
+        I('AWS-7 | Ice Shelf', 'sniper', 'epic', 1915, 2),
+        I('Bayonet | Frozen Lake', 'knife_bayonet', 'epic', 2203, 2),
+        I('Butterfly Knife | Aurora Veil', 'knife_butterfly', 'legendary', 6862, 2),
+        I('Karambit | Glacier Heart', 'knife_karambit', 'mythic', 25734, 2)
+      ]
+    },
+    {
       id: 'operative', name: 'Operative Kit', sub: 'Agents, gloves and field gear', price: 800,
       accent: '#5a7d5a', odds: ODDS.t3,
       items: [
@@ -2773,6 +2906,25 @@
         I('Moto Gloves | Crimson Weave', 'gloves', 'epic', 2937),
         I('Operative | The Quartermaster', 'agent', 'legendary', 9150),
         I('Moto Gloves | Gold Standard', 'gloves', 'mythic', 34312)
+      ]
+    },
+    {
+      id: 'canopy', name: 'Canopy Cache', sub: 'Deep jungle, deeper greens', price: 950,
+      accent: '#3e8f4a', odds: ODDS.t3,
+      items: [
+        I('SP-5 | Fern Frond', 'smg', 'common', 191, 2),
+        I('P-22 | Mossback', 'pistol', 'common', 217, 2),
+        I('BR-12 | Vine Snare', 'shotgun', 'common', 243, 2),
+        I('Field Gloves | Tree Frog', 'gloves', 'uncommon', 430, 2),
+        I('AR-12 | Monsoon', 'rifle_m4', 'uncommon', 489, 2),
+        I('Sticker | Toucan', 'sticker', 'uncommon', 548, 2),
+        I('KR-74 | Jungle Canopy', 'rifle_ak', 'rare', 1076, 2),
+        I('LR-800 | Treeline', 'sniper', 'rare', 1222, 2),
+        I('Operative | Pathfinder', 'agent', 'rare', 1369, 2),
+        I('AWS-7 | Emerald Viper', 'sniper', 'epic', 3031, 2),
+        I('Bayonet | Liana', 'knife_bayonet', 'epic', 3488, 2),
+        I('Butterfly Knife | Jade Orchid', 'knife_butterfly', 'legendary', 10865, 2),
+        I('Karambit | Emerald Idol', 'knife_karambit', 'mythic', 40746, 2)
       ]
     },
     {
@@ -2795,6 +2947,25 @@
       ]
     },
     {
+      id: 'reactor', name: 'Reactor Core', sub: 'Handle with lead gloves', price: 1600,
+      accent: '#8fd13a', odds: ODDS.t4,
+      items: [
+        I('SP-5 | Control Rod', 'smg', 'common', 280, 2),
+        I('P-22 | Geiger Count', 'pistol', 'common', 319, 2),
+        I('AR-12 | Hazmat', 'rifle_m4', 'common', 357, 2),
+        I('Moto Gloves | Lead Lined', 'gloves', 'uncommon', 631, 2),
+        I('HX-45 | Meltdown Drill', 'pistol', 'uncommon', 717, 2),
+        I('Sticker | Radiation Sign', 'sticker', 'uncommon', 803, 2),
+        I('KR-74 | Toxic Runoff', 'rifle_ak', 'rare', 1577, 2),
+        I('MK Vector | Isotope Glow', 'smg', 'rare', 1792, 2),
+        I('LR-800 | Cooling Tower', 'sniper', 'rare', 2007, 2),
+        I('AWS-7 | Acid Rain', 'sniper', 'epic', 4445, 2),
+        I('Operative | Decon Unit', 'agent', 'epic', 5114, 2),
+        I('Butterfly Knife | Critical Mass', 'knife_butterfly', 'legendary', 15931, 2),
+        I('Karambit | Core Meltdown', 'knife_karambit', 'mythic', 59743, 2)
+      ]
+    },
+    {
       id: 'blades', name: 'Blade Depot', sub: 'Knives, and nothing but', price: 2400,
       accent: '#b4553a', odds: ODDS.t4,
       items: [
@@ -2811,6 +2982,25 @@
         I('Butterfly Knife | Marble Fade', 'knife_butterfly', 'epic', 7671),
         I('Karambit | Lore', 'knife_karambit', 'legendary', 23897),
         I('Butterfly Knife | Ruby Doppler', 'knife_butterfly', 'mythic', 89615)
+      ]
+    },
+    {
+      id: 'gala', name: 'Midnight Gala', sub: 'Black tie, gold trim', price: 3000,
+      accent: '#2b2733', odds: ODDS.t4,
+      items: [
+        I('P-22 | Cufflink', 'pistol', 'common', 526, 2),
+        I('SP-5 | Velvet Rope', 'smg', 'common', 597, 2),
+        I('AR-12 | Coat Check', 'rifle_m4', 'common', 669, 2),
+        I('Field Gloves | Evening Silk', 'gloves', 'uncommon', 1183, 2),
+        I('Charm | Champagne Cork', 'charm', 'uncommon', 1344, 2),
+        I('Sticker | Masquerade', 'sticker', 'uncommon', 1506, 2),
+        I('KR-74 | Onyx Ballroom', 'rifle_ak', 'rare', 2957, 2),
+        I('RX-357 | Gilded Invite', 'revolver', 'rare', 3361, 2),
+        I('Operative | The Host', 'agent', 'rare', 3764, 2),
+        I('AWS-7 | Black Pearl', 'sniper', 'epic', 8334, 2),
+        I('Bayonet | Golden Hour', 'knife_bayonet', 'epic', 9589, 2),
+        I('Butterfly Knife | Midnight Waltz', 'knife_butterfly', 'legendary', 29872, 2),
+        I('Karambit | Ruby Tiara', 'knife_karambit', 'mythic', 112018, 2)
       ]
     },
     {
@@ -2833,6 +3023,25 @@
       ]
     },
     {
+      id: 'storm', name: 'Stormfront', sub: 'Charged finishes, rough weather', price: 5000,
+      accent: '#6b4fd6', odds: ODDS.t5,
+      items: [
+        I('SP-5 | Drizzle', 'smg', 'common', 776, 2),
+        I('P-22 | Overcast Grey', 'pistol', 'common', 882, 2),
+        I('BR-12 | Hailstone', 'shotgun', 'common', 987, 2),
+        I('Moto Gloves | Static Charge', 'gloves', 'uncommon', 1746, 2),
+        I('HX-45 | Pressure Front', 'pistol', 'uncommon', 1984, 2),
+        I('Sticker | Thunderclap', 'sticker', 'uncommon', 2222, 2),
+        I('KR-74 | Violet Squall', 'rifle_ak', 'rare', 4364, 2),
+        I('AR-12 | Eye Wall', 'rifle_m4', 'rare', 4959, 2),
+        I('LR-800 | Ball Lightning', 'sniper', 'rare', 5554, 2),
+        I('AWS-7 | Supercell', 'sniper', 'epic', 12299, 2),
+        I('Bayonet | St. Elmo', 'knife_bayonet', 'epic', 14150, 2),
+        I('Butterfly Knife | Tempest Violet', 'knife_butterfly', 'legendary', 44081, 2),
+        I('Karambit | Stormbringer', 'knife_karambit', 'mythic', 165304, 2)
+      ]
+    },
+    {
       id: 'chroma', name: 'Chroma Lab', sub: 'Experimental finishes', price: 6500,
       accent: '#1f9d8f', odds: ODDS.t5,
       items: [
@@ -2849,6 +3058,25 @@
         I('AR-12 | Chain Reaction', 'rifle_m4', 'epic', 18395),
         I('Karambit | Fissure', 'knife_karambit', 'legendary', 57305),
         I('Moto Gloves | Antimatter', 'gloves', 'mythic', 214895)
+      ]
+    },
+    {
+      id: 'emberforge', name: 'Emberforge', sub: 'Hammered at the anvil', price: 8500,
+      accent: '#e0561c', odds: ODDS.t5,
+      items: [
+        I('P-22 | Cinder Block', 'pistol', 'common', 1319, 2),
+        I('SP-5 | Soot Stack', 'smg', 'common', 1499, 2),
+        I('AR-12 | Bellows', 'rifle_m4', 'common', 1679, 2),
+        I('Field Gloves | Forge Apron', 'gloves', 'uncommon', 2968, 2),
+        I('HX-45 | Hot Iron', 'pistol', 'uncommon', 3372, 2),
+        I('Sticker | Anvil', 'sticker', 'uncommon', 3777, 2),
+        I('KR-74 | Magma Flow', 'rifle_ak', 'rare', 7419, 2),
+        I('RX-357 | Brand Mark', 'revolver', 'rare', 8431, 2),
+        I('LR-800 | Slag Heap', 'sniper', 'rare', 9442, 2),
+        I('AWS-7 | Firewalker', 'sniper', 'epic', 20908, 2),
+        I('Bayonet | Forge Scale', 'knife_bayonet', 'epic', 24055, 2),
+        I('Butterfly Knife | Molten Edge', 'knife_butterfly', 'legendary', 74938, 2),
+        I('Karambit | Heart of the Forge', 'knife_karambit', 'mythic', 281017, 2)
       ]
     },
     {
@@ -2871,6 +3099,25 @@
       ]
     },
     {
+      id: 'celestial', name: 'Celestial Reserve', sub: 'Finishes from way out there', price: 16000,
+      accent: '#3a3f9e', odds: ODDS.t6,
+      items: [
+        I('P-22 | Moon Dust', 'pistol', 'common', 2227, 2),
+        I('SP-5 | Comet Tail', 'smg', 'common', 2531, 2),
+        I('AR-12 | Low Orbit', 'rifle_m4', 'common', 2835, 2),
+        I('Moto Gloves | Zero-G', 'gloves', 'uncommon', 5012, 2),
+        I('HX-45 | Star Chart', 'pistol', 'uncommon', 5695, 2),
+        I('Charm | Tiny Planet', 'charm', 'uncommon', 6378, 2),
+        I('KR-74 | Nebula Drift', 'rifle_ak', 'rare', 12529, 2),
+        I('LR-800 | Deep Field', 'sniper', 'rare', 14238, 2),
+        I('Operative | The Astronomer', 'agent', 'rare', 15946, 2),
+        I('AWS-7 | Supernova', 'sniper', 'epic', 35310, 2),
+        I('Bayonet | Meteorite', 'knife_bayonet', 'epic', 40625, 2),
+        I('Butterfly Knife | Galaxy Spectrum', 'knife_butterfly', 'legendary', 126558, 2),
+        I('Karambit | Starborn Prism', 'knife_karambit', 'mythic', 474591, 2)
+      ]
+    },
+    {
       id: 'vanguard', name: 'Vanguard Vault', sub: 'The deep end. Nothing cheap inside.', price: 25000,
       accent: '#1d1b18', odds: ODDS.t6,
       items: [
@@ -2887,6 +3134,25 @@
         I('AWS-7 | Oracle', 'sniper', 'epic', 63477),
         I('Butterfly Knife | Vanguard Fade', 'knife_butterfly', 'legendary', 197746),
         I('Butterfly Knife | Crown Jewel', 'knife_butterfly', 'mythic', 741548)
+      ]
+    },
+    {
+      id: 'sovereign', name: 'Sovereign Treasury', sub: 'The rarest vault in the shop', price: 50000,
+      accent: '#d4af37', odds: ODDS.t6,
+      items: [
+        I('P-22 | Royal Seal', 'pistol', 'common', 6961, 2),
+        I('SP-5 | Treasury Note', 'smg', 'common', 7910, 2),
+        I('AR-12 | Palace Guard', 'rifle_m4', 'common', 8859, 2),
+        I('Field Gloves | Ermine', 'gloves', 'uncommon', 15661, 2),
+        I('RX-357 | Gold Leaf', 'revolver', 'uncommon', 17797, 2),
+        I('Charm | Scepter', 'charm', 'uncommon', 19933, 2),
+        I('KR-74 | Imperial Mint', 'rifle_ak', 'rare', 39154, 2),
+        I('LR-800 | Throne Room', 'sniper', 'rare', 44493, 2),
+        I('Operative | The Regent', 'agent', 'rare', 49832, 2),
+        I('AWS-7 | Sapphire Crown', 'sniper', 'epic', 110342, 2),
+        I('Bayonet | Solid Gold', 'knife_bayonet', 'epic', 126953, 2),
+        I('Butterfly Knife | Diamond Court', 'knife_butterfly', 'legendary', 395492, 2),
+        I('Karambit | The Sovereign', 'knife_karambit', 'mythic', 1483096, 2)
       ]
     },
     {
@@ -3065,7 +3331,9 @@
 
   const CASE_EMBLEMS = {
     scrap: 'wrench', starter: 'star', capsule: 'peel', urban: 'spray', neon: 'bolt', operative: 'helmet',
-    obsidian: 'gem', blades: 'dagger', prism: 'prism', chroma: 'flask', apex: 'crown', vanguard: 'shield', vault: 'dial'
+    obsidian: 'gem', blades: 'dagger', prism: 'prism', chroma: 'flask', apex: 'crown', vanguard: 'shield', vault: 'dial',
+    pocket: 'coin', backyard: 'target', arcade: 'pixel', harbor: 'anchor', frontier: 'hat', glacier: 'flake',
+    canopy: 'leaf', reactor: 'hex', gala: 'mask', storm: 'cloud', emberforge: 'flame', celestial: 'moon', sovereign: 'diamond'
   };
   ART.registerCrates(CASES.map((c) => ({ name: c.name, accent: c.accent, emblem: CASE_EMBLEMS[c.id] })));
 
@@ -3349,6 +3617,23 @@
 
     opening = { winners, bonus, box, reels: [], finished: 0, settled: false, timers: [] };
 
+    // Into the inventory (and the save) before the reels spin, so a reload
+    // mid-spin never loses a pull. The reels only reveal what was rolled.
+    if (cloud.signedIn()) {
+      winners.concat(bonus).forEach((it) => state.inventory.push(it));   // already the server's
+      opening.added = winners.map((it) => it.uid);
+    } else {
+      opening.added = winners.map((it) => {
+        const made = addItem(it);
+        if (!state.best || made.value > state.best.value) {
+          state.best = { name: made.name, value: made.value, rarity: made.rarity };
+        }
+        return made.uid;
+      });
+      bonus.forEach(addItem);
+      save();
+    }
+
     $('#open-title').textContent = box.name;
     $('#open-sub').textContent = (count > 1 ? count + ' cases · ' : '') +
       (box.locked ? count + ' key' + (count > 1 ? 's' : '') : cost === 0 ? 'Free' : fmt(cost) + ' coins');
@@ -3456,21 +3741,6 @@
     const total = winners.reduce((s, it) => s + it.value, 0);
     const spent = opening.box.price * winners.length;
 
-    if (cloud.signedIn()) {
-      // Already in the account on the server; show them in the inventory now.
-      winners.concat(opening.bonus).forEach((it) => state.inventory.push(it));
-      opening.added = winners.map((it) => it.uid);
-    } else {
-      // Into the inventory now, so a reload on this screen never loses a pull.
-      opening.added = winners.map((it) => {
-        const made = addItem(it);
-        if (!state.best || made.value > state.best.value) {
-          state.best = { name: made.name, value: made.value, rarity: made.rarity };
-        }
-        return made.uid;
-      });
-      opening.bonus.forEach(addItem);
-    }
 
     $('#result-grid').innerHTML = winners.map((it, i) =>
       itemMarkup(it).replace('class="item ', 'style="animation-delay:' + (i * 75) + 'ms" class="item ')
@@ -3665,11 +3935,13 @@
   }
 
   function updateWheel() {
-    const stake = stakeValue();
-    const target = stake > 0 ? pickTarget(stake, upgrade.mult) : null;
+    // While spinning, keep showing the bet that was placed.
+    const shown = upgrade.spinning ? upgrade.shown : null;
+    const stake = shown ? shown.stake : stakeValue();
+    const target = shown ? shown.target : stake > 0 ? pickTarget(stake, upgrade.mult) : null;
     upgrade.target = target;
 
-    const chance = upgradeChance(stake, target);
+    const chance = shown ? shown.chance : upgradeChance(stake, target);
     upgrade.chance = chance;
 
     $('#wheel-arc').setAttribute('d', describeArc(chance));
@@ -3722,6 +3994,23 @@
       won = Math.random() < chance;
     }
 
+    // Settle it now: the stake is gone and any prize is in the inventory (and
+    // saved) before the wheel even turns, so reloading mid-spin changes nothing.
+    // The wheel only reveals the result.
+    upgrade.shown = { stake: stakeValue(), target: target, chance: chance };
+    const gone = new Set(staked);
+    state.inventory = state.inventory.filter((it) => !gone.has(it.uid));
+    upgrade.selected.clear();
+    let made = null;
+    if (won && prize) { state.inventory.push(prize); made = prize; }
+    else if (won) {
+      made = addItem(instantiate(target));
+      if (!state.best || made.value > state.best.value) {
+        state.best = { name: made.name, value: made.value, rarity: made.rarity };
+      }
+    }
+    save();
+
     upgrade.spinning = true;
     updateWheel();
     SFX.whoosh();
@@ -3755,20 +4044,8 @@
 
     setTimeout(() => {
       upgrade.spinning = false;
-      const set = new Set(staked);
-      state.inventory = state.inventory.filter((it) => !set.has(it.uid));
-      upgrade.selected.clear();
-
       const center = $('#wheel-center');
       if (won) {
-        let made;
-        if (prize) { state.inventory.push(prize); made = prize; }
-        else {
-          made = addItem(instantiate(target));
-          if (!state.best || made.value > state.best.value) {
-            state.best = { name: made.name, value: made.value, rarity: made.rarity };
-          }
-        }
         center.className = 'wheel-center win';
         $('#wheel-pct').textContent = 'WIN';
         $('#wheel-label').textContent = made.name;
@@ -3785,7 +4062,6 @@
       upgrade.result = { won: won };
       renderBalance();
       refreshCaseButtons();
-      save();
       renderUpgrader();
     }, 4900);
   }
@@ -4374,7 +4650,7 @@
   const BOT_NAMES = ['Rival A', 'Rival B', 'Rival C'];
 
   const battle = {
-    caseIndex: 1, rounds: 3, players: 2, mode: 'high', src: 'online',
+    caseIndex: Math.max(0, CASES.findIndex((c) => c.id === 'starter')), rounds: 3, players: 2, mode: 'high', src: 'online',
     running: false, live: null
   };
 
@@ -4446,6 +4722,8 @@
     }
     const plan = computeBattle(box, battle.rounds, seats.length, battle.mode);
     beginBattle({ box: box, rounds: battle.rounds, mode: battle.mode, seats: seats, plan: plan });
+    battle.live.paid = payBattle(battle.live);       // settled up front; the reels just reveal it
+    save();
     SFX.whoosh();
     setTimeout(runRound, 500);
   }
@@ -4562,7 +4840,7 @@
 
     let result;
     if (live.cloud) result = cloud.finishBattle(live);
-    else result = payBattle(live);
+    else result = live.paid || payBattle(live);
     const pool = result.pool, winner = result.winner;
     const poolValue = pool.reduce((sum, it) => sum + it.value, 0);
     const youWon = winner.you;
