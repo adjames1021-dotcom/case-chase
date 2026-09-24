@@ -17,6 +17,8 @@ site/                  the game (this folder is what goes live)
   index.html           the whole game in one file; its CORE block holds the rules
   assets/              optional custom item images
 server/                the account server: logins, inventories, trades, battles
+functions/             runs the server on the site itself, under /api
+wrangler.toml          the Pages site's settings (database, admin key)
 scripts/
   check.mjs            pre-deploy checks
   smoke.mjs            plays the game in a headless browser
@@ -26,10 +28,14 @@ scripts/
 .github/workflows/     the automatic tests and deploy
 ```
 
+Everything is one website:
+
 | Part | Lives at | Deployed from |
 | --- | --- | --- |
 | Game | https://case-sim.pages.dev | `site/` |
-| Server | https://case-sim-server.caseopeningsim.workers.dev | `server/` |
+| Server | https://case-sim.pages.dev/api | `server/`, run by `functions/` |
+
+The game only ever talks to its own site. A copy opened from a file talks to `case-sim.pages.dev`.
 
 ## How updates work
 
@@ -76,7 +82,7 @@ GitHub needs a Cloudflare API token before it can deploy. Until you add one, the
 
 ### If an update does go wrong
 
-Cloudflare keeps every deploy. In the Cloudflare dashboard, open **Workers & Pages**, then **case-sim**, then **Deployments**. Click ⋯ next to the last good one and choose **Rollback to this deployment**. The server has the same thing under **case-sim-server → Deployments**. Player data stays in the database either way.
+Cloudflare keeps every deploy. In the Cloudflare dashboard, open **Workers & Pages**, then **case-sim**, then **Deployments**. Click ⋯ next to the last good one and choose **Rollback to this deployment**. That rolls back the server too, since it's part of the site. Player data stays in the database either way.
 
 ## Running things by hand
 
@@ -84,9 +90,11 @@ Deploying by hand works too. You need Node.js and a Cloudflare login (`npx wrang
 
 ```bash
 node scripts/check.mjs                                               # the pre-deploy checks
-npx wrangler pages deploy site --project-name case-sim --branch main # deploy the game
-cd server && npx wrangler deploy                                     # deploy the server
+node scripts/sync-core.mjs                                           # copy the game's rules for the server
+npx wrangler pages deploy site --project-name case-sim --branch main # deploy the site and its server
 ```
+
+To run the whole thing on your computer: `npx wrangler d1 execute case-sim --local --file server/schema.sql`, then `npx wrangler pages dev`. Open http://127.0.0.1:8788, and the game talks to the server on that same address.
 
 To play from the file, open `site/index.html` in a browser. Accounts work there too, because it connects to the live server. Guest progress in the file is separate from guest progress on the website.
 

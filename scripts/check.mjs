@@ -95,6 +95,22 @@ syntax('server/src/worker.js', readFileSync(join(root, 'server/src/worker.js'), 
 const toml = readFileSync(join(root, 'server/wrangler.toml'), 'utf8');
 if (/REPLACE_WITH/.test(toml)) fail('server/wrangler.toml still has a REPLACE_WITH placeholder');
 
+// The site runs the server as a Pages Function (functions/), configured by the
+// root wrangler.toml; it must use the same database and admin key.
+try {
+  const pages = readFileSync(join(root, 'wrangler.toml'), 'utf8');
+  const val = (text, key) => (new RegExp(key + ' = "([^"]+)"').exec(text) || [])[1];
+  if (val(pages, 'pages_build_output_dir') !== 'site') fail('wrangler.toml must have pages_build_output_dir = "site"');
+  for (const key of ['database_id', 'ADMIN_X', 'ADMIN_Y']) {
+    if (!val(pages, key) || val(pages, key) !== val(toml, key)) fail(key + ' differs between wrangler.toml and server/wrangler.toml');
+  }
+  const fn = readFileSync(join(root, 'functions/api/[[path]].js'), 'utf8');
+  if (!fn.includes("from '../../server/src/worker.js'")) fail('functions/api/[[path]].js must run server/src/worker.js');
+  pass('the site runs the server, with the same database and admin key');
+} catch (e) {
+  fail('Missing the site\'s server setup: ' + e.message);
+}
+
 // Bans only work if the server knows the same admin public key as the game.
 const gx = /x: '([A-Za-z0-9_-]{43})'/.exec(html), gy = /y: '([A-Za-z0-9_-]{43})'/.exec(html);
 const sx = /ADMIN_X = "([^"]+)"/.exec(toml), sy = /ADMIN_Y = "([^"]+)"/.exec(toml);

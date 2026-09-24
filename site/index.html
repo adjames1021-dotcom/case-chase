@@ -5323,12 +5323,14 @@
      and there's no trading or leaderboard.
      ========================================================= */
 
-  const SERVER_URL = 'https://case-sim-server.caseopeningsim.workers.dev';
+  // The server runs on the game's own site (under /api). A page served from
+  // the site uses its own address; a copy opened as a file uses this one.
+  const SERVER_URL = 'https://case-sim.pages.dev';
   const SESSION_KEY = 'case-sim-session';
   const LOBBY_KEY = 'case-sim-lobby';
 
   const cloud = (function () {
-    const base = SERVER_URL.replace(/\/+$/, '');
+    const base = /^https?:$/.test(location.protocol) ? '' : SERVER_URL.replace(/\/+$/, '');
     const ONLINE_WINDOW = 300;            // s since last seen that still counts as online
 
     let token = null;                     // session token, kept in localStorage

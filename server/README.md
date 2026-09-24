@@ -1,12 +1,12 @@
 # Case Sim server
 
-The backend for accounts. It holds every account's coins and items and does every roll: opening cases, the upgrader, trades, battles and gift codes. It also serves the global leaderboard. It's a Cloudflare Worker (`src/worker.js`) with a D1 database (`schema.sql`), both on Cloudflare's free plan.
+The backend for accounts. It holds every account's coins and items and does every roll: opening cases, the upgrader, trades, battles and gift codes. It also serves the global leaderboard. The code is `src/worker.js`, with a D1 database (`schema.sql`), both on Cloudflare's free plan.
 
-- **Live at:** https://case-sim-server.caseopeningsim.workers.dev
-- **Database:** `case-sim` (its id is in `wrangler.toml`)
-- **Game setting:** `SERVER_URL` in `site/index.html` points here
+- **Live at:** https://case-sim.pages.dev/api. It runs on the game's own site, as a Pages Function (`functions/api/[[path]].js` at the repo root simply hands every `/api` request to `src/worker.js`).
+- **Database:** `case-sim` (its id is in `wrangler.toml` here and in the root `wrangler.toml`; the checks keep them the same)
+- **Game setting:** a page served from the site calls its own `/api`. A copy opened as a file calls `SERVER_URL` in `site/index.html`.
 
-It deploys automatically when `server/` or the game file changes on `main`, after the tests pass (see the main [README](../README.md)). If `schema.sql` changed, its tables are updated first.
+It deploys with the site whenever `site/`, `server/` or `functions/` changes on `main`, after the tests pass (see the main [README](../README.md)). If `schema.sql` changed, its tables are updated first.
 
 ## How it works
 
@@ -53,25 +53,27 @@ npx wrangler d1 execute case-sim --remote --command "DELETE FROM accounts; DELET
 
 ## Deploying by hand
 
+From the repo root:
+
 ```bash
-cd server
-npm install
 npx wrangler login
-npm run db:init      # only needed when schema.sql changed; safe to repeat
-npm run deploy       # rebuilds src/core.js from the game first
+npx wrangler d1 execute case-sim --remote --file server/schema.sql   # only when schema.sql changed; safe to repeat
+node scripts/sync-core.mjs
+npx wrangler pages deploy site --project-name case-sim --branch main
 ```
 
 ## Running it locally
 
+From the repo root:
+
 ```bash
-cd server
-npm install
-npm run db:init:local
-npm run dev          # http://127.0.0.1:8787
-node ../scripts/api-test.mjs          # in a second terminal: the server tests
+node scripts/sync-core.mjs
+npx wrangler d1 execute case-sim --local --file server/schema.sql
+npx wrangler pages dev                                     # game and server on http://127.0.0.1:8788
+API_BASE=http://127.0.0.1:8788 node scripts/api-test.mjs   # in a second terminal: the server tests
 ```
 
-To play against the local server, open a **copy** of `site/index.html` and change its `SERVER_URL` to `http://127.0.0.1:8787`. Don't commit that change: the pre-deploy checks refuse any `SERVER_URL` that isn't `https://`.
+Open http://127.0.0.1:8788 to play against the local copy.
 
 Set `ADMIN_KEY=ADMK-...` before running the tests to include the gift and moderation tests.
 

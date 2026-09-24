@@ -1,0 +1,16 @@
+# Cloudflare Pages: the game (site/) plus its server (functions/, which runs
+# server/src/worker.js). Deployed by the workflow with `wrangler pages deploy`.
+# The database and admin key must match server/wrangler.toml; the checks
+# make sure they do.
+name = "case-sim"
+pages_build_output_dir = "site"
+compatibility_date = "2025-06-01"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "case-sim"
+database_id = "8bb7c3c1-5849-48f4-9f5b-35e5a8fba6a3"
+
+[vars]
+ADMIN_X = "FlmySf715vkyc4vayPgbDNLuTV4r0ewWrdDQIN-sDfk"
+ADMIN_Y = "Sx2xiZcEaH71oDjHa2bYR9eNGFJoSaUy8Is_qu_tRIE"
