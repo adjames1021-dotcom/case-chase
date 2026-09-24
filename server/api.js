@@ -53,7 +53,8 @@
 import {
   CASES, ALL_ITEMS, ITEM_INDEX, GAME_VERSION, VAULT_KEY, VAULT_CRATE, WEARS, NO_WEAR, NO_TRACKER,
   rollItem, rollWear, instantiate, bonusChance, itemTuple, tupleToItem,
-  pickTarget, upgradeChance, computeBattle, seededRng, hashString, nameProblem, textProblem, RARITIES
+  pickTarget, upgradeChance, computeBattle, seededRng, hashString, nameProblem, textProblem, RARITIES,
+  FREE_COOLDOWN, SEASONS, seasonsOn, onSale, caseBonus
 } from './core.js';
 
 const NAME_RE = /^[A-Za-z0-9_-]{3,16}$/;
@@ -65,7 +66,6 @@ const SIGNUPS_PER_HOUR = 20, SIGNUPS_PER_DAY = 60;   // per IP; schools share on
 const SIGNUPS_ALL_PER_HOUR = 300;       // across everyone, so a botnet can't flood the game
 const POW_BITS = 18;                    // sign-up proof of work: about a second of a browser's time
 const POW_MIN_AGE = 2, POW_MAX_AGE = 15 * 60;   // s from getting a sign-up challenge to using it
-const FREE_COOLDOWN = 3000;             // ms between free-case openings
 const MAX_ITEMS = 3000;
 const MAX_OFFER_ITEMS = 20, MAX_PENDING = 20;
 const MAX_LISTINGS = 20;                // open market listings per account
@@ -80,7 +80,6 @@ const SIGN = { name: 'ECDSA', hash: 'SHA-256' };
 const utf8 = new TextEncoder();
 const nowS = () => Math.floor(Date.now() / 1000);
 const rand = () => crypto.getRandomValues(new Uint32Array(1))[0] / 4294967296;
-const KEY_IDX = ITEM_INDEX[VAULT_KEY.name], CRATE_IDX = ITEM_INDEX[VAULT_CRATE.name];
 
 // Accounts that are always admins: ADMIN_ACCOUNTS in wrangler.toml (account
 // ids, so a renamed or re-registered name can never inherit it). The admin
@@ -517,27 +516,33 @@ async function openCase(request, env, me) {
   const b = await body(request);
   const box = CASES.find((c) => c.id === b.case_id);
   if (!box) fail(400, 'Unknown case. Update your game.');
-  let count = isInt(b.count, 1, 5) ? b.count : 1;
+  if (!box.locked && !onSale(box, await activeSeasons(env))) fail(409, box.name + ' is only sold around ' + SEASONS[box.season].name);
+  const free = box.price === 0 && !box.locked;
+  let count = free ? 1 : isInt(b.count, 1, 5) ? b.count : 1;      // the free case opens one at a time
   if (me.inv_count + count * 3 > MAX_ITEMS) fail(409, 'Your inventory is full. Sell something first.');
   const t = Date.now(), ts = nowS();
   const stmts = [];
   let removed = [];
-  const free = box.price === 0 && !box.locked;
 
   if (box.locked) {
+    // Opened with a crate item (and a key, if the case needs one) instead of coins.
+    const crateIdx = ITEM_INDEX[box.crate], keyIdx = box.key ? ITEM_INDEX[box.key] : -1;
     const held = await db.prepare(
-      'SELECT SUM(idx = ?) AS k, SUM(idx = ?) AS c FROM items WHERE owner = ? AND locked IS NULL').bind(KEY_IDX, CRATE_IDX, me.id).first();
-    count = Math.min(count, held.k || 0, held.c || 0);
-    if (!count) fail(409, (held.c || 0) ? 'You need a Vault Key' : 'You need a Vault Case');
+      `SELECT SUM(idx = ?) AS c, SUM(idx = ?) AS k FROM items WHERE owner = ? AND locked IS NULL`).bind(crateIdx, keyIdx, me.id).first();
+    count = Math.min(count, held.c || 0, box.key ? held.k || 0 : count);
+    if (!count) fail(409, (held.c || 0) ? 'You need a ' + box.key : 'You need a ' + box.crate);
     const pick = async (idx) => (await db.prepare('SELECT id FROM items WHERE owner = ? AND locked IS NULL AND idx = ? LIMIT ?')
       .bind(me.id, idx, count).all()).results.map((r) => r.id);
-    removed = (await pick(KEY_IDX)).concat(await pick(CRATE_IDX));
+    removed = (await pick(crateIdx)).concat(box.key ? await pick(keyIdx) : []);
     stmts.push(
       check(db, '(SELECT COUNT(*) FROM items WHERE owner = ? AND locked IS NULL AND id IN (SELECT value FROM json_each(?))) = ?',
         me.id, JSON.stringify(removed), removed.length),
       db.prepare('DELETE FROM items WHERE owner = ? AND id IN (SELECT value FROM json_each(?))').bind(me.id, JSON.stringify(removed)));
   } else if (free) {
-    if (me.last_free > t - FREE_COOLDOWN) fail(429, 'Slow down a little');
+    if (me.last_free > t - FREE_COOLDOWN) {
+      const wait = Math.ceil((me.last_free + FREE_COOLDOWN - t) / 1000);
+      fail(429, 'The free case is ready in ' + wait + 's', { retry: wait });
+    }
     stmts.push(check(db, '(SELECT last_free FROM accounts WHERE id = ?) <= ?', me.id, t - FREE_COOLDOWN));
   } else if (me.coins < box.price * count) {
     fail(409, 'Not enough coins');
@@ -546,10 +551,11 @@ async function openCase(request, env, me) {
   const cost = box.locked ? 0 : box.price * count;
   const pulls = [], bonus = [];
   for (let i = 0; i < count; i++) pulls.push(itemRow(rollItem(box, rand)));
-  const chance = bonusChance(box);
+  const chance = bonusChance(box), extra = caseBonus(box);
   for (let i = 0; i < count; i++) {
     if (rand() < chance) bonus.push(itemRow(instantiate(VAULT_KEY, rand)));
     if (rand() < chance) bonus.push(itemRow(instantiate(VAULT_CRATE, rand)));
+    if (extra && rand() < box.bonusChance) bonus.push(itemRow(instantiate(extra, rand)));
   }
 
   stmts.push(db.prepare(
@@ -873,6 +879,7 @@ async function createBattle(request, env, me) {
   await limit(db, 'battle', me.id, 'You\'ve made a lot of battles. Wait a few minutes.');
   const box = CASES.find((c) => c.id === b.case_id && !c.locked);
   if (!box) fail(400, 'Unknown case');
+  if (!onSale(box, await activeSeasons(env))) fail(409, box.name + ' is only around at ' + SEASONS[box.season].name);
   if (!isInt(b.rounds, 1, 10) || !isInt(b.max_players, 2, 4)) fail(400, 'Bad settings');
   if (b.mode !== 'high' && b.mode !== 'low') fail(400, 'Bad mode');
   const cost = box.price * b.rounds;
@@ -1163,9 +1170,16 @@ const deleteSuggestion = (db, id) => db.batch([
   db.prepare('DELETE FROM suggestions WHERE id = ?').bind(id)
 ]);
 
+// Admin overrides for the holiday seasons: { halloween: 'on' | 'off' | 'auto', ... }.
+const seasonOverrides = (s) => { try { return JSON.parse(s.seasons || '{}') || {}; } catch (e) { return {}; } };
+const activeSeasons = async (env) => seasonsOn(new Date(), seasonOverrides(await settings(env.DB)));
+
 async function config(env) {
   const s = await settings(env.DB);
-  return json({ announcement: s.announcement || '', maintenance: s.maintenance === '1', version: GAME_VERSION });
+  return json({
+    announcement: s.announcement || '', maintenance: s.maintenance === '1', version: GAME_VERSION,
+    seasons: seasonsOn(new Date(), seasonOverrides(s)), season_modes: seasonOverrides(s)
+  });
 }
 
 // Blocks changes to coins and items while the admin has maintenance on.
@@ -1637,6 +1651,17 @@ const ADMIN = {
     if (p.maintenance != null) {
       stmts.push(db.prepare('INSERT OR REPLACE INTO settings (k, v) VALUES (?, ?)').bind('maintenance', p.maintenance ? '1' : '0'));
       changes.push('maintenance ' + (p.maintenance ? 'on' : 'off'));
+    }
+    if (p.seasons && typeof p.seasons === 'object') {
+      // Holiday cases: 'on' or 'off' by hand, or 'auto' to follow the calendar.
+      const modes = seasonOverrides(await settings(db));
+      Object.keys(SEASONS).forEach((k) => {
+        const v = p.seasons[k];
+        if (v !== 'on' && v !== 'off' && v !== 'auto') return;
+        if (v === 'auto') delete modes[k]; else modes[k] = v;
+        changes.push(SEASONS[k].name + ' cases ' + (v === 'auto' ? 'follow the calendar' : v));
+      });
+      stmts.push(db.prepare('INSERT OR REPLACE INTO settings (k, v) VALUES (?, ?)').bind('seasons', JSON.stringify(modes)));
     }
     if (!stmts.length) fail(400, 'Nothing to change');
     await db.batch(stmts);

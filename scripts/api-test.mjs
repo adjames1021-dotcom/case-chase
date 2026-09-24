@@ -172,9 +172,12 @@ ok('unknown case refused', (await call('POST', '/open', { case_id: 'nope' }, a))
 ok('cannot afford', (await call('POST', '/open', { case_id: 'vanguard' }, a)).status === 409);
 r = await call('POST', '/open', { case_id: 'scrap' }, b);
 ok('free case', r.status === 200 && r.data.me.coins === 500);
-ok('free case cooldown', (await call('POST', '/open', { case_id: 'scrap' }, b)).status === 429);
-await sleep(3100);
-ok('free case after cooldown', (await call('POST', '/open', { case_id: 'scrap', count: 5 }, b)).status === 200);
+r = await call('POST', '/open', { case_id: 'scrap' }, b);
+ok('free case cooldown', r.status === 429 && +r.retry >= 1 && +r.retry <= core.FREE_COOLDOWN / 1000, [r.status, r.retry]);
+await sleep(core.FREE_COOLDOWN + 100);
+r = await call('POST', '/open', { case_id: 'scrap', count: 5 }, b);
+ok('free case after cooldown, one at a time', r.status === 200 && r.data.items.length === 1, r.data && r.data.items);
+ok('holiday case not sold out of season', (await call('POST', '/open', { case_id: core.CASES.find((c) => c.season && !c.locked && core.seasonsOn(new Date(), {}).indexOf(c.season) < 0).id }, b)).status === 409);
 await call('POST', '/open', { case_id: 'starter', count: 5 }, b);
 
 // Racing purchases can never overdraw.
@@ -548,6 +551,33 @@ await admin({ a: 'revoke_admin', id: 'modguy' });
 ok('removing admin takes the tools away', (await acctAdmin(mt, { a: 'stats' })).status === 403 && (await me(mt)).me.admin === false);
 ok('the heartbeat notices it', (await call('POST', '/ping', null, mt)).data.me.admin === false);
 
+
+  /* ---- holiday seasons and presents ---- */
+  const offSeason = core.CASES.find((c) => c.season && !c.locked && core.seasonsOn(new Date(), {}).indexOf(c.season) < 0);
+  const holT = (await call('POST', '/signup', { name: 'festive', password: 'festpass' })).data.token;
+  await admin({ a: 'coins', id: 'festive', set: 100000 });
+  ok('season off by the calendar', (await call('POST', '/open', { case_id: offSeason.id }, holT)).status === 409);
+  const sw = {}; sw[offSeason.season] = 'on';
+  await admin({ a: 'settings', seasons: sw });
+  ok('config reports the season on', (await call('GET', '/config')).data.seasons.indexOf(offSeason.season) >= 0);
+  r = await call('POST', '/open', { case_id: offSeason.id, count: 2 }, holT);
+  ok('admin switches a season on: its case sells', r.status === 200 && r.data.items.length === 2 && r.data.me.coins === 100000 - 2 * offSeason.price, r.status);
+  r = await call('POST', '/battles', { case_id: offSeason.id, rounds: 1, max_players: 2, mode: 'high', version: core.GAME_VERSION }, holT);
+  ok('...and battles with it', r.status === 200, r.data);
+  if (r.status === 200) await call('POST', '/battles/' + r.data.id + '/leave', null, holT);
+  sw[offSeason.season] = 'off';
+  await admin({ a: 'settings', seasons: sw });
+  ok('switched off again', (await call('POST', '/open', { case_id: offSeason.id }, holT)).status === 409);
+  sw[offSeason.season] = 'auto';
+  await admin({ a: 'settings', seasons: sw });
+  ok('back to the calendar', JSON.stringify((await call('GET', '/config')).data.season_modes) === '{}');
+  ok('no present, no opening', (await call('POST', '/open', { case_id: 'present' }, holT)).status === 409);
+  await admin({ a: 'give', id: 'festive', idx: core.ITEM_INDEX['Frosty Present'], wear: -1, tracker: 0, count: 2 });
+  const presentBox = core.CASES.find((c) => c.id === 'present');
+  r = await call('POST', '/open', { case_id: 'present', count: 2 }, holT);
+  ok('presents open without a key, any time of year', r.status === 200 && r.data.items.length === 2 && r.data.removed.length === 2 &&
+    r.data.items.every((row) => presentBox.items.some((it) => it.name === core.ALL_ITEMS[row[1]].name)), r.data);
+  ok('...and cost nothing', r.data.me.coins === (await me(holT)).me.coins);
 
   /* ---- market and suggestions (admin) ---- */
   r = await call('POST', '/open', { case_id: 'starter', count: 2 }, sellerT);

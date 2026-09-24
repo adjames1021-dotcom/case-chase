@@ -664,6 +664,10 @@
   .case-art { height: 158px; }
   .case-hero svg { height: 150px; }
   .case-card.locked { border-color: rgba(201,162,39,.35); }
+  .case-card.seasonal { border-color: rgba(216,40,58,.4); }
+  .case-card { position: relative; }
+  .case-season { position: absolute; top: 10px; left: 10px; z-index: 2; font-family: var(--cond); font-size: 10px; font-weight: 700;
+                 letter-spacing: 1.2px; text-transform: uppercase; padding: 2px 8px; background: rgba(216,40,58,.85); color: #fff; }
   .case-price.need { font-size: 12px; font-weight: 600; color: var(--ink-2); font-family: inherit; }
   .case-price.need b { color: var(--gold); font-weight: 800; }
   .item.bonus { box-shadow: 0 0 0 1px var(--gold), 0 0 22px rgba(240,166,42,.3); }
@@ -1496,6 +1500,11 @@
             </div>
           </div>
           <div class="card">
+            <h4>Holiday cases</h4>
+            <p class="hint">Holiday cases are sold in their season by the calendar. Switch one on early, or off, here.</p>
+            <div id="adm-seasons"></div>
+          </div>
+          <div class="card">
             <h4>Maintenance mode</h4>
             <p class="hint">Pauses opening cases, selling, upgrades, trades, battles and gifts for every account while you fix something. Players can still log in and look around. Guests aren't affected.</p>
             <div class="kv"><span>Status</span><b id="adm-maint-state">…</b></div>
@@ -1874,6 +1883,77 @@
       'M' + (x + 10) + ',' + y + 'Q' + (x + 17) + ',' + (y + 5) + ' ' + (x + 12) + ',' + (y + 11) +
       'L' + (x + 9) + ',' + (y + 11) + 'Q' + (x + 13) + ',' + (y + 5) + ' ' + (x + 7) + ',' + y + 'Z';
 
+    // A finger (or thumb) for the glove models: a tapered capsule from the
+    // knuckle at (x, y), pointing `deg` degrees below the horizontal.
+    function digit(x, y, deg, len, w0, w1) {
+      const r = deg * Math.PI / 180, ux = Math.cos(r), uy = Math.sin(r), nx = -uy, ny = ux;
+      const tx = x + ux * len, ty = y + uy * len, f = (v) => +v.toFixed(1);
+      return 'M' + f(x + nx * w0 / 2) + ',' + f(y + ny * w0 / 2) + ' L' + f(tx + nx * w1 / 2) + ',' + f(ty + ny * w1 / 2) +
+        ' A' + f(w1 / 2) + ',' + f(w1 / 2) + ' 0 0 0 ' + f(tx - nx * w1 / 2) + ',' + f(ty - ny * w1 / 2) +
+        ' L' + f(x - nx * w0 / 2) + ',' + f(y - ny * w0 / 2) + ' Z';
+    }
+    // A slightly bowed line across a digit, `at` of the way along it.
+    function crease(d, at) {
+      const [x, y, deg, len, w0, w1] = d;
+      const r = deg * Math.PI / 180, ux = Math.cos(r), uy = Math.sin(r), nx = -uy, ny = ux;
+      const w = (w0 + (w1 - w0) * at) / 2 - 1.5, cx = x + ux * len * at, cy = y + uy * len * at, f = (v) => +v.toFixed(1);
+      return 'M' + f(cx + nx * w) + ',' + f(cy + ny * w) + ' Q' + f(cx + ux * 3) + ',' + f(cy + uy * 3) + ' ' + f(cx - nx * w) + ',' + f(cy - ny * w);
+    }
+    // A shorter piece of a digit: from `from` to `to` of the way along it, `scale` as wide.
+    function segment(d, from, to, scale) {
+      const [x, y, deg, len, w0, w1] = d, r = deg * Math.PI / 180;
+      const w = (at) => (w0 + (w1 - w0) * at) * scale;
+      return digit(x + Math.cos(r) * len * from, y + Math.sin(r) * len * from, deg, len * (to - from), w(from), w(to));
+    }
+
+    // The three glove cuts share one hand: thumb and fingers first, then the
+    // back of the hand (its scalloped edge makes the knuckles), then the cuff.
+    function gloveCut(cut) {
+      const fingers = [[204, 53, -6, 56, 22, 18], [211, 77, 0, 62, 23, 19], [211, 101, 5, 57, 22, 18], [203, 122, 12, 45, 19, 15]];
+      const thumb = [110, 114, 30, 72, 32, 23];
+      const parts = [{ d: digit.apply(null, thumb), m: 'skin', shade: 'h' }]
+        .concat(fingers.map((f) => ({ d: digit.apply(null, f), m: 'skin' })))
+        .concat([
+          { d: 'M84,48 Q128,34 196,38 Q214,40 219,50 Q228,59 219,69 Q229,81 220,93 Q229,105 219,116 Q223,128 206,131 L92,131 Z', m: 'skin' },
+          { d: 'M10,70 Q10,56 24,54 L88,48 L94,131 L28,137 Q10,137 10,123 Z', m: 'skin' }
+        ]);
+      const lines = fingers.map((f) => crease(f, .5)).join(' ') + ' ' + crease(thumb, .55) + ' M88,50 L94,129';
+      const out = { box: '0 6 282 180', shadow: [142, 178, 122, 5], parts: parts, holes: '', lines: lines, pins: [],
+        lights: 'M86,49.5 Q128,36 194,39.5 ' + fingers.map((f) => {
+          const r = f[2] * Math.PI / 180, n = f[4] / 2 - 2;
+          return 'M' + (f[0] + 6 + Math.sin(r) * n).toFixed(1) + ',' + (f[1] - Math.cos(r) * n).toFixed(1) +
+            ' L' + (f[0] + Math.cos(r) * f[3] * .8 + Math.sin(r) * (f[5] / 2 - 2)).toFixed(1) + ',' +
+            (f[1] + Math.sin(r) * f[3] * .8 - Math.cos(r) * (f[5] / 2 - 2)).toFixed(1);
+        }).join(' ') };
+      if (cut === 'moto') {
+        parts.push(
+          { d: 'M16,74 L88,68 L90,98 L18,104 Z', m: 'dark' },
+          { d: rr(64, 71, 15, 24, 3) + rr(68, 76, 7, 14, 2), m: 'metal', rule: 1 },
+          { d: 'M166,46 Q190,38 212,48 L216,120 Q194,130 170,124 Q160,86 166,46 Z', m: 'dark' },
+          { d: rr(174, 52, 34, 17, 7) + rr(176, 75, 34, 17, 7) + rr(176, 98, 32, 17, 7), m: 'metal' });
+        fingers.forEach((f) => parts.push({ d: segment(f, .42, .72, .78), m: 'dark' }));
+        out.dash = 'M96,62 Q128,54 160,56 M98,120 Q128,120 160,120';
+        out.pins = [[183, 60.5, 1.6], [185, 83.5, 1.6], [185, 106.5, 1.6]];
+      } else if (cut === 'field') {
+        parts.push(
+          { d: 'M18,58 L34,56 L40,134 L24,136 Z', m: 'dark', o: .5 },
+          { d: circ(62, 92, 7.5) + circ(62, 92, 3.5), m: 'metal', rule: 1 });
+        out.dash = 'M100,58 Q146,48 194,50 M100,120 Q150,120 200,122 ' + fingers.map((f) => {
+          const r = f[2] * Math.PI / 180, x = (at) => (f[0] + Math.cos(r) * f[3] * at).toFixed(1), y = (at) => (f[1] + Math.sin(r) * f[3] * at).toFixed(1);
+          return 'M' + x(.2) + ',' + y(.2) + ' L' + x(.82) + ',' + y(.82);
+        }).join(' ');
+      } else {
+        // hand wraps: tape wound round the wrist, across the hand and round each finger
+        out.lines += ' ' + [0, 1, 2, 3, 4].map((i) => {
+          const x = 24 + i * 13;
+          return 'M' + x + ',' + (56 - i * .6) + ' Q' + (x + 7) + ',95 ' + (x + 1) + ',' + (135 - i * .6);
+        }).join(' ') + ' M98,126 Q140,98 196,44 M104,54 Q150,76 206,124 M112,130 Q170,108 214,76 M96,98 Q128,64 168,42' +
+          ' ' + fingers.map((f) => crease(f, .2) + ' ' + crease(f, .36)).join(' ') + ' ' + crease(thumb, .32) + ' ' + crease(thumb, .46);
+        out.dash = '';
+      }
+      return out;
+    }
+
     const MODELS = {
       rifle_ak: {
         box: '0 0 320 128', shadow: [160, 119, 150, 5],
@@ -2059,76 +2139,77 @@
       },
 
       knife_bayonet: {
-        box: '-4 -16 320 144', shadow: [160, 122, 140, 4], rot: [-16, 160, 55],
+        box: '-6 -22 330 150', shadow: [160, 124, 142, 4], rot: [-16, 160, 55],
         parts: [
-          { d: 'M104,40 L236,40 Q270,42 310,53 Q282,68 244,68 L104,68 Z', m: 'skin' },
-          { d: 'M104,60 L244,60 Q274,60 303,54 Q282,68 244,68 L104,68 Z', m: 'edge', shade: 'none' },
-          { d: 'M126,40 ' + rep(9, (i) => 'L' + (129 + i * 6) + ',34 L' + (132 + i * 6) + ',40 ') + 'Z', m: 'skin' },
-          { d: 'M93,31 Q93,29 95,29 L105,29 Q107,29 107,31 L107,79 Q107,81 105,81 L95,81 Q93,81 93,79 Z', m: 'metal' },
-          { d: 'M18,42 L95,44 L95,66 L18,68 Q13,55 18,42 Z', m: 'skin', tex: 'ribs' },
-          { d: 'M8,41 Q2,55 8,69 L20,69 L20,41 Z', m: 'metal' }
+          // clip-point blade with a sawback spine
+          { d: 'M104,37 L232,37 Q262,39 314,57 Q292,73 252,73 L104,73 Z', m: 'skin' },
+          { d: 'M120,37 ' + rep(11, (i) => 'L' + (122 + i * 8) + ',30 L' + (126 + i * 8) + ',37 ') + 'Z', m: 'skin' },
+          { d: 'M104,65 L252,65 Q284,65 309,58 Q292,73 252,73 L104,73 Z', m: 'edge', shade: 'none' },
+          // crossguard with a muzzle ring, and the pommel
+          { d: circ(99, 20, 9) + circ(99, 20, 5.5), m: 'metal', rule: 1 },
+          { d: 'M91,27 Q91,25 93,25 L105,25 Q107,25 107,27 L107,84 Q107,86 105,86 L93,86 Q91,86 91,84 Z', m: 'metal' },
+          { d: 'M20,41 Q56,36 91,42 L91,69 Q56,75 20,70 Q15,55.5 20,41 Z', m: 'skin', tex: 'ribs' },
+          { d: 'M6,39 Q-1,55.5 6,72 L21,72 Q16,55.5 21,39 Z', m: 'metal' }
         ],
-        holes: 'M112,46 L222,46 L216,51 L112,51 Z' + rr(128, 50, 22, 8, 4),
-        lines: rep(7, (i) => 'M' + (30 + i * 9) + ',45 L' + (30 + i * 9) + ',66'),
-        lights: 'M105,40.8 L236,40.8 Q268,42.8 306,53',
-        pins: [[36, 55, 2.2], [76, 55, 2.2]]
+        holes: 'M112,45 L226,45 L220,52 L112,52 Z' + rr(130, 57, 28, 7, 3.5) + circ(10, 55.5, 2.6),
+        lines: rep(6, (i) => 'M' + (30 + i * 10) + ',' + (41 - i * .2) + ' Q' + (32 + i * 10) + ',55.5 ' + (30 + i * 10) + ',' + (70 + i * .2)),
+        lights: 'M108,37.8 L232,37.8 Q262,39.8 309,56.2 M93,26.5 L105,26.5',
+        pins: [[44, 55.5, 2.4], [74, 55.5, 2.4]]
       },
 
       knife_karambit: {
-        box: '0 0 250 180', shadow: [130, 170, 104, 5],
+        box: '4 -8 262 196', shadow: [134, 180, 106, 5], rot: [-24, 140, 104],
         parts: [
-          { d: circ(46, 132, 24) + circ(46, 132, 13), m: 'skin', rule: 1 },
-          { d: 'M60,114 Q100,90 150,64 L163,83 Q116,108 74,138 Z', m: 'skin', tex: 'ribs' },
-          { d: 'M156,56 Q200,24 234,60 Q256,97 238,153 Q228,110 206,88 Q184,70 168,81 Z', m: 'skin' },
-          { d: 'M168,81 Q190,73 210,91 Q231,113 238,153 Q221,116 200,97 Q185,85 171,87 Z', m: 'edge', shade: 'none' },
-          { d: 'M145,58 L160,51 L173,78 L159,85 Z', m: 'metal' }
+          // finger ring and grooved handle
+          { d: circ(36, 102, 22) + circ(36, 102, 12.5), m: 'skin', rule: 1 },
+          { d: circ(36, 102, 14.5) + circ(36, 102, 12.5), m: 'metal', rule: 1, shade: 'none' },
+          { d: 'M52,89 Q100,82 150,84 L150,116 Q141,125 132,117 Q123,126 114,117 Q105,126 96,117 Q84,122 70,118 L54,116 Q58,102 52,89 Z',
+            m: 'skin', tex: 'stipple' },
+          // bolster, then the claw
+          { d: 'M146,79 Q146,77 148,77 L159,76 Q161,76 161,78 L163,121 Q163,123 161,123 L150,123 Q148,123 148,121 Z', m: 'metal' },
+          { d: 'M159,80 C198,62 244,76 256,120 C262,144 254,164 238,178 C238,150 224,126 199,119 C183,115 171,117 161,122 Z', m: 'skin' },
+          { d: 'M166,78 ' + rep(5, (i) => 'L' + (168 + i * 6) + ',71 L' + (171 + i * 6) + ',76 ') + 'Z', m: 'skin' },
+          { d: 'M238,178 C238,150 224,126 199,119 C183,115 171,117 161,122 L161,113 C174,107 188,106 203,110 C231,118 244,146 238,178 Z',
+            m: 'edge', shade: 'none' }
         ],
         holes: '',
-        lines: 'M168,48 Q206,38 226,66',
-        lights: 'M160,54 Q200,27 232,60 Q250,90 240,140',
-        pins: [[92, 108, 2.6], [128, 88, 2.6]]
+        lines: 'M172,84 C204,74 236,88 246,120 M70,95 Q108,90 144,92',
+        lights: 'M164,79 C200,64 240,78 252,116 M54,90 Q100,83 146,85',
+        pins: [[84, 101, 2.6], [126, 100, 2.6]]
       },
 
       knife_butterfly: {
-        box: '-2 -10 320 132', shadow: [160, 116, 140, 4], rot: [-16, 160, 54],
+        box: '-4 -14 326 138', shadow: [160, 118, 142, 4], rot: [-16, 160, 54],
         parts: [
-          { d: rr(6, 40, 146, 13, 4) + rep(5, (i) => rr(22 + i * 22, 43.5, 15, 6, 3)), m: 'skin', rule: 1 },
-          { d: rr(6, 55, 146, 13, 4) + rep(5, (i) => rr(22 + i * 22, 58.5, 15, 6, 3)), m: 'skin', rule: 1 },
-          { d: 'M152,42 L270,42 Q296,44 313,54 Q296,63 270,65 L152,65 Z', m: 'skin' },
-          { d: 'M152,58 L270,58 Q294,58 308,55 Q296,63 270,65 L152,65 Z', m: 'edge', shade: 'none' },
-          { d: 'M145,38 L160,38 L160,70 L145,70 Z', m: 'metal' },
-          { d: 'M2,44 L10,44 L10,64 L2,64 Z', m: 'metal' }
+          // two skeletonized handle halves, the latch and the pivots
+          { d: rr(8, 37, 140, 15, 5) + rep(6, (i) => rr(20 + i * 20, 41.5, 13, 6, 3)), m: 'skin', rule: 1 },
+          { d: rr(8, 55, 140, 15, 5) + rep(6, (i) => rr(20 + i * 20, 59.5, 13, 6, 3)), m: 'skin', rule: 1 },
+          { d: 'M0,44 L9,44 L9,63 L0,63 Q-3,53.5 0,44 Z', m: 'metal' },
+          { d: 'M146,34 Q146,32 148,32 L160,32 Q162,32 162,34 L162,73 Q162,75 160,75 L148,75 Q146,75 146,73 Z', m: 'metal' },
+          // spear blade with a swedge
+          { d: 'M160,40 L262,40 Q292,43 318,54 Q292,66 262,68 L160,68 Z', m: 'skin' },
+          { d: 'M226,40 L262,40 Q292,43 318,54 L262,47 Z', m: 'metal', shade: 'none', o: .45 },
+          { d: 'M160,60 L262,60 Q294,60 313,56 Q292,66 262,68 L160,68 Z', m: 'edge', shade: 'none' }
         ],
         holes: '',
-        lines: 'M166,49 L252,49',
-        lights: 'M153,42.8 L270,42.8 Q294,44.8 310,53.5 M8,40.8 L150,40.8',
-        pins: [[152, 47, 2.4], [152, 61, 2.4], [8, 54, 1.8]]
+        lines: 'M168,50 L246,50',
+        lights: 'M161,40.8 L262,40.8 Q290,43.6 314,53.6 M12,37.8 L144,37.8',
+        pins: [[154, 45, 2.6], [154, 62, 2.6], [5, 53.5, 1.8]]
       },
 
-      gloves: {
-        box: '0 0 270 170', shadow: [138, 162, 118, 5],
-        parts: [
-          { d: 'M10,72 Q12,56 28,54 L72,50 L80,118 L32,124 Q14,124 12,110 Z', m: 'skin' },
-          { d: 'M92,106 Q130,114 160,126 Q177,133 175,145 Q171,156 156,152 L104,134 Q89,128 92,106 Z', m: 'skin', shade: 'h' },
-          { d: 'M68,48 Q112,35 172,40 Q192,42 198,56 L202,100 Q200,116 182,120 L80,122 Z', m: 'skin' },
-          { d: 'M170,40 Q202,30 238,34 Q250,36 248,46 Q246,55 234,53 L196,57 Z', m: 'skin' },
-          { d: 'M192,58 L248,56 Q260,57 259,67 Q258,77 246,76 L194,79 Z', m: 'skin' },
-          { d: 'M194,81 L242,81 Q254,82 252,92 Q250,100 239,99 L194,101 Z', m: 'skin' },
-          { d: 'M188,103 L228,107 Q238,109 236,117 Q234,123 224,122 L186,119 Z', m: 'skin' },
-          { d: 'M20,75 L76,68 L78,90 L22,97 Z', m: 'dark' },
-          { d: 'M54,70 L68,68 L70,92 L56,94 Z', m: 'metal' },
-          { d: rr(168, 46, 20, 16, 5), m: 'dark' },
-          { d: rr(172, 66, 20, 16, 5), m: 'dark' },
-          { d: rr(172, 86, 20, 16, 5), m: 'dark' },
-          { d: rr(168, 104, 18, 13, 5), m: 'dark' }
-        ],
-        holes: '',
-        lines: 'M88,56 Q140,48 186,50 M90,114 Q140,112 182,112 M212,40 L212,54 M222,58 L222,76 M218,82 L218,100 M208,106 L207,120',
-        dash: 'M84,62 Q130,54 160,56 M86,108 Q130,106 160,106',
-        lights: 'M72,49.5 Q112,37 170,41 M172,41 Q202,31.5 236,35',
-        pins: []
-      }
+      // Gloves come in three cuts, picked by name (see gloveModel).
+      gloves_moto: gloveCut('moto'),
+      gloves_field: gloveCut('field'),
+      gloves_wraps: gloveCut('wraps')
     };
+
+    // Which glove cut to draw, from the item's name.
+    function gloveModel(item) {
+      const n = item.name || '';
+      if (n.indexOf('Moto') === 0) return MODELS.gloves_moto;
+      if (n.indexOf('Hand Wraps') === 0) return MODELS.gloves_wraps;
+      return MODELS.gloves_field;
+    }
 
     /* ---------- weapon cases and keys ---------- */
 
@@ -2162,11 +2243,18 @@
       cloud: 'M9,25 Q2,25 3,18 Q4,12 11,13 Q13,5 22,6 Q31,7 31,14 Q38,14 37,21 Q36,25 31,25 Z M20,23 L14,33 L19,33 L16,39 L25,29 L20,29 Z',
       flame: 'M20,2 Q31,14 31,25 Q31,38 20,38 Q9,38 9,25 Q9,17 15,12 Q15,20 20,22 Q22,13 20,2 Z',
       moon: 'M25,3 Q11,8 11,20 Q11,32 25,37 Q9,40 4,26 Q0,7 25,3 Z M30,9 L32,14 L37,15 L33,18 L34,23 L30,20 L26,23 L27,18 L23,15 L28,14 Z',
-      diamond: 'M11,5 L29,5 L37,15 L20,37 L3,15 Z'
+      diamond: 'M11,5 L29,5 L37,15 L20,37 L3,15 Z',
+      pumpkin: 'M22,4 Q26,4 28,6 L26,9 Q24,8 22,10 Z M20,10 Q35,8 37,23 Q37,37 20,37 Q3,37 3,23 Q5,8 20,10 Z ' +
+        'M11,19 L16,14 L18,21 Z M29,19 L24,14 L22,21 Z M10,25 L14,28 L17,26 L20,29 L23,26 L26,28 L30,25 Q20,34 10,25 Z',
+      wheat: 'M19,12 L21,12 L21,38 L19,38 Z M20,2 L23.5,7 L20,11 L16.5,7 Z M13,11 L19,14 L19,19 L13,17 Z M27,11 L21,14 L21,19 L27,17 Z ' +
+        'M13,19 L19,22 L19,27 L13,25 Z M27,19 L21,22 L21,27 L27,25 Z',
+      tree: 'M20,2 L28,12 L24,12 L32,21 L27,21 L36,32 L4,32 L13,21 L8,21 L16,12 L12,12 Z M17,32 L23,32 L23,38 L17,38 Z',
+      gift: 'M5,15 L35,15 L35,22 L5,22 Z M7,22 L33,22 L33,37 L7,37 Z M18,15 L22,15 L22,37 L18,37 Z ' +
+        'M20,15 Q9,3 7,10 Q6,15 20,15 Z M20,15 Q31,3 33,10 Q34,15 20,15 Z'
     };
 
     // Emblems drawn with cut-out rings or holes (even-odd fill).
-    const HOLED_EMBLEMS = { dial: 1, peel: 1, coin: 1, target: 1, hex: 1 };
+    const HOLED_EMBLEMS = { dial: 1, peel: 1, coin: 1, target: 1, hex: 1, pumpkin: 1 };
 
     const crateInfo = {};
     function registerCrates(list) {
@@ -2233,9 +2321,15 @@
       bolt: 'M118,18 L52,108 L94,108 L78,182 L150,84 L106,84 Z',
       heart: 'M100,170 Q30,120 30,74 Q30,36 66,36 Q88,36 100,58 Q112,36 134,36 Q170,36 170,74 Q170,120 100,170 Z',
       shield: 'M100,20 L164,40 Q164,128 100,178 Q36,128 36,40 Z',
-      diamond: 'M100,18 L170,80 L100,182 L30,80 Z'
+      diamond: 'M100,18 L170,80 L100,182 L30,80 Z',
+      pumpkin: 'M104,26 Q116,22 124,30 L116,40 Q110,36 106,40 Z M100,40 Q166,34 170,104 Q170,170 100,172 Q30,170 30,104 Q34,34 100,40 Z',
+      snowball: circ(100, 102, 70),
+      wishbone: 'M92,176 L108,176 L108,112 Q140,86 158,30 L140,26 Q124,76 100,96 Q76,76 60,26 L42,30 Q60,86 92,112 Z'
     };
+    // Stickers without a matching word pick one of these (the original set, so their looks never change).
+    const EMBLEM_FALLBACK = ['star', 'skull', 'flame', 'crown', 'bolt', 'heart', 'shield', 'diamond'];
     const EMBLEM_WORDS = [
+      [/pumpkin|jack o/i, 'pumpkin'], [/snowball|snowman/i, 'snowball'], [/wishbone/i, 'wishbone'],
       [/skull|fang|bone/i, 'skull'], [/flame|phoenix|fire|ember|hazard/i, 'flame'],
       [/crown|king|royal/i, 'crown'], [/bolt|volt|static|signal/i, 'bolt'],
       [/heart|love/i, 'heart'], [/shield|guard/i, 'shield'], [/diamond|drift|holo|gem/i, 'diamond'],
@@ -2245,8 +2339,7 @@
     function stickerModel(item) {
       let key = null;
       for (const w of EMBLEM_WORDS) if (w[0].test(item.name)) { key = w[1]; break; }
-      const keys = Object.keys(EMBLEMS);
-      if (!key) key = keys[hash(item.name) % keys.length];
+      if (!key) key = EMBLEM_FALLBACK[hash(item.name) % EMBLEM_FALLBACK.length];
       const d = EMBLEMS[key];
       return {
         box: '0 0 200 200', shadow: [100, 190, 70, 5], sticker: true,
@@ -2265,9 +2358,12 @@
       coin: circ(80, 140, 38) + circ(80, 140, 28),
       tag: 'M52,98 L108,98 Q116,98 116,106 L116,170 Q116,178 108,178 L52,178 Q44,178 44,170 L44,106 Q44,98 52,98 Z' +
            circ(80, 112, 5),
-      bolt: 'M92,98 L56,146 L78,146 L68,186 L106,132 L84,132 Z'
+      bolt: 'M92,98 L56,146 L78,146 L68,186 L106,132 L84,132 Z',
+      bell: 'M80,98 Q106,98 108,130 L110,156 Q112,166 122,170 L122,176 L38,176 L38,170 Q48,166 50,156 L52,130 Q54,98 80,98 Z' + circ(80, 182, 8)
     };
+    const PENDANT_FALLBACK = ['skull', 'gem', 'duck', 'die', 'coin', 'tag', 'bolt'];
     const PENDANT_WORDS = [
+      [/bell/i, 'bell'],
       [/skull/i, 'skull'], [/duck/i, 'duck'], [/marble|glass|gem/i, 'gem'], [/tag/i, 'tag'],
       [/pin|coin|gold/i, 'coin'], [/bolt|lucky/i, 'bolt'], [/dice|die/i, 'die']
     ];
@@ -2275,8 +2371,7 @@
     function charmModel(item) {
       let key = null;
       for (const w of PENDANT_WORDS) if (w[0].test(item.name)) { key = w[1]; break; }
-      const keys = Object.keys(PENDANTS);
-      if (!key) key = keys[hash(item.name) % keys.length];
+      if (!key) key = PENDANT_FALLBACK[hash(item.name) % PENDANT_FALLBACK.length];
       const holed = key === 'skull' || key === 'die' || key === 'coin' || key === 'tag' || key === 'duck';
       return {
         box: '14 40 132 154', shadow: [80, 188, 44, 4],
@@ -2331,6 +2426,15 @@
 
     // Words in a skin's name steer its colour and finish, so names and art agree.
     const COLOR_WORDS = [
+      // holidays first, so their colours win
+      [/pumpkin|candy corn|all hallows|autumn blaze|harvest moon|hayride/i, [26, 92, 52]],
+      [/witching|phantom|hex moon|cauldron|night howl|crypt/i, [276, 55, 40]],
+      [/cobweb|bone grip|graveyard|snowball|snowfall|snow globe|icicle/i, [205, 18, 80]],
+      [/jingle bell|sleigh bell|north star/i, [44, 80, 52]],
+      [/candy cane|peppermint|nutcracker|chimney|cranberry|stocking/i, [354, 76, 48]],
+      [/evergreen|tinsel|sleigh|silent night|yule|mistletoe/i, [140, 52, 32]],
+      [/gingerbread|hot cocoa|pecan|gravy|cornbread|cider|flannel|carving|cornucopia|wishbone/i, [26, 52, 38]],
+      [/frosty|frost nip|mitten|ugly sweater|knitted/i, [200, 58, 60]],
       [/duck|banana|lemon|yellow/i, [48, 90, 56]],
       [/birch|walnut|\boak\b|timber|maple|cedar|\bwood\b/i, [27, 48, 40]],
       [/ruby|crimson|redline|slaughter|blood|red\b|deadline|kill/i, [352, 72, 44]],
@@ -2350,6 +2454,7 @@
       [/ranger|olive|sapper|quartermaster/i, [72, 28, 38]]
     ];
     const FINISH_WORDS = [
+      [/candy cane|peppermint|ugly sweater|flannel|knitted/i, 'stripe'], [/tinsel|snowfall|snow globe|snowball/i, 'splatter'],
       [/solid|gold standard|gilded|chrom|polished|anodi[sz]ed|rubber/i, 'solid'],
       [/birch|walnut|\boak\b|timber|maple|cedar|\bwood\b/i, 'wood'],
       [/doppler/i, 'doppler'], [/fade|aurora|spectrum|prism|chroma|kaleidoscope|holo|foil|refraction|iridium|lightbender|facet/i, 'fade'],
@@ -2601,6 +2706,7 @@
       else if (item.kind === 'agent') M = agentModel(item);
       else if (item.kind === 'crate') M = crateModel(item);
       else if (item.kind === 'key') M = keyModel(item);
+      else if (item.kind === 'gloves') M = gloveModel(item);
       if (!M) M = MODELS.rifle_ak;
 
       const box = M.box.split(' ').map(Number);
@@ -2900,7 +3006,7 @@
      Bump GAME_VERSION whenever items, cases or odds change.
      ====================================================================== */
 
-  const GAME_VERSION = 2;
+  const GAME_VERSION = 3;
 
   function hashString(str) {
     let h = 2166136261;
@@ -2914,8 +3020,10 @@
     epic: '#8847ff', legendary: '#d32ce6', mythic: '#eb4b4b'
   };
 
-  // Odds are tuned so every paid case returns ~93% of its price on average.
+  // Base odds for each tier. Paid cases are then tuned by price (see tuneOdds),
+  // so the dearer the case, the more of its price it pays back.
   const ODDS = {
+    free: { common: .8215, uncommon: .15, rare: .025, epic: .003, legendary: .0004, mythic: .0001 },
     t1: { common: .62, uncommon: .24, rare: .10, epic: .03, legendary: .009, mythic: .001 },
     t2: { common: .58, uncommon: .25, rare: .11, epic: .045, legendary: .013, mythic: .002 },
     t3: { common: .54, uncommon: .26, rare: .125, epic: .055, legendary: .017, mythic: .003 },
@@ -2951,7 +3059,7 @@
   const CASES = [
     {
       id: 'scrap', name: 'Scrap Tin', sub: 'Free pull, on the house', price: 0,
-      accent: '#8d9199', odds: ODDS.t1,
+      accent: '#8d9199', odds: ODDS.free,
       items: [
         I('P-22 | Duct Tape', 'pistol', 'common', 4),
         I('SP-5 | Rust Bucket', 'smg', 'common', 5),
@@ -2966,6 +3074,63 @@
         I('LR-800 | Sandbag', 'sniper', 'epic', 75),
         I('KR-74 | Junkyard King', 'rifle_ak', 'legendary', 230),
         I('Karambit | Last Resort', 'knife_karambit', 'mythic', 800)
+      ]
+    },
+    {
+      id: 'hollow', name: 'Haunted Hollow', sub: 'Only around Halloween', price: 666, season: 'halloween',
+      accent: '#ff7a1a', odds: ODDS.t3,
+      items: [
+        I('P-22 | Candy Corn', 'pistol', 'common', 124, 3),
+        I('SP-5 | Cobweb', 'smg', 'common', 140, 3),
+        I('AR-12 | Graveyard Shift', 'rifle_m4', 'common', 158, 3),
+        I('Field Gloves | Bone Grip', 'gloves', 'uncommon', 280, 3),
+        I('HX-45 | Witching Hour', 'pistol', 'uncommon', 318, 3),
+        I('Sticker | Pumpkin Grin', 'sticker', 'uncommon', 356, 3),
+        I('KR-74 | Pumpkin Patch', 'rifle_ak', 'rare', 700, 3),
+        I('LR-800 | Night Howl', 'sniper', 'rare', 795, 3),
+        I('MK Vector | Cauldron', 'smg', 'rare', 890, 3),
+        I('AWS-7 | Phantom Veil', 'sniper', 'epic', 1970, 3),
+        I('Bayonet | Crypt Keeper', 'knife_bayonet', 'epic', 2270, 3),
+        I('Butterfly Knife | Hex Moon', 'knife_butterfly', 'legendary', 7060, 3),
+        I('Karambit | All Hallows', 'knife_karambit', 'mythic', 26500, 3)
+      ]
+    },
+    {
+      id: 'harvest', name: 'Harvest Crate', sub: 'Only around Thanksgiving', price: 450, season: 'thanksgiving',
+      accent: '#c8702a', odds: ODDS.t3,
+      items: [
+        I('P-22 | Hayride', 'pistol', 'common', 91, 3),
+        I('SP-5 | Cornbread', 'smg', 'common', 103, 3),
+        I('BR-12 | Pecan Pie', 'shotgun', 'common', 116, 3),
+        I('Hand Wraps | Flannel', 'gloves', 'uncommon', 204, 3),
+        I('HX-45 | Cranberry', 'pistol', 'uncommon', 232, 3),
+        I('Sticker | Wishbone', 'sticker', 'uncommon', 260, 3),
+        I('KR-74 | Autumn Blaze', 'rifle_ak', 'rare', 510, 3),
+        I('AR-12 | Cider Press', 'rifle_m4', 'rare', 578, 3),
+        I('RX-357 | Gravy Boat', 'revolver', 'rare', 648, 3),
+        I('LR-800 | Maple Road', 'sniper', 'epic', 1436, 3),
+        I('Bayonet | Carving Set', 'knife_bayonet', 'epic', 1650, 3),
+        I('Butterfly Knife | Cornucopia', 'knife_butterfly', 'legendary', 5150, 3),
+        I('Karambit | Harvest Moon', 'knife_karambit', 'mythic', 19300, 3)
+      ]
+    },
+    {
+      id: 'wonder', name: 'Winter Wonder', sub: 'Only around Christmas', price: 1225, season: 'christmas',
+      accent: '#d8283a', odds: ODDS.t4, bonusItem: 'Frosty Present', bonusChance: .02,
+      items: [
+        I('SP-5 | Tinsel', 'smg', 'common', 214, 3),
+        I('P-22 | Gingerbread', 'pistol', 'common', 244, 3),
+        I('AR-12 | Snowfall', 'rifle_m4', 'common', 273, 3),
+        I('LR-800 | Sleigh Ride', 'sniper', 'uncommon', 483, 3),
+        I('Moto Gloves | Mitten Weather', 'gloves', 'uncommon', 549, 3),
+        I('BR-12 | Chimney Sweep', 'shotgun', 'uncommon', 614, 3),
+        I('KR-74 | Candy Cane', 'rifle_ak', 'rare', 1207, 3),
+        I('MK Vector | Peppermint', 'smg', 'rare', 1372, 3),
+        I('RX-357 | Jingle Bell', 'revolver', 'rare', 1537, 3),
+        I('AWS-7 | Evergreen', 'sniper', 'epic', 3403, 3),
+        I('AR-12 | Nutcracker', 'rifle_m4', 'epic', 3915, 3),
+        I('Bayonet | Mistletoe', 'knife_bayonet', 'legendary', 12200, 3),
+        I('Karambit | North Star', 'knife_karambit', 'mythic', 45700, 3)
       ]
     },
     {
@@ -3425,7 +3590,7 @@
       ]
     },
     {
-      id: 'vault', name: 'Vault Case', sub: '', price: 0, locked: true,
+      id: 'vault', name: 'Vault Case', sub: '', price: 0, locked: true, crate: 'Vault Case', key: 'Vault Key',
       accent: '#c9a227', odds: ODDS.t6,
       items: [
         I('P-22 | Tumbler', 'pistol', 'common', 90),
@@ -3442,6 +3607,27 @@
         I('Butterfly Knife | Gilded Vault', 'knife_butterfly', 'legendary', 5142),
         I('Karambit | Treasury', 'knife_karambit', 'mythic', 19305)
       ]
+    },
+    {
+      // Can't be bought: presents come from rewards, gifts and Winter Wonder cases, and open without a key.
+      id: 'present', name: 'Frosty Present', sub: 'A gift, not for sale', price: 0, locked: true, crate: 'Frosty Present',
+      unit: 'present', season: 'christmas',
+      accent: '#3aa0d8', odds: ODDS.t4,
+      items: [
+        I('P-22 | Hot Cocoa', 'pistol', 'common', 60, 3),
+        I('SP-5 | Ugly Sweater', 'smg', 'common', 70, 3),
+        I('Sticker | Snowball Fight', 'sticker', 'common', 80, 3),
+        I('Charm | Sleigh Bell', 'charm', 'uncommon', 140, 3),
+        I('HX-45 | Stocking Stuffer', 'pistol', 'uncommon', 160, 3),
+        I('Hand Wraps | Knitted', 'gloves', 'uncommon', 180, 3),
+        I('KR-74 | Frost Nip', 'rifle_ak', 'rare', 380, 3),
+        I('AR-12 | Silent Night', 'rifle_m4', 'rare', 430, 3),
+        I('BR-12 | Yule Log', 'shotgun', 'rare', 470, 3),
+        I('AWS-7 | Aurora Borealis', 'sniper', 'epic', 1100, 3),
+        I('Bayonet | Icicle', 'knife_bayonet', 'epic', 1300, 3),
+        I('Butterfly Knife | Snow Globe', 'knife_butterfly', 'legendary', 4200, 3),
+        I('Karambit | Frosty', 'knife_karambit', 'mythic', 15000, 3)
+      ]
     }
   ];
 
@@ -3449,11 +3635,14 @@
   const VAULT_KEY = I('Vault Key', 'key', 'legendary', 90);
   const VAULT_CRATE = I('Vault Case', 'crate', 'epic', 90);
   const SPECIAL_ITEMS = [VAULT_KEY, VAULT_CRATE];
+  // Crates added later go through the case list's `since` ordering like any other item.
+  const PRESENT_CRATE = I('Frosty Present', 'crate', 'legendary', 250, 3);
+  const CRATE_ITEMS = [PRESENT_CRATE];
   // Every item in a fixed order. Saved items point at their position here, so
   // the list only ever grows: items added after launch (the ones with a
   // `since`) always come after everything older, wherever they sit in a case.
   const ALL_ITEMS = (function () {
-    const all = CASES.reduce((acc, c) => acc.concat(c.items), []);
+    const all = CASES.reduce((acc, c) => acc.concat(c.items), []).concat(CRATE_ITEMS);
     const later = all.filter((it) => it.since).sort((a, b) => a.since - b.since);
     return all.filter((it) => !it.since).concat(SPECIAL_ITEMS, later);
   })();
@@ -3466,6 +3655,81 @@
   // Chance per paid case of each bonus drop. Scales with price and caps low,
   // so the vault never pushes a case's return over its price.
   const bonusChance = (box) => box.price > 0 ? Math.min(0.03, 0.0015 + box.price / 60000) : 0;
+
+  // The case's own extra bonus drop, if it has one (Winter Wonder can drop a Frosty Present).
+  const caseBonus = (box) => box.bonusItem ? ALL_ITEMS[ITEM_INDEX[box.bonusItem]] : null;
+
+  /* ---------- how much cases pay back ---------- */
+
+  // The share of its price a paid case pays back on average: 95% for the
+  // cheapest, rising with price to break-even at 50,000. The free case pays
+  // far less (ODDS.free) and has a cooldown.
+  const FREE_COOLDOWN = 10000;                    // ms between free cases
+  function returnTarget(price) {
+    return 0.95 + 0.05 * Math.max(0, Math.min(1, Math.log(price / 10) / Math.log(5000)));
+  }
+
+  // Average worth of one drop of an item, with wear and trackers averaged in.
+  const WEAR_AVG = WEARS.reduce((sum, w) => sum + w.p * w.mult, 0);
+  const dropWorth = (it) => it.value * (NO_WEAR[it.kind] ? 1 : WEAR_AVG) *
+    (NO_TRACKER[it.kind] ? 1 : 1 + TRACKER_CHANCE * (TRACKER_MULT - 1));
+
+  // Average worth of a drop of each rarity (a rarity with no items rolls from the whole case).
+  function rarityWorth(box) {
+    const all = box.items.reduce((sum, it) => sum + dropWorth(it), 0) / box.items.length;
+    const out = {};
+    RARITIES.forEach((r) => {
+      const pool = box.items.filter((it) => it.rarity === r);
+      out[r] = pool.length ? pool.reduce((sum, it) => sum + dropWorth(it), 0) / pool.length : all;
+    });
+    return out;
+  }
+
+  const caseWorth = (box, odds) => {
+    const worth = rarityWorth(box);
+    const bonus = caseBonus(box);
+    return RARITIES.reduce((sum, r) => sum + (odds[r] || 0) * worth[r], 0) +
+      2 * bonusChance(box) * VAULT_KEY.value + (bonus ? box.bonusChance * bonus.value : 0);
+  };
+
+  // Scales a paid case's chances of everything above common by one factor so
+  // the case pays back returnTarget(price); commons take up the rest.
+  function tuneOdds(box) {
+    const base = box.odds, worth = rarityWorth(box), bonus = caseBonus(box);
+    const rest = 1 - (base.common || 0);
+    const up = RARITIES.slice(1).reduce((sum, r) => sum + (base[r] || 0) * worth[r], 0);
+    const extra = 2 * bonusChance(box) * VAULT_KEY.value + (bonus ? box.bonusChance * bonus.value : 0);
+    const want = returnTarget(box.price) * box.price - extra;
+    const k = Math.max(0.2, Math.min(0.98 / rest, (want - worth.common) / (up - worth.common * rest)));
+    const odds = { common: 1 - k * rest };
+    RARITIES.slice(1).forEach((r) => { odds[r] = (base[r] || 0) * k; });
+    return odds;
+  }
+  CASES.forEach((box) => { if (box.price > 0 && !box.locked) box.odds = tuneOdds(box); });
+
+  /* ---------- holiday seasons ---------- */
+
+  // Holiday cases are only sold in their season (UTC dates, both ends
+  // included). The admin panel can switch a season on or off by hand.
+  const SEASONS = {
+    halloween: { name: 'Halloween', from: [10, 1], to: [11, 2] },
+    thanksgiving: { name: 'Thanksgiving', from: [11, 1], to: [11, 30] },
+    christmas: { name: 'Christmas', from: [12, 1], to: [1, 6] }
+  };
+  // The seasons on right now. `overrides` maps a season to 'on' or 'off'; anything else follows the date.
+  function seasonsOn(date, overrides) {
+    const md = (date.getUTCMonth() + 1) * 100 + date.getUTCDate();
+    return Object.keys(SEASONS).filter((k) => {
+      const o = overrides && overrides[k];
+      if (o === 'on' || o === 'off') return o === 'on';
+      const a = SEASONS[k].from[0] * 100 + SEASONS[k].from[1], b = SEASONS[k].to[0] * 100 + SEASONS[k].to[1];
+      return a <= b ? md >= a && md <= b : md >= a || md <= b;
+    });
+  }
+  // Whether a case can be bought (or battled) with these seasons on.
+  const onSale = (box, seasons) => !box.locked && (!box.season || seasons.indexOf(box.season) >= 0);
+  // The locked case a crate item opens, if any.
+  const caseForCrate = (name) => CASES.find((c) => c.locked && c.crate === name) || null;
 
   // Each roll takes an optional random source. Battles use a seeded one, so
   // the server and every player's game roll exactly the same items.
@@ -3672,7 +3936,8 @@
     scrap: 'wrench', starter: 'star', capsule: 'peel', urban: 'spray', neon: 'bolt', operative: 'helmet',
     obsidian: 'gem', blades: 'dagger', prism: 'prism', chroma: 'flask', apex: 'crown', vanguard: 'shield', vault: 'dial',
     pocket: 'coin', backyard: 'target', arcade: 'pixel', harbor: 'anchor', frontier: 'hat', glacier: 'flake',
-    canopy: 'leaf', reactor: 'hex', gala: 'mask', storm: 'cloud', emberforge: 'flame', celestial: 'moon', sovereign: 'diamond'
+    canopy: 'leaf', reactor: 'hex', gala: 'mask', storm: 'cloud', emberforge: 'flame', celestial: 'moon', sovereign: 'diamond',
+    hollow: 'pumpkin', harvest: 'wheat', wonder: 'tree', present: 'gift'
   };
   ART.registerCrates(CASES.map((c) => ({ name: c.name, accent: c.accent, emblem: CASE_EMBLEMS[c.id] })));
 
@@ -3831,13 +4096,30 @@
 
   let openCount = 1;
 
+  // Holiday seasons on right now: the server's word when we have it, else the calendar.
+  function currentSeasons() {
+    const c = cloud.cachedConfig();
+    return c && Array.isArray(c.seasons) ? c.seasons : seasonsOn(new Date(), {});
+  }
+
+  // Which cases the grid shows: everything on sale, the Vault, and holiday
+  // crates in their season or while you hold one.
+  function caseShown(box, seasons) {
+    if (!box.locked) return onSale(box, seasons);
+    return !box.season || seasons.indexOf(box.season) >= 0 || heldNamed(box.crate) > 0;
+  }
+
   function renderCases() {
+    const seasons = currentSeasons();
+    $('#case-grid').dataset.seasons = seasons.join();
     $('#case-grid').innerHTML = CASES.map((box, i) => {
+      if (!caseShown(box, seasons)) return '';
       const bars = RARITIES.map((r) =>
         '<span style="flex:' + ((box.odds[r] || 0) * 1000) + ';background:' + RARITY_COLOR[r] + '"></span>'
       ).join('');
       const top = box.items.reduce((a, b) => (b.value > a.value ? b : a), box.items[0]);
-      return '<article class="case-card' + (box.locked ? ' locked' : '') + '">' +
+      return '<article class="case-card' + (box.locked ? ' locked' : '') + (box.season ? ' seasonal' : '') + '">' +
+        (box.season ? '<span class="case-season">' + SEASONS[box.season].name + '</span>' : '') +
         '<div class="case-art" style="background:radial-gradient(ellipse at 50% 60%,' +
           box.accent + '38,' + box.accent + '0c 58%,transparent 76%)">' +
           '<div class="case-hero">' + artFor({ kind: 'crate', name: box.name, rarity: 'common' }) + '</div>' +
@@ -3863,25 +4145,47 @@
     refreshCaseButtons();
   }
 
-  const heldCount = (kind) => state.inventory.filter((it) => it.kind === kind).length;
+  const heldNamed = (name) => state.inventory.filter((it) => it.name === name).length;
 
-  function takeOne(kind) {
-    const i = state.inventory.findIndex((it) => it.kind === kind);
+  function takeNamed(name) {
+    const i = state.inventory.findIndex((it) => it.name === name);
     if (i > -1) state.inventory.splice(i, 1);
   }
 
+  // How many of a locked case you can open: crates, and keys if it needs them.
+  const lockedPairs = (box) => Math.min(heldNamed(box.crate), box.key ? heldNamed(box.key) : Infinity);
+
+  // The free case has a cooldown (FREE_COOLDOWN); this is when it's next ready.
+  let freeAt = 0, freeTimer = null;
+  const freeWait = () => Math.max(0, Math.ceil((freeAt - Date.now()) / 1000));
+  function setFreeWait(seconds) {
+    freeAt = Date.now() + seconds * 1000;
+    clearInterval(freeTimer);
+    freeTimer = setInterval(() => { refreshCaseButtons(); if (!freeWait()) clearInterval(freeTimer); }, 1000);
+    refreshCaseButtons();
+  }
+
   function refreshCaseButtons() {
+    if ($('#case-grid').dataset.seasons !== currentSeasons().join()) { renderCases(); return; }
     $$('#case-grid [data-held]').forEach((el) => {
-      const c = heldCount('crate'), k = heldCount('key');
-      el.innerHTML = '<b>' + c + '</b> case' + (c === 1 ? '' : 's') + ' · <b>' + k + '</b> key' + (k === 1 ? '' : 's');
+      const box = CASES[+el.dataset.held], c = heldNamed(box.crate), unit = box.unit || 'case';
+      el.innerHTML = '<b>' + c + '</b> ' + unit + (c === 1 ? '' : 's') +
+        (box.key ? ' · <b>' + heldNamed(box.key) + '</b> key' + (heldNamed(box.key) === 1 ? '' : 's') : '');
     });
     $$('#case-grid [data-open]').forEach((btn) => {
       const box = CASES[+btn.dataset.open];
       if (box.locked) {
-        const pairs = Math.min(heldCount('crate'), heldCount('key'));
+        const pairs = lockedPairs(box);
         btn.disabled = !pairs;
         btn.textContent = pairs && openCount > 1 ? 'Open x' + Math.min(openCount, pairs) : 'Open';
-        btn.title = pairs ? '' : 'Needs a Vault Case and a Vault Key';
+        btn.title = pairs ? '' : box.key ? 'Needs a ' + box.crate + ' and a ' + box.key : 'Get a ' + box.crate + ' from rewards or gifts';
+        return;
+      }
+      if (box.price === 0) {
+        const wait = freeWait();
+        btn.disabled = wait > 0;
+        btn.textContent = wait > 0 ? 'Ready in ' + wait + 's' : 'Open';
+        btn.title = 'Free, once every ' + FREE_COOLDOWN / 1000 + ' seconds';
         return;
       }
       const cost = box.price * openCount;
@@ -3918,8 +4222,11 @@
     if (opening || requesting) return;
     let count = forceCount || openCount;
     if (box.locked) {
-      count = Math.min(count, heldCount('crate'), heldCount('key'));
-      if (!count) { toast(heldCount('crate') ? 'Need a Vault Key' : 'Need a Vault Case', 'bad'); return; }
+      count = Math.min(count, lockedPairs(box));
+      if (!count) { toast(heldNamed(box.crate) ? 'You need a ' + box.key : 'You need a ' + box.crate, 'bad'); return; }
+    } else if (box.price === 0) {
+      count = 1;                                   // the free case opens one at a time
+      if (freeWait()) { toast('The free case is ready in ' + freeWait() + 's', 'bad'); return; }
     }
     const cost = box.price * count;
     if (state.coins < cost) { toast('Not enough coins', 'bad'); return; }
@@ -3940,7 +4247,7 @@
     } else {
       state.coins -= cost;
       if (box.locked) {
-        for (let i = 0; i < count; i++) { takeOne('crate'); takeOne('key'); }
+        for (let i = 0; i < count; i++) { takeNamed(box.crate); if (box.key) takeNamed(box.key); }
         renderInventory();
       }
       state.opened += count;
@@ -3950,12 +4257,14 @@
       winners = [];
       for (let i = 0; i < count; i++) winners.push(rollItem(box));
       bonus = [];
-      const chance = bonusChance(box);
+      const chance = bonusChance(box), extra = caseBonus(box);
       for (let i = 0; i < count; i++) {
         if (Math.random() < chance) bonus.push(instantiate(VAULT_KEY));
         if (Math.random() < chance) bonus.push(instantiate(VAULT_CRATE));
+        if (extra && Math.random() < box.bonusChance) bonus.push(instantiate(extra));
       }
     }
+    if (box.price === 0 && !box.locked) setFreeWait(FREE_COOLDOWN / 1000);
 
     opening = { winners, bonus, box, reels: [], finished: 0, settled: false, timers: [] };
 
@@ -3978,7 +4287,7 @@
 
     $('#open-title').textContent = box.name;
     $('#open-sub').textContent = (count > 1 ? count + ' cases · ' : '') +
-      (box.locked ? count + ' key' + (count > 1 ? 's' : '') : cost === 0 ? 'Free' : fmt(cost) + ' coins');
+      (box.locked ? count + ' ' + (box.key ? 'key' : box.unit || 'case') + (count > 1 ? 's' : '') : cost === 0 ? 'Free' : fmt(cost) + ' coins');
     $('#open-results').style.display = 'none';
     $('#skip-btn').style.display = '';
     $('#reels').innerHTML = '';
@@ -4178,12 +4487,12 @@
     $('#sell-filtered').textContent = 'Sell shown (' + fmt(list.reduce((s, it) => s + it.value, 0)) + ')';
     body.innerHTML = '<div class="inv-grid">' + list.map((it) =>
       itemMarkup(it).replace(/<\/div>$/,
-        (it.kind === 'crate' ? '<button class="open-crate" data-opencrate="1">Open</button>' : '') +
+        (it.kind === 'crate' && caseForCrate(it.name) ? '<button class="open-crate" data-opencrate="' + escAttr(it.name) + '">Open</button>' : '') +
         '<button class="sell" data-sell="' + it.uid + '">Sell ' + fmt(it.value) + '</button></div>')
     ).join('') + '</div>';
 
     $$('#inv-body [data-opencrate]').forEach((btn) => btn.addEventListener('click', () => {
-      startOpening(CASES.find((c) => c.locked), 1);
+      startOpening(caseForCrate(btn.dataset.opencrate), 1);
     }));
     $$('#inv-body [data-sell]').forEach((btn) =>
       btn.addEventListener('click', () => sellItems([+btn.dataset.sell])));
@@ -5188,6 +5497,23 @@
     $('#adm-maint-state').style.color = c.maintenance ? 'var(--mythic)' : '';
     $('#adm-maint').textContent = c.maintenance ? 'Turn off' : 'Turn on';
     $('#adm-maint').dataset.on = c.maintenance ? '1' : '';
+    const modes = c.season_modes || {}, on = c.seasons || [];
+    const fmtDay = (d) => ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][d[0] - 1] + ' ' + d[1];
+    $('#adm-seasons').innerHTML = Object.keys(SEASONS).map((k) =>
+      '<div class="kv"><span>' + SEASONS[k].name + ' <i class="hint" style="margin:0">' + fmtDay(SEASONS[k].from) + ' – ' + fmtDay(SEASONS[k].to) + '</i></span>' +
+      '<b style="color:' + (on.indexOf(k) >= 0 ? 'var(--good)' : 'var(--ink-3)') + '">' + (on.indexOf(k) >= 0 ? 'On' : 'Off') + '</b>' +
+      '<select class="control" data-season="' + k + '" style="width:auto">' +
+        [['auto', 'Calendar'], ['on', 'Always on'], ['off', 'Always off']].map((o) =>
+          '<option value="' + o[0] + '"' + ((modes[k] || 'auto') === o[0] ? ' selected' : '') + '>' + o[1] + '</option>').join('') +
+      '</select></div>').join('');
+    $$('#adm-seasons [data-season]').forEach((sel) => sel.addEventListener('change', async () => {
+      const change = {};
+      change[sel.dataset.season] = sel.value;
+      if (await adminDo('settings', { seasons: change }, SEASONS[sel.dataset.season].name + ' cases: ' + sel.options[sel.selectedIndex].text)) {
+        await cloud.config(true);
+        loadAdminSettings();
+      }
+    }));
   }
 
   async function saveAnnouncement(text) {
@@ -5467,9 +5793,11 @@
   }
 
   function renderBattleSetup() {
-    const sel = $('#bt-case');
-    if (!sel.options.length) {
-      sel.innerHTML = CASES.map((c, i) => c.locked ? '' :
+    const sel = $('#bt-case'), seasons = currentSeasons();
+    if (!sel.options.length || sel.dataset.seasons !== seasons.join()) {
+      sel.dataset.seasons = seasons.join();
+      if (!onSale(CASES[battle.caseIndex], seasons)) battle.caseIndex = CASES.findIndex((c) => onSale(c, seasons));
+      sel.innerHTML = CASES.map((c, i) => !onSale(c, seasons) ? '' :
         '<option value="' + i + '">' + c.name + ' · ' +
         (c.price === 0 ? 'FREE' : fmt(c.price)) + '</option>').join('');
       sel.value = String(battle.caseIndex);
@@ -6136,7 +6464,10 @@
         applyMe(r.me);
         invRev = r.me.rev;
         return { winners: r.items.map(rowToItem), bonus: r.bonus.map(rowToItem) };
-      } catch (e) { return actionFailed(e); }
+      } catch (e) {
+        if (e.status === 429 && e.data && e.data.retry && box.price === 0) setFreeWait(e.data.retry);
+        return actionFailed(e);
+      }
     }
 
     async function sell(uids) {
@@ -6259,6 +6590,7 @@
       try { cfg = await api('GET', '/api/config'); }
       catch (e) { return null; }
       renderBanner();
+      if ($('#case-grid').dataset.seasons !== currentSeasons().join()) { renderCases(); renderBattleSetup(); }
       return cfg;
     }
 
@@ -7147,7 +7479,7 @@
       submitLogin: submitLogin, checkNameAsTyped: checkNameAsTyped, playAsGuest: playAsGuest, logout: logout, refresh: refresh,
       open: open, sell: sell, upgrade: upgradeItems, claimGift: claimGift,
       renderBoard: renderBoard, moderate: moderate, renderTradeBadge: renderTradeBadge,
-      admin: adminCall, config: config, dismissBanner: dismissBanner, isAdminAccount: isAdminAccount, peekGift: peekGift,
+      admin: adminCall, config: config, cachedConfig: () => cfg, dismissBanner: dismissBanner, isAdminAccount: isAdminAccount, peekGift: peekGift,
       showAccount: showAccount, hideAccount: hideAccount, changePassword: changePassword, logoutEverywhere: logoutEverywhere,
       renderTradeView: renderTradeView, search: search, pickPartner: pickPartner,
       battleBusy: battleBusy, createBattle: createBattle, renderBattles: renderBattles, finishBattle: finishBattle,
