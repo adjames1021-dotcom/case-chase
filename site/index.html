@@ -2581,13 +2581,17 @@
 
     const cache = {};
 
+    // Plain drawings (no wear or float) are cached as templates, and every copy
+    // gets its own ids. SVG looks up url(#id) across the whole page, so copies
+    // sharing ids all used the first one, and when that first copy sat
+    // somewhere hidden (a closed case reel, another tab) the skin's pattern
+    // vanished everywhere else.
+    const ID_SLOT = '__mxid__';
     function render(item) {
-      const clean = item.float == null;
-      const key = clean ? item.kind + '|' + item.name + '|' + item.rarity : null;
-      if (key && cache[key]) return cache[key];
-      const out = draw(item, key ? 'n' + hash(key).toString(36) : null);
-      if (key) cache[key] = out;
-      return out;
+      if (item.float != null) return draw(item, null);
+      const key = item.kind + '|' + item.name + '|' + item.rarity;
+      if (!cache[key]) cache[key] = draw(item, ID_SLOT);
+      return cache[key].split(ID_SLOT).join('x' + (uid++).toString(36));
     }
 
     function draw(item, fixedId) {
