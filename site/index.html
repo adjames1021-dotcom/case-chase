@@ -314,6 +314,11 @@
     position: sticky; bottom: -22px; z-index: 5; background: var(--bg);
     margin: 0 -22px -22px; padding: 12px 22px; border-top: 1px solid var(--line);
   }
+  .sheet-actions kbd {
+    font: 700 10px/1 var(--cond); padding: 2px 5px; margin-left: 6px;
+    border: 1px solid currentColor; opacity: .7; vertical-align: 1px;
+  }
+  @media (hover: none) { .sheet-actions kbd { display: none; } }
   .payout { margin-right: auto; font-size: 13px; color: var(--ink-2); }
   .payout b { color: var(--ink); font-variant-numeric: tabular-nums; }
   .payout .up { color: var(--good); }
@@ -1699,7 +1704,8 @@
       <div class="sheet-actions">
         <div class="payout" id="open-payout"></div>
         <button class="btn btn-ghost" id="sell-pulls">Sell all pulls</button>
-        <button class="btn btn-primary" id="keep-pulls">Keep in inventory</button>
+        <button class="btn btn-ghost" id="again-pulls" title="Keep these and open the same case again">Open again <kbd>Q</kbd></button>
+        <button class="btn btn-primary" id="keep-pulls">Keep in inventory <kbd>E</kbd></button>
       </div>
     </div>
   </div>
@@ -4491,6 +4497,16 @@
     $('#open-results').style.display = '';
     $('#open-results').scrollIntoView({ block: 'nearest', behavior: 'smooth' });
     save();
+  }
+
+  // Q: keep the pulls and open the same case again. E: keep the pulls.
+  // While the reels spin, either key skips to the results first.
+  async function quickKey(again) {
+    if (!opening || opening.closing) return;
+    if (!opening.settled) { skipOpening(); return; }
+    const box = opening.box, count = opening.winners.length;
+    await closeOpening(false);
+    if (again) startOpening(box, count);
   }
 
   async function closeOpening(sellAll) {
@@ -8025,6 +8041,7 @@
 
     $('#skip-btn').addEventListener('click', skipOpening);
     $('#keep-pulls').addEventListener('click', () => closeOpening(false));
+    $('#again-pulls').addEventListener('click', () => quickKey(true));
     $('#sell-pulls').addEventListener('click', () => closeOpening(true));
     $('#contents-close').addEventListener('click', () => $('#contents-overlay').classList.remove('open'));
     $('#contents-overlay').addEventListener('click', (e) => {
@@ -8149,6 +8166,14 @@
     });
 
     document.addEventListener('keydown', (e) => {
+      const k = e.key.toLowerCase();
+      if ((k === 'q' || k === 'e') && !e.repeat && !e.ctrlKey && !e.metaKey && !e.altKey &&
+          !/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName) &&
+          $('#open-overlay').classList.contains('open')) {
+        e.preventDefault();
+        quickKey(k === 'q');
+        return;
+      }
       if (e.key !== 'Escape') return;
       $('#contents-overlay').classList.remove('open');
       if (giftUi.res) closeGift();
