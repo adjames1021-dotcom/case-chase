@@ -211,3 +211,35 @@ CREATE INDEX IF NOT EXISTS suggestions_votes ON suggestions (votes DESC, created
 CREATE INDEX IF NOT EXISTS suggestions_new   ON suggestions (created_at DESC);
 CREATE TABLE IF NOT EXISTS suggestion_votes (suggestion TEXT NOT NULL, account TEXT NOT NULL, PRIMARY KEY (suggestion, account));
 CREATE INDEX IF NOT EXISTS suggestion_votes_account ON suggestion_votes (account);
+
+-- Items a player locked so they can't be sold, upgraded, traded, listed or
+-- used up by mistake. A lock belongs to the owner: it goes when the item
+-- is deleted or changes hands.
+CREATE TABLE IF NOT EXISTS item_locks (item INTEGER PRIMARY KEY, account TEXT NOT NULL, at INTEGER NOT NULL);
+CREATE INDEX IF NOT EXISTS item_locks_account ON item_locks (account);
+CREATE TRIGGER IF NOT EXISTS items_unlock_gone AFTER DELETE ON items BEGIN
+  DELETE FROM item_locks WHERE item = OLD.id;
+END;
+CREATE TRIGGER IF NOT EXISTS items_unlock_moved AFTER UPDATE OF owner ON items WHEN OLD.owner <> NEW.owner BEGIN
+  DELETE FROM item_locks WHERE item = NEW.id;
+END;
+
+-- Rewards: one row per reward claimed. period is 'W<day of its Monday>' or 'M<year>-<month>'.
+CREATE TABLE IF NOT EXISTS reward_claims (
+  account  TEXT NOT NULL,
+  period   TEXT NOT NULL,
+  slot     INTEGER NOT NULL,
+  at       INTEGER NOT NULL,
+  PRIMARY KEY (account, period, slot)
+);
+
+-- Battle invites, and lobbies only invited players can join.
+CREATE TABLE IF NOT EXISTS lobby_invites (
+  lobby    TEXT NOT NULL,
+  account  TEXT NOT NULL,
+  from_id  TEXT NOT NULL,
+  at       INTEGER NOT NULL,
+  PRIMARY KEY (lobby, account)
+);
+CREATE INDEX IF NOT EXISTS lobby_invites_account ON lobby_invites (account);
+CREATE TABLE IF NOT EXISTS private_lobbies (lobby TEXT PRIMARY KEY);

@@ -43,6 +43,11 @@
     POST /api/market           auth  { item, price }      list an item
     POST /api/market/:id/buy|cancel  auth
     GET  /api/suggestions            ?sort=top|new         (with a login, says which you voted for)
+    POST /api/lock             auth  { ids, lock }        lock or unlock items -> { locks }
+    GET  /api/rewards          auth  the reward track and your progress
+    POST /api/rewards/claim    auth  today's reward
+    GET  /api/invites          auth  battles you've been invited to
+    POST /api/battles/:id/invite|decline  auth  { to }  invite someone (you must be in it) / turn an invite down
     POST /api/suggestions      auth  { text }
     POST /api/suggestions/:id/vote|delete  auth
     POST /api/account/password auth  { old, password }
@@ -265,6 +270,7 @@ const LIMITS = {                          // [how many, in how many seconds]
   battle:     [40, 600],                  // battles made per account
   gift:       [30, 600],                  // gift codes tried per account
   listing:    [60, 600],                  // market listings made per account
+  invite:     [60, 600],                  // battle invites sent per account
   suggest:    [5, 3600]                   // suggestions posted per account
 };
 const ipOf = (request) => request.headers.get('CF-Connecting-IP') || 'local';
@@ -441,7 +447,7 @@ async function signup(request, env) {
     db.prepare('DELETE FROM used_challenges WHERE at < ?').bind(t - POW_MAX_AGE - 60),
     ...recordDevices(db, id, keys, request)
   ]).catch((e) => { if (e.status === 409) fail(409, 'That username is taken'); throw e; });
-  return json({ token: session.token, me: meOut(await account(db, id)), inventory: [] });
+  return json(Object.assign({ token: session.token, me: meOut(await account(db, id)), inventory: [], locks: [] }, await perks(db, { id: id })));
 }
 
 async function login(request, env) {
@@ -472,7 +478,8 @@ async function login(request, env) {
   await db.batch([session.stmt,
     db.prepare('UPDATE accounts SET fail_count = 0, last_seen = ?, last_ping = ? WHERE id = ?').bind(t, t, a.id),
     ...recordDevices(db, a.id, keys, request)]);
-  return json({ token: session.token, me: await meFull(db, await account(db, a.id)), inventory: await inventory(db, a.id) });
+  return json(Object.assign({ token: session.token, me: await meFull(db, await account(db, a.id)), inventory: await inventory(db, a.id),
+    locks: await lockList(db, a.id) }, await perks(db, a)));
 }
 
 async function authed(request, env) {
@@ -498,6 +505,9 @@ async function authed(request, env) {
   return row;
 }
 
+// What the game shows next to your account: rewards ready to claim, and the login gift.
+const perks = async (db, me) => ({ reward_ready: (await rewardState(db, me)).ready, login_gift: await pendingLoginGift(db, me) });
+
 async function ping(request, env, me) {
   const t = nowS();
   await env.DB.batch(recordDevices(env.DB, me.id, await deviceKeys(request, env.DB), request));
@@ -506,7 +516,107 @@ async function ping(request, env, me) {
     `UPDATE accounts SET played = played + CASE WHEN ? - last_ping BETWEEN 1 AND 120 THEN ? - last_ping ELSE 0 END,
             last_ping = ?, last_seen = ? WHERE id = ?`).bind(t, t, t, t, me.id).run();
   const pending = await env.DB.prepare(`SELECT COUNT(*) AS n FROM offers WHERE to_id = ? AND status = 'pending'`).bind(me.id).first();
-  return json({ me: await meFull(env.DB, await account(env.DB, me.id)), pending: pending.n, sold: await newSales(env.DB, me) });
+  return json(Object.assign({ me: await meFull(env.DB, await account(env.DB, me.id)), pending: pending.n, sold: await newSales(env.DB, me),
+    invites: await myInvites(env.DB, me) }, await perks(env.DB, me)));
+}
+
+/* ---------- item locks ----------
+   Players lock items they want to keep; locked items can't be sold,
+   upgraded, traded, listed or used up opening a case until unlocked. */
+
+const UNLOCKED = 'id NOT IN (SELECT item FROM item_locks)';
+const anyLocked = async (db, ids) =>
+  !!(await db.prepare('SELECT 1 FROM item_locks WHERE item IN (SELECT value FROM json_each(?)) LIMIT 1').bind(ids).first());
+const noneLocked = (db, ids) => check(db, 'NOT EXISTS (SELECT 1 FROM item_locks WHERE item IN (SELECT value FROM json_each(?)))', ids);
+const lockList = async (db, id) => (await db.prepare('SELECT item FROM item_locks WHERE account = ?').bind(id).all()).results.map((r) => r.item);
+
+async function lockItems(request, env, me) {
+  const db = env.DB;
+  const b = await body(request);
+  const ids = JSON.stringify(idList(b.ids, 500));
+  if (b.lock) {
+    await db.prepare(`INSERT OR IGNORE INTO item_locks (item, account, at)
+                      SELECT id, owner, ? FROM items WHERE owner = ? AND id IN (SELECT value FROM json_each(?))`).bind(nowS(), me.id, ids).run();
+  } else {
+    await db.prepare('DELETE FROM item_locks WHERE account = ? AND item IN (SELECT value FROM json_each(?))').bind(me.id, ids).run();
+  }
+  return json({ locks: await lockList(db, me.id) });
+}
+
+/* ---------- rewards ----------
+   A reward track the admin sets up, weekly or monthly: each day a player
+   logs in they can claim the next reward on it, once a day. Progress starts
+   over when the week (from Monday, UTC) or the month begins. */
+
+const DEFAULT_REWARDS = {
+  on: true, title: 'Weekly rewards', period: 'week',
+  days: [100, 150, 200, 250, 300, 400].map((c) => ({ coins: c, items: [] }))
+    .concat([{ coins: 500, items: [[ITEM_INDEX['Vault Key'], -1, 0], [ITEM_INDEX['Vault Case'], -1, 0]] }])
+};
+function rewardConfig(s) {
+  try { const r = JSON.parse(s.rewards || 'null'); if (r && Array.isArray(r.days) && r.days.length) return r; } catch (e) { /* default */ }
+  return DEFAULT_REWARDS;
+}
+
+// The current week or month: a key for it and when it ends (s).
+function rewardPeriod(period, t) {
+  if (period === 'month') {
+    const d = new Date(t * 1000), y = d.getUTCFullYear(), m = d.getUTCMonth();
+    return { key: 'M' + y + '-' + (m + 1), ends: Date.UTC(y, m + 1, 1) / 1000 };
+  }
+  const day = Math.floor(t / 86400), monday = day - (new Date(day * 86400000).getUTCDay() + 6) % 7;
+  return { key: 'W' + monday, ends: (monday + 7) * 86400 };
+}
+
+async function rewardState(db, me) {
+  const cfg = rewardConfig(await settings(db)), t = nowS(), per = rewardPeriod(cfg.period, t);
+  const rows = (await db.prepare('SELECT slot, at FROM reward_claims WHERE account = ? AND period = ?').bind(me.id, per.key).all()).results;
+  const today = Math.floor(t / 86400);
+  const claimedToday = rows.some((r) => Math.floor(r.at / 86400) === today);
+  return {
+    cfg: cfg, per: per, t: t, claimed: rows.length, claimedToday: claimedToday, nextAt: (today + 1) * 86400,
+    ready: cfg.on !== false && !claimedToday && rows.length < cfg.days.length
+  };
+}
+
+const rewardsOut = (st) => ({
+  on: st.cfg.on !== false, title: st.cfg.title, period: st.cfg.period, days: st.cfg.days, claimed: st.claimed,
+  ready: st.ready, claimed_today: st.claimedToday, next_at: st.nextAt, ends: st.per.ends, now: st.t
+});
+
+async function claimReward(env, me) {
+  const db = env.DB;
+  const st = await rewardState(db, me);
+  if (st.cfg.on === false) fail(409, 'Rewards are switched off right now');
+  if (st.claimed >= st.cfg.days.length) fail(409, 'You\'ve claimed every reward this ' + (st.cfg.period === 'month' ? 'month' : 'week'));
+  if (st.claimedToday) fail(409, 'Come back tomorrow for your next reward');
+  const day = st.cfg.days[st.claimed];
+  const rows = [];
+  (day.items || []).forEach((it) => rows.push(...makeItems(it[0], it[1], it[2], 1)));
+  if (me.inv_count + rows.length > MAX_ITEMS) fail(409, 'Your inventory is full. Sell something first.');
+  const today = Math.floor(st.t / 86400) * 86400;
+  const stmts = [
+    db.prepare('INSERT INTO reward_claims (account, period, slot, at) VALUES (?, ?, ?, ?)').bind(me.id, st.per.key, st.claimed, st.t),
+    check(db, '(SELECT COUNT(*) FROM reward_claims WHERE account = ? AND period = ? AND at >= ?) = 1', me.id, st.per.key, today),
+    db.prepare('UPDATE accounts SET coins = coins + ? WHERE id = ?').bind(day.coins || 0, me.id)
+  ];
+  const itemsAt = rows.length ? stmts.push(insertItems(db, me.id, rows, st.t)) - 1 : -1;
+  const res = await transact(db, stmts);
+  return json({
+    me: meOut(await account(db, me.id)), coins: day.coins || 0, items: itemsAt >= 0 ? sorted(res[itemsAt]) : [],
+    rewards: rewardsOut(await rewardState(db, me))
+  });
+}
+
+// The admin's login gift, if this account hasn't claimed it yet: offered on login.
+async function pendingLoginGift(db, me) {
+  const id = (await settings(db)).login_gift;
+  if (!id) return null;
+  const g = await db.prepare(
+    `SELECT g.* FROM server_gifts g WHERE g.id = ? AND (g.expires = 0 OR g.expires > ?)
+        AND NOT EXISTS (SELECT 1 FROM revoked_gifts r WHERE r.gift_id = g.id)
+        AND NOT EXISTS (SELECT 1 FROM gift_claims c WHERE c.gift_id = g.id AND c.account = ?)`).bind(id, nowS(), me.id).first();
+  return g ? { code: 'GIFT2.' + g.id, coins: g.coins, items: JSON.parse(g.items).map((r) => r.slice(0, 4)), message: g.message, expires: g.expires } : null;
 }
 
 /* ---------- cases, selling, upgrades ---------- */
@@ -528,10 +638,13 @@ async function openCase(request, env, me) {
     // Opened with a crate item (and a key, if the case needs one) instead of coins.
     const crateIdx = ITEM_INDEX[box.crate], keyIdx = box.key ? ITEM_INDEX[box.key] : -1;
     const held = await db.prepare(
-      `SELECT SUM(idx = ?) AS c, SUM(idx = ?) AS k FROM items WHERE owner = ? AND locked IS NULL`).bind(crateIdx, keyIdx, me.id).first();
+      `SELECT SUM(idx = ? AND ${UNLOCKED}) AS c, SUM(idx = ? AND ${UNLOCKED}) AS k, SUM(idx = ?) AS all_c
+         FROM items WHERE owner = ? AND locked IS NULL`).bind(crateIdx, keyIdx, crateIdx, me.id).first();
     count = Math.min(count, held.c || 0, box.key ? held.k || 0 : count);
-    if (!count) fail(409, (held.c || 0) ? 'You need a ' + box.key : 'You need a ' + box.crate);
-    const pick = async (idx) => (await db.prepare('SELECT id FROM items WHERE owner = ? AND locked IS NULL AND idx = ? LIMIT ?')
+    if (!count) {
+      fail(409, (held.c || 0) ? 'You need a ' + box.key : (held.all_c || 0) ? 'Your ' + box.crate + ' is locked. Unlock it to open it.' : 'You need a ' + box.crate);
+    }
+    const pick = async (idx) => (await db.prepare(`SELECT id FROM items WHERE owner = ? AND locked IS NULL AND ${UNLOCKED} AND idx = ? LIMIT ?`)
       .bind(me.id, idx, count).all()).results.map((r) => r.id);
     removed = (await pick(crateIdx)).concat(box.key ? await pick(keyIdx) : []);
     stmts.push(
@@ -577,8 +690,8 @@ async function sell(request, env, me) {
   const ids = JSON.stringify(idList((await body(request)).ids, MAX_ITEMS));
   const res = await transact(db, [
     db.prepare(`UPDATE accounts SET coins = coins + COALESCE((SELECT SUM(value) FROM items WHERE owner = ? AND locked IS NULL
-                  AND id IN (SELECT value FROM json_each(?))), 0) WHERE id = ?`).bind(me.id, ids, me.id),
-    db.prepare('DELETE FROM items WHERE owner = ? AND locked IS NULL AND id IN (SELECT value FROM json_each(?)) RETURNING id')
+                  AND ${UNLOCKED} AND id IN (SELECT value FROM json_each(?))), 0) WHERE id = ?`).bind(me.id, ids, me.id),
+    db.prepare(`DELETE FROM items WHERE owner = ? AND locked IS NULL AND ${UNLOCKED} AND id IN (SELECT value FROM json_each(?)) RETURNING id`)
       .bind(me.id, ids)
   ]);
   return json({ me: meOut(await account(db, me.id)), removed: res[1].results.map((r) => r.id) });
@@ -592,6 +705,7 @@ async function upgrade(request, env, me) {
   const mult = Number(b.mult);
   if (!(mult >= 1.1 && mult <= 100)) fail(400, 'Bad multiplier');
   const ids = JSON.stringify(list);
+  if (await anyLocked(db, ids)) fail(409, 'Some of those items are locked. Unlock them to stake them.');
   const stake = await db.prepare(
     'SELECT COUNT(*) AS n, SUM(value) AS v FROM items WHERE owner = ? AND locked IS NULL AND id IN (SELECT value FROM json_each(?))')
     .bind(me.id, ids).first();
@@ -603,6 +717,7 @@ async function upgrade(request, env, me) {
   const stmts = [
     check(db, '(SELECT COUNT(*) FROM items WHERE owner = ? AND locked IS NULL AND id IN (SELECT value FROM json_each(?))) = ?',
       me.id, ids, list.length),
+    noneLocked(db, ids),
     db.prepare('DELETE FROM items WHERE owner = ? AND id IN (SELECT value FROM json_each(?))').bind(me.id, ids)
   ];
   if (won) {
@@ -612,7 +727,7 @@ async function upgrade(request, env, me) {
   const res = await transact(db, stmts);
   return json({
     me: meOut(await account(db, me.id)), won: won, chance: chance, target: ITEM_INDEX[target.name],
-    item: won ? sorted(res[2])[0] : null, removed: list
+    item: won ? sorted(res[3])[0] : null, removed: list
   });
 }
 
@@ -749,6 +864,8 @@ async function createOffer(request, env, me) {
   const rowsOf = async (owner, ids) => (await db.prepare(
     'SELECT id, idx, wear, float, tracker FROM items WHERE owner = ? AND locked IS NULL AND id IN (SELECT value FROM json_each(?))')
     .bind(owner, JSON.stringify(ids)).all()).results.map(rowOut);
+  if (await anyLocked(db, JSON.stringify(give))) fail(409, 'Some of your items are locked. Unlock them to trade them.');
+  if (await anyLocked(db, JSON.stringify(want))) fail(409, 'They\'ve locked some of those items');
   const giveRows = await rowsOf(me.id, give), wantRows = await rowsOf(to.id, want);
   if (giveRows.length !== give.length) fail(409, 'Some of your items are gone');
   if (wantRows.length !== want.length) fail(409, 'They no longer have some of those items');
@@ -757,6 +874,7 @@ async function createOffer(request, env, me) {
   await transact(db, [
     check(db, ownedCheck, me.id, JSON.stringify(give), give.length),
     check(db, ownedCheck, to.id, JSON.stringify(want), want.length),
+    noneLocked(db, JSON.stringify(give.concat(want))),
     db.prepare('UPDATE accounts SET coins = coins - ? WHERE id = ?').bind(giveCoins, me.id),
     db.prepare('UPDATE items SET locked = ? WHERE owner = ? AND locked IS NULL AND id IN (SELECT value FROM json_each(?))')
       .bind('o:' + id, me.id, JSON.stringify(give)),
@@ -801,8 +919,10 @@ async function offerAction(id, action, env, me) {
       'SELECT COUNT(*) AS n FROM items WHERE owner = ? AND locked IS NULL AND id IN (SELECT value FROM json_each(?))')
       .bind(me.id, wantIds).first();
     if (have.n !== want.length) fail(409, 'You no longer have everything they asked for');
+    if (await anyLocked(db, wantIds)) fail(409, 'You\'ve locked some of the items they asked for. Unlock them to accept.');
     await transact(db, [
       isPending,
+      noneLocked(db, wantIds),
       check(db, '(SELECT COUNT(*) FROM items WHERE locked = ? AND owner = ?) = ?', tag, o.from_id, give.length),
       check(db, ownedCheck, me.id, wantIds, want.length),
       db.prepare('UPDATE accounts SET coins = coins - ? WHERE id = ?').bind(o.want_coins, me.id),
@@ -888,6 +1008,8 @@ async function createBattle(request, env, me) {
   if (!b.bots && await db.prepare(`SELECT 1 FROM lobbies WHERE creator = ? AND status = 'open'`).bind(me.id).first()) {
     fail(409, 'You already have an open battle');
   }
+  const targets = !b.bots && b.invite ? await inviteTargets(db, me, b.invite, []) : [];
+  if (!b.bots && b.private && !targets.length) fail(400, 'Invite someone to an invite-only battle');
 
   const id = randomId(9), ts = nowS();
   const l = { id, case_id: box.id, rounds: b.rounds, mode: b.mode, cost };
@@ -904,15 +1026,47 @@ async function createBattle(request, env, me) {
                                      seed, start_at, winner, created_at, updated_at)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
       .bind(id, me.id, box.id, b.rounds, b.max_players, b.mode, GAME_VERSION, cost, JSON.stringify(players),
-            start ? 'running' : 'open', start && start.seed, start && start.startAt, start && start.winner, ts, ts)
-  ].concat(start ? start.stmts : []));
+            start ? 'running' : 'open', start && start.seed, start && start.startAt, start && start.winner, ts, ts),
+    !b.bots && b.private ? db.prepare('INSERT INTO private_lobbies (lobby) VALUES (?)').bind(id) : null
+  ].concat(start ? start.stmts : [], inviteRows(db, id, me, targets)));
+  if (Math.random() < 0.05) {
+    await db.prepare(`DELETE FROM lobby_invites WHERE lobby IN (SELECT id FROM lobbies WHERE status <> 'open')`).run();
+  }
   return json(Object.assign(battleOut(await db.prepare('SELECT * FROM lobbies WHERE id = ?').bind(id).first()),
-    { me: meOut(await account(db, me.id)) }));
+    { me: meOut(await account(db, me.id)), private: !b.bots && !!b.private, invited: targets.map((a) => a.name) }));
 }
+
+// Open lobbies you've been invited to (and aren't in yet).
+async function myInvites(db, me) {
+  const { results } = await db.prepare(
+    `SELECT l.*, a.name AS from_name FROM lobby_invites i JOIN lobbies l ON l.id = i.lobby JOIN accounts a ON a.id = i.from_id
+      WHERE i.account = ? AND l.status = 'open' ORDER BY i.at DESC LIMIT 10`).bind(me.id).all();
+  return results.filter((l) => !JSON.parse(l.players).some((p) => p.id === me.id))
+    .map((l) => Object.assign(battleOut(l), { from_name: l.from_name }));
+}
+
+// The players (ids or names, up to 3) someone wants to invite to a battle.
+async function inviteTargets(db, me, who, seated) {
+  const out = [];
+  for (const w of (Array.isArray(who) ? who : [who]).slice(0, 3)) {
+    const a = await db.prepare('SELECT id, name FROM accounts WHERE (id = ? OR name_lower = ?) AND banned = 0')
+      .bind(String(w || ''), String(w || '').toLowerCase()).first();
+    if (!a) fail(404, 'No player called ' + String(w || '').slice(0, 20));
+    if (a.id === me.id) fail(400, 'You can\'t invite yourself');
+    if ((seated || []).some((p) => p.id === a.id) || out.some((x) => x.id === a.id)) continue;
+    await limit(db, 'invite', me.id, 'You\'ve sent a lot of invites. Wait a few minutes.');
+    out.push(a);
+  }
+  return out;
+}
+const inviteRows = (db, lobby, me, targets) => targets.map((a) =>
+  db.prepare('INSERT OR REPLACE INTO lobby_invites (lobby, account, from_id, at) VALUES (?, ?, ?, ?)').bind(lobby, a.id, me.id, nowS()));
+const isPrivate = async (db, id) => !!(await db.prepare('SELECT 1 FROM private_lobbies WHERE lobby = ?').bind(id).first());
 
 async function listBattles(env) {
   await expireLobbies(env);
-  const { results } = await env.DB.prepare(`SELECT * FROM lobbies WHERE status = 'open' ORDER BY created_at DESC LIMIT 30`).all();
+  const { results } = await env.DB.prepare(
+    `SELECT * FROM lobbies WHERE status = 'open' AND id NOT IN (SELECT lobby FROM private_lobbies) ORDER BY created_at DESC LIMIT 30`).all();
   return json({ battles: results.map(battleOut), now_ms: Date.now() });
 }
 
@@ -920,12 +1074,27 @@ async function getBattle(id, env) {
   await expireLobbies(env);
   const l = await env.DB.prepare('SELECT * FROM lobbies WHERE id = ?').bind(id).first();
   if (!l) fail(404, 'No such battle');
-  return json(battleOut(l));
+  return json(Object.assign(battleOut(l), { private: await isPrivate(env.DB, id) }));
 }
 
 async function battleAction(id, action, request, env, me) {
   const db = env.DB;
   const b = await body(request);
+  if (action === 'invite' || action === 'decline') {
+    const l = await db.prepare('SELECT * FROM lobbies WHERE id = ?').bind(id).first();
+    if (!l || l.status !== 'open') fail(409, 'That battle isn\'t open any more');
+    if (action === 'decline') {
+      await db.prepare('DELETE FROM lobby_invites WHERE lobby = ? AND account = ?').bind(id, me.id).run();
+      return json({ ok: true });
+    }
+    const players = JSON.parse(l.players);
+    if (!players.some((p) => p.id === me.id)) fail(403, 'Join the battle to invite people');
+    const sent = await db.prepare('SELECT COUNT(*) AS n FROM lobby_invites WHERE lobby = ?').bind(id).first();
+    if (sent.n >= 10) fail(429, 'That battle has plenty of invites already');
+    const targets = await inviteTargets(db, me, b.to, players);
+    if (targets.length) await db.batch(inviteRows(db, id, me, targets));
+    return json({ invited: targets.map((a) => a.name) });
+  }
   for (let attempt = 0; attempt < 3; attempt++) {
     const l = await db.prepare('SELECT * FROM lobbies WHERE id = ?').bind(id).first();
     if (!l) fail(404, 'No such battle');
@@ -941,6 +1110,9 @@ async function battleAction(id, action, request, env, me) {
       if (b.version !== l.version || l.version !== GAME_VERSION) fail(409, 'Update your game to join this battle');
       if (players.length >= l.max_players) fail(409, 'That battle is full');
       if (me.coins < l.cost) fail(409, 'Not enough coins');
+      if (await isPrivate(db, id) && !(await db.prepare('SELECT 1 FROM lobby_invites WHERE lobby = ? AND account = ?').bind(id, me.id).first())) {
+        fail(403, 'That battle is invite-only');
+      }
       players.push({ id: me.id, name: me.name });
       stmts.push(db.prepare('UPDATE accounts SET coins = coins - ? WHERE id = ?').bind(l.cost, me.id));
     } else if (action === 'leave') {
@@ -1042,12 +1214,14 @@ async function createListing(request, env, me) {
   await limit(db, 'listing', me.id, 'You\'ve listed a lot of items. Wait a few minutes.');
   const it = await db.prepare('SELECT * FROM items WHERE id = ? AND owner = ? AND locked IS NULL').bind(b.item, me.id).first();
   if (!it) fail(409, 'You don\'t have that item any more');
+  if (await anyLocked(db, JSON.stringify([it.id]))) fail(409, 'That item is locked. Unlock it to sell it.');
   const open = await db.prepare(`SELECT COUNT(*) AS n FROM listings WHERE seller = ? AND status = 'open'`).bind(me.id).first();
   if (open.n >= MAX_LISTINGS) fail(429, 'You can have ' + MAX_LISTINGS + ' items listed at once');
   const id = randomId(9), t = nowS(), tag = 'm:' + id;
   await transact(db, [
     db.prepare('UPDATE items SET locked = ? WHERE id = ? AND owner = ? AND locked IS NULL').bind(tag, it.id, me.id),
     check(db, '(SELECT locked FROM items WHERE id = ?) = ?', it.id, tag),
+    noneLocked(db, JSON.stringify([it.id])),
     db.prepare(`INSERT INTO listings (id, seller, item, idx, wear, float, tracker, value, price, status, created_at, updated_at)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'open', ?, ?)`)
       .bind(id, me.id, it.id, it.idx, it.wear, it.float, it.tracker, it.value, b.price, t, t)
@@ -1253,6 +1427,34 @@ async function deleteAccounts(db, ids) {
 }
 const deleteAccount = (db, a) => deleteAccounts(db, [a.id]);
 
+// Stores a gift on the server (coins, items as [idx, wear, float, tracker], message, ttl in s).
+async function createServerGift(db, p, actor) {
+  const coins = p.coins || 0;
+  if (!isInt(coins, 0, 1e12)) fail(400, 'Bad coin amount');
+  const list = Array.isArray(p.items) ? p.items : [];
+  if (list.length > 50) fail(400, 'At most 50 items');
+  const rows = list.map((t) => {
+    const it = tupleToItem(t);
+    if (!it) fail(400, 'One of those items isn\'t valid');
+    return t.concat([it.value]);
+  });
+  if (!coins && !rows.length) fail(400, 'Add coins or items first');
+  const ttl = isInt(p.ttl, 0, 365 * 86400) ? p.ttl : 0;
+  const id = randomId(12);
+  await db.prepare('INSERT INTO server_gifts (id, coins, items, message, expires, created_at, created_by) VALUES (?, ?, ?, ?, ?, ?, ?)')
+    .bind(id, coins, JSON.stringify(rows), String(p.message || '').slice(0, 120), ttl ? nowS() + ttl : 0, nowS(),
+          actor ? actor.name : 'admin key').run();
+  return { id: id, summary: (coins ? coins + ' coins' : '') + (coins && rows.length ? ' + ' : '') + (rows.length ? rows.length + ' item(s)' : '') };
+}
+
+async function loginGiftInfo(db, id) {
+  const g = await db.prepare('SELECT * FROM server_gifts WHERE id = ?').bind(id).first();
+  if (!g) return null;
+  const claims = await db.prepare('SELECT COUNT(*) AS n FROM gift_claims WHERE gift_id = ?').bind(id).first();
+  return { id: g.id, coins: g.coins, items: JSON.parse(g.items).map((r) => r.slice(0, 4)), message: g.message, expires: g.expires,
+           created_at: g.created_at, claims: claims.n, expired: !!(g.expires && g.expires < nowS()) };
+}
+
 // Account ids from `ids` that aren't admins (bulk actions never touch admins).
 async function withoutAdmins(db, ids) {
   const admins = new Set((await db.prepare('SELECT account FROM admin_accounts').all()).results.map((r) => r.account));
@@ -1387,23 +1589,26 @@ const ADMIN = {
 
   // A gift code stored on the server, for admins without the key.
   async make_gift(db, p, actor) {
-    const coins = p.coins || 0;
-    if (!isInt(coins, 0, 1e12)) fail(400, 'Bad coin amount');
-    const list = Array.isArray(p.items) ? p.items : [];
-    if (list.length > 50) fail(400, 'At most 50 items');
-    const rows = list.map((t) => {
-      const it = tupleToItem(t);
-      if (!it) fail(400, 'One of those items isn\'t valid');
-      return t.concat([it.value]);
-    });
-    if (!coins && !rows.length) fail(400, 'Add coins or items first');
-    const ttl = isInt(p.ttl, 0, 365 * 86400) ? p.ttl : 0;
-    const id = randomId(12);
-    await db.prepare('INSERT INTO server_gifts (id, coins, items, message, expires, created_at, created_by) VALUES (?, ?, ?, ?, ?, ?, ?)')
-      .bind(id, coins, JSON.stringify(rows), String(p.message || '').slice(0, 120), ttl ? nowS() + ttl : 0, nowS(),
-            actor ? actor.name : 'admin key').run();
-    return { code: 'GIFT2.' + id, log: ['gift ' + id, 'created: ' + (coins ? coins + ' coins' : '') + (coins && rows.length ? ' + ' : '') +
-      (rows.length ? rows.length + ' item(s)' : '')] };
+    const g = await createServerGift(db, p, actor);
+    return { code: 'GIFT2.' + g.id, log: ['gift ' + g.id, 'created: ' + g.summary] };
+  },
+
+  // The login gift: offered once to every account when it logs in (or plays).
+  // With no fields it reports the current one; `end` stops it.
+  async login_gift(db, p, actor) {
+    const s = await settings(db);
+    if (p.end) {
+      await db.prepare("DELETE FROM settings WHERE k = 'login_gift'").run();
+      settingsCache.at = 0;
+      return { gift: null, log: ['login gift', 'ended'] };
+    }
+    if (p.coins != null || p.items != null) {
+      const g = await createServerGift(db, p, actor);
+      await db.prepare("INSERT OR REPLACE INTO settings (k, v) VALUES ('login_gift', ?)").bind(g.id).run();
+      settingsCache.at = 0;
+      return { gift: await loginGiftInfo(db, g.id), log: ['login gift', 'started: ' + g.summary] };
+    }
+    return { gift: s.login_gift ? await loginGiftInfo(db, s.login_gift) : null };
   },
 
   async coins(db, p) {
@@ -1669,6 +1874,35 @@ const ADMIN = {
     return { log: ['game', changes.join('; ')] };
   },
 
+  // The reward track. With no `days` it reports the current one.
+  async rewards(db, p) {
+    if (p.days == null && p.on == null) return { rewards: rewardConfig(await settings(db)) };
+    const cur = rewardConfig(await settings(db));
+    const period = p.period === 'month' ? 'month' : p.period === 'week' ? 'week' : cur.period;
+    const days = p.days == null ? cur.days : p.days;
+    if (!Array.isArray(days) || !days.length || days.length > (period === 'month' ? 31 : 7)) {
+      fail(400, period === 'month' ? 'A monthly track has 1-31 days' : 'A weekly track has 1-7 days');
+    }
+    const clean = days.map((d, i) => {
+      const coins = d && d.coins != null ? d.coins : 0;
+      if (!isInt(coins, 0, 1e9)) fail(400, 'Day ' + (i + 1) + ': bad coin amount');
+      const items = Array.isArray(d.items) ? d.items : [];
+      if (items.length > 10) fail(400, 'Day ' + (i + 1) + ': at most 10 items');
+      items.forEach((it) => {
+        if (!Array.isArray(it) || it.length !== 3 || !isInt(it[0], 0, ALL_ITEMS.length - 1) || !isInt(it[1], -1, 5) || !isInt(it[2], 0, 1)) {
+          fail(400, 'Day ' + (i + 1) + ': one of the items isn\'t valid');
+        }
+        makeItems(it[0], it[1], it[2], 1);                // throws if that wear or tracker can't exist
+      });
+      return { coins: coins, items: items.map((it) => it.slice()) };
+    });
+    const out = { on: p.on == null ? cur.on !== false : !!p.on, title: String(p.title == null ? cur.title : p.title).trim().slice(0, 40) || 'Rewards',
+                  period: period, days: clean };
+    await db.prepare("INSERT OR REPLACE INTO settings (k, v) VALUES ('rewards', ?)").bind(JSON.stringify(out)).run();
+    settingsCache.at = 0;
+    return { rewards: out, log: ['rewards', (out.on ? '' : 'off; ') + out.title + ': ' + out.period + 'ly, ' + out.days.length + ' days'] };
+  },
+
   async gifts(db, p) {
     const ids = Array.isArray(p.gifts) ? p.gifts.map(String).slice(0, 100) : [];
     const out = {};
@@ -1776,7 +2010,13 @@ export default {
         await env.DB.prepare('DELETE FROM sessions WHERE token_hash = ?').bind(me.s_hash).run();
         return json({ ok: true });
       }
-      if (method === 'GET' && a === 'me') return json({ me: await meFull(env.DB, me), inventory: await inventory(env.DB, me.id) });
+      if (method === 'GET' && a === 'me') {
+        return json(Object.assign({ me: await meFull(env.DB, me), inventory: await inventory(env.DB, me.id), locks: await lockList(env.DB, me.id),
+          invites: await myInvites(env.DB, me) }, await perks(env.DB, me)));
+      }
+      if (method === 'POST' && a === 'lock') return await lockItems(request, env, me);
+      if (method === 'GET' && a === 'rewards') return json(rewardsOut(await rewardState(env.DB, me)));
+      if (method === 'GET' && a === 'invites') return json({ invites: await myInvites(env.DB, me) });
       if (method === 'POST' && a === 'ping') return await ping(request, env, me);
       if (method === 'POST' && a === 'account' && b === 'password') return await changePassword(request, env, me);
       if (method === 'POST' && a === 'account' && b === 'logout-all') {
@@ -1797,6 +2037,7 @@ export default {
       if (method === 'POST' && a === 'offers' && b && c) return await offerAction(b, c, env, me);
       if (method === 'POST' && a === 'battles' && !b) return await createBattle(request, env, me);
       if (method === 'POST' && a === 'battles' && b && c) return await battleAction(b, c, request, env, me);
+      if (method === 'POST' && a === 'rewards' && b === 'claim') return await claimReward(env, me);
       if (method === 'POST' && a === 'market' && !b) return await createListing(request, env, me);
       if (method === 'POST' && a === 'market' && b && c) return await listingAction(b, c, env, me);
       fail(404, 'Not found');

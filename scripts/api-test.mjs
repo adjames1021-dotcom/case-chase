@@ -317,6 +317,75 @@ r = await call('GET', '/suggestions?sort=new');
 ok('newest first', r.data.suggestions[0].text === 'Idea number 4 for the game');
 ok('author can delete', (await call('POST', '/suggestions/' + r.data.suggestions[0].id + '/delete', null, sellerT)).status === 200);
 
+/* ---- item locks ---- */
+const lockT = (await call('POST', '/signup', { name: 'locker', password: 'lockpass' })).data.token;
+const pal = await call('POST', '/signup', { name: 'lockpal', password: 'palpass1' });
+const palT = pal.data.token, palId = pal.data.me.id;
+r = await call('POST', '/open', { case_id: 'starter', count: 5 }, lockT);
+const [lk1, lk2, lk3, lk4] = r.data.items.map((row) => row[0]);
+r = await call('POST', '/lock', { ids: [lk1, lk2], lock: true }, lockT);
+ok('lock items', r.status === 200 && r.data.locks.length === 2 && r.data.locks.indexOf(lk1) >= 0, r.data);
+ok('/me says which are locked', (await me(lockT)).locks.length === 2);
+ok('can\'t lock someone else\'s', (await call('POST', '/lock', { ids: [lk3], lock: true }, palT)).data.locks.length === 0);
+const lockCoins = (await me(lockT)).me.coins;
+r = await call('POST', '/sell', { ids: [lk1, lk3] }, lockT);
+ok('selling skips locked items', r.status === 200 && r.data.removed.length === 1 && r.data.removed[0] === lk3, r.data.removed);
+ok('...and pays only for the rest', r.data.me.coins > lockCoins && (await me(lockT)).inventory.some((x) => x[0] === lk1));
+ok('locked items can\'t be staked', (await call('POST', '/upgrade', { ids: [lk1], mult: 2 }, lockT)).status === 409);
+ok('...or listed', (await call('POST', '/market', { item: lk1, price: 50 }, lockT)).status === 409);
+ok('...or offered', (await call('POST', '/offers', { to: palId, give: [lk1] }, lockT)).status === 409);
+ok('...or asked for', (await call('POST', '/offers', { to: (await me(lockT)).me.id, want: [lk2] }, palT)).status === 409);
+r = await call('POST', '/lock', { ids: [lk1], lock: false }, lockT);
+ok('unlock', r.data.locks.length === 1 && r.data.locks[0] === lk2);
+ok('unlocked items sell again', (await call('POST', '/sell', { ids: [lk1] }, lockT)).data.removed.length === 1);
+// A lock belongs to the owner: an item offered and then locked moves on without it.
+r = await call('POST', '/offers', { to: palId, give: [lk4] }, lockT);
+await call('POST', '/lock', { ids: [lk4], lock: true }, lockT);
+ok('accepting an offer you locked items for is refused only on your side', (await call('POST', '/offers/' + r.data.id + '/accept', null, palT)).status === 200);
+ok('the lock went with the old owner', (await me(lockT)).locks.indexOf(lk4) < 0 && (await me(palT)).locks.indexOf(lk4) < 0 &&
+  (await me(palT)).inventory.some((x) => x[0] === lk4));
+
+/* ---- rewards ---- */
+r = await call('GET', '/rewards', null, lockT);
+ok('default reward track: weekly, 7 days', r.status === 200 && r.data.period === 'week' && r.data.days.length === 7 && r.data.claimed === 0 && r.data.ready, r.data);
+const rc = (await me(lockT)).me.coins;
+r = await call('POST', '/rewards/claim', null, lockT);
+ok('claim day 1', r.status === 200 && r.data.coins === 100 && r.data.me.coins === rc + 100 && r.data.rewards.claimed === 1 && !r.data.rewards.ready, r.data);
+r = await call('POST', '/rewards/claim', null, lockT);
+ok('once a day', r.status === 409 && /tomorrow/.test(r.data.error), r.data);
+ok('heartbeat says nothing to claim', (await call('POST', '/ping', null, lockT)).data.reward_ready === false);
+ok('rewards need a login', (await call('GET', '/rewards')).status === 401);
+const twice = await Promise.all([call('POST', '/rewards/claim', null, palT), call('POST', '/rewards/claim', null, palT)]);
+ok('two claims at once: one wins', twice.filter((x) => x.status === 200).length === 1, twice.map((x) => x.status));
+
+/* ---- battle invites ---- */
+const hostT = (await call('POST', '/signup', { name: 'host1', password: 'hostpass' })).data.token;
+const g1T = (await call('POST', '/signup', { name: 'guest1', password: 'guestpass' })).data.token;
+const g2T = (await call('POST', '/signup', { name: 'guest2', password: 'guestpass' })).data.token;
+const lobSpec = (rounds) => ({ case_id: 'starter', rounds: rounds || 1, max_players: 3, mode: 'high', version: core.GAME_VERSION });
+ok('invite-only needs an invite', (await call('POST', '/battles', Object.assign(lobSpec(), { private: true }), hostT)).status === 400);
+ok('inviting nobody real fails', (await call('POST', '/battles', Object.assign(lobSpec(), { invite: ['nosuchplayer'] }), hostT)).status === 404);
+r = await call('POST', '/battles', Object.assign(lobSpec(), { private: true, invite: ['guest1'] }), hostT);
+ok('create an invite-only battle', r.status === 200 && r.data.private === true && r.data.invited[0] === 'guest1', r.data);
+const pl = r.data.id;
+r = await call('POST', '/ping', null, g1T);
+ok('invite arrives on the heartbeat', r.data.invites.length === 1 && r.data.invites[0].id === pl && r.data.invites[0].from_name === 'host1', r.data.invites);
+ok('...and in /invites', (await call('GET', '/invites', null, g1T)).data.invites.length === 1);
+ok('invite-only battles aren\'t listed', !(await call('GET', '/battles')).data.battles.some((x) => x.id === pl));
+ok('the battle page says invite-only', (await call('GET', '/battles/' + pl)).data.private === true);
+ok('uninvited players can\'t join', (await call('POST', '/battles/' + pl + '/join', { version: core.GAME_VERSION }, g2T)).status === 403);
+ok('only players in it can invite', (await call('POST', '/battles/' + pl + '/invite', { to: 'guest2' }, g1T)).status === 403);
+r = await call('POST', '/battles/' + pl + '/invite', { to: 'guest2' }, hostT);
+ok('invite from the lobby', r.status === 200 && r.data.invited[0] === 'guest2', r.data);
+ok('invited player joins', (await call('POST', '/battles/' + pl + '/join', { version: core.GAME_VERSION }, g2T)).status === 200);
+ok('joined players see no invite for it', (await call('GET', '/invites', null, g2T)).data.invites.length === 0);
+await call('POST', '/battles/' + pl + '/decline', null, g1T);
+ok('decline', (await call('GET', '/invites', null, g1T)).data.invites.length === 0);
+await call('POST', '/battles/' + pl + '/leave', null, hostT);
+r = await call('POST', '/battles', Object.assign(lobSpec(), { invite: ['guest1'] }), hostT);
+ok('open battles can have invites too, and stay listed', r.status === 200 && (await call('GET', '/battles')).data.battles.some((x) => x.id === r.data.id));
+await call('POST', '/battles/' + r.data.id + '/leave', null, hostT);
+
 /* ---- battles ---- */
 const coinsA = (await me(a)).me.coins, coinsB = (await me(b)).me.coins;
 const invA = (await me(a)).inventory.length, invB = (await me(b)).inventory.length;
@@ -578,6 +647,47 @@ ok('the heartbeat notices it', (await call('POST', '/ping', null, mt)).data.me.a
   ok('presents open without a key, any time of year', r.status === 200 && r.data.items.length === 2 && r.data.removed.length === 2 &&
     r.data.items.every((row) => presentBox.items.some((it) => it.name === core.ALL_ITEMS[row[1]].name)), r.data);
   ok('...and cost nothing', r.data.me.coins === (await me(holT)).me.coins);
+
+  /* ---- rewards and the login gift (admin) ---- */
+  r = await admin({ a: 'rewards' });
+  ok('admin reads the reward track', r.status === 200 && r.data.rewards.days.length === 7);
+  const presentIdx = core.ITEM_INDEX['Frosty Present'];
+  ok('a weekly track has at most 7 days', (await admin({ a: 'rewards', period: 'week', days: Array(8).fill({ coins: 1, items: [] }) })).status === 400);
+  ok('bad reward items refused', (await admin({ a: 'rewards', days: [{ coins: 1, items: [[99999, -1, 0]] }] })).status === 400);
+  r = await admin({ a: 'rewards', title: 'Winter rewards', period: 'month', days: [{ coins: 5, items: [[presentIdx, -1, 0]] }, { coins: 10, items: [] }, { coins: 15, items: [] }] });
+  ok('admin sets a monthly track', r.status === 200 && r.data.rewards.period === 'month' && r.data.rewards.days.length === 3, r.data);
+  const rwT = (await call('POST', '/signup', { name: 'rewardee', password: 'rewardpass' })).data.token;
+  r = await call('GET', '/rewards', null, rwT);
+  ok('players see the new track', r.data.title === 'Winter rewards' && r.data.period === 'month' && r.data.days.length === 3 && r.data.ready, r.data);
+  r = await call('POST', '/rewards/claim', null, rwT);
+  ok('claim gives coins and items', r.status === 200 && r.data.coins === 5 && r.data.items.length === 1 && r.data.items[0][1] === presentIdx, r.data);
+  await admin({ a: 'rewards', on: false });
+  ok('rewards switched off', (await call('POST', '/rewards/claim', null, (await call('POST', '/signup', { name: 'latecomer', password: 'latepass' })).data.token)).status === 409);
+  await admin({ a: 'rewards', on: true, title: 'Weekly rewards', period: 'week', days: [100, 150, 200, 250, 300, 400, 500].map((c) => ({ coins: c, items: [] })) });
+
+  ok('no login gift yet', (await admin({ a: 'login_gift' })).data.gift === null);
+  r = await admin({ a: 'login_gift', coins: 77, items: [[core.ITEM_INDEX['Sticker | Paper Crane'], 0, 0, 0]], message: 'Happy holidays!', ttl: 86400 });
+  ok('admin starts a login gift', r.status === 200 && r.data.gift.coins === 77 && r.data.gift.claims === 0, r.data);
+  let lg = (await me(rwT)).login_gift;
+  ok('players are offered it', lg && lg.coins === 77 && lg.items.length === 1 && lg.message === 'Happy holidays!' && /^GIFT2\./.test(lg.code), lg);
+  ok('...on the heartbeat too', !!(await call('POST', '/ping', null, rwT)).data.login_gift);
+  const lgc = (await me(rwT)).me.coins;
+  r = await call('POST', '/gift', { code: lg.code }, rwT);
+  ok('claiming it', r.status === 200 && r.data.me.coins === lgc + 77);
+  ok('offered once', (await me(rwT)).login_gift === null && (await admin({ a: 'login_gift' })).data.gift.claims === 1);
+  const newT = (await call('POST', '/signup', { name: 'newcomer', password: 'newpass1' })).data;
+  ok('new accounts get it at sign-up', newT.login_gift && newT.login_gift.coins === 77);
+  await admin({ a: 'login_gift', end: true });
+  ok('ending it', (await me(newT.token)).login_gift === null);
+
+  /* ---- locked crates (admin) ---- */
+  await admin({ a: 'give', id: 'locker', idx: presentIdx, wear: -1, tracker: 0, count: 1 });
+  const pid = (await me(lockT)).inventory.find((x) => x[1] === presentIdx)[0];
+  await call('POST', '/lock', { ids: [pid], lock: true }, lockT);
+  r = await call('POST', '/open', { case_id: 'present' }, lockT);
+  ok('a locked present won\'t open', r.status === 409 && /locked/.test(r.data.error), r.data);
+  await call('POST', '/lock', { ids: [pid], lock: false }, lockT);
+  ok('unlocked, it opens', (await call('POST', '/open', { case_id: 'present' }, lockT)).status === 200);
 
   /* ---- market and suggestions (admin) ---- */
   r = await call('POST', '/open', { case_id: 'starter', count: 2 }, sellerT);

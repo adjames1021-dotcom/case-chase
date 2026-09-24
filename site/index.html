@@ -676,6 +676,17 @@
     background: var(--gold); color: #1a1206; font-family: var(--cond);
     font-size: 9px; font-weight: 700; letter-spacing: 1px; padding: 2px 6px;
   }
+  .item .lock-btn {
+    position: absolute; top: 6px; right: 6px; z-index: 3; width: 24px; height: 24px; padding: 4px; display: grid; place-items: center;
+    border: 1px solid var(--line-strong); background: rgba(9,13,18,.72); color: var(--ink-2); cursor: pointer;
+    opacity: 0; transition: opacity .15s ease, color .15s ease;
+  }
+  .item .lock-btn svg { width: 14px; height: 14px; }
+  .item:hover .lock-btn, .item .lock-btn:focus-visible { opacity: 1; }
+  .item .lock-btn:hover { color: #fff; border-color: rgba(255,255,255,.35); }
+  .item .lock-btn.on { opacity: 1; color: var(--gold); border-color: rgba(240,166,42,.6); }
+  .item.is-locked { box-shadow: inset 0 0 0 1px rgba(240,166,42,.45); }
+  @media (hover: none) { .item .lock-btn { opacity: .8; } }
   .inv-grid .item .open-crate {
     position: absolute; left: 8px; right: 8px; bottom: 44px; z-index: 3;
     background: var(--gold); border: 0; color: #1a1206; padding: 7px;
@@ -777,6 +788,32 @@
   .sg-reply { margin-top: 9px; padding: 8px 11px; border-left: 3px solid var(--orange); background: var(--orange-soft); font-size: 13px; line-height: 1.45; overflow-wrap: anywhere; }
   .sg-admin .control { width: auto; flex: 1 1 160px; }
   .sg-admin select.control { flex: 0 0 auto; }
+
+  /* ---------- Rewards ---------- */
+  .rw-sheet { max-width: 760px; }
+  .rw-days { display: grid; grid-template-columns: repeat(auto-fill, minmax(112px, 1fr)); gap: 10px; }
+  .rw-day { position: relative; padding: 12px 8px; border: 1px solid var(--line-strong); background: rgba(9,13,18,.55); min-height: 112px;
+            display: flex; flex-direction: column; gap: 7px; align-items: center; text-align: center; }
+  .rw-day b { font-family: var(--cond); font-size: 12px; letter-spacing: 1.3px; text-transform: uppercase; color: var(--ink-2); }
+  .rw-day .rw-coins { color: var(--gold); font-weight: 700; font-size: 14px; }
+  .rw-day .rw-items { display: flex; flex-wrap: wrap; gap: 4px; justify-content: center; }
+  .rw-day.done { opacity: .5; }
+  .rw-day.done::after { content: '\2713'; position: absolute; top: 6px; right: 8px; color: var(--good); font-weight: 800; }
+  .rw-day.today { border-color: var(--orange); box-shadow: 0 0 0 2px var(--orange-soft); }
+  .rw-btn { position: relative; }
+  .rw-btn .dot { position: absolute; top: 3px; right: 3px; width: 8px; height: 8px; border-radius: 50%; background: var(--orange);
+                 display: none; box-shadow: 0 0 0 2px var(--bg); }
+  .rw-btn.ready { color: var(--orange); border-color: var(--orange); }
+  .rw-btn.ready .dot { display: block; }
+  .rwa-card { grid-column: 1 / -1; }
+  .rwa-daychips { display: flex; flex-wrap: wrap; gap: 4px; margin: 12px 0 10px; }
+  .rwa-daychips .chip { padding: 5px 9px; }
+  .rwa-items { display: flex; flex-wrap: wrap; gap: 6px; margin: 4px 0 10px; }
+  .rwa-item { display: inline-flex; align-items: center; gap: 6px; padding: 3px 6px 3px 3px; border: 1px solid var(--line-strong);
+              background: rgba(9,13,18,.55); font-size: 12px; }
+  .rwa-item button { border: 0; background: none; color: var(--ink-3); cursor: pointer; padding: 0 2px; }
+  .rwa-item button:hover { color: var(--mythic); }
+  .invite-card .inv-acts { display: flex; gap: 6px; }
 
   /* ---------- Admin panel ---------- */
   .adm-tabs .chip { padding: 6px 10px; }
@@ -1086,6 +1123,10 @@
     .topbar .brand { min-width: 0; }
     .topbar .brand h1 { display: none; }
     .topbar .brand small { font-size: 18px; }
+  }
+  @media (max-width: 400px) {
+    .topbar .brand { display: none; }
+    header.topbar { gap: 10px; }
     .toast-host { bottom: 82px; }
     main { padding: 18px 16px 90px; }
   }
@@ -1147,7 +1188,7 @@
       <button class="tab" data-tab="upgrader" title="Upgrader"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="M12 16V8"/><path d="M8.5 11.5L12 8l3.5 3.5"/></svg><span data-short="Upgrade">Upgrader</span></button>
       <button class="tab" data-tab="trade" title="Trade"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h14"/><path d="M15 4.5L18.5 8 15 11.5"/><path d="M20 16H6"/><path d="M9 12.5L5.5 16 9 19.5"/></svg><span>Trade</span><i class="pill" id="trade-count" style="display:none">0</i></button>
       <button class="tab" data-tab="market" title="Market"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 12.2V4.5a1 1 0 0 1 1-1h7.7l8.3 8.3a1.5 1.5 0 0 1 0 2.1l-6.2 6.2a1.5 1.5 0 0 1-2.1 0z"/><circle cx="8" cy="8" r="1.6"/></svg><span>Market</span></button>
-      <button class="tab" data-tab="battles" title="Battles"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4l8.5 8.5"/><path d="M4 5.5L5.5 4"/><path d="M11 15l-2 2 -2.5-.5 -1.5 2L3.5 17l2-1.5L5 13l2-2"/><path d="M19 4l-8.5 8.5"/><path d="M20 5.5L18.5 4"/><path d="M13 15l2 2 2.5-.5 1.5 2 1.5-1.5-2-1.5.5-2.5-2-2"/></svg><span>Battles</span></button>
+      <button class="tab" data-tab="battles" title="Battles"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4l8.5 8.5"/><path d="M4 5.5L5.5 4"/><path d="M11 15l-2 2 -2.5-.5 -1.5 2L3.5 17l2-1.5L5 13l2-2"/><path d="M19 4l-8.5 8.5"/><path d="M20 5.5L18.5 4"/><path d="M13 15l2 2 2.5-.5 1.5 2 1.5-1.5-2-1.5.5-2.5-2-2"/></svg><span>Battles</span><i class="pill" id="battle-count" style="display:none">0</i></button>
       <button class="tab" data-tab="leaderboard" title="Leaderboard"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 4h8v5a4 4 0 0 1-8 0z"/><path d="M8 6H5v1a3.5 3.5 0 0 0 3.2 3.5"/><path d="M16 6h3v1a3.5 3.5 0 0 1-3.2 3.5"/><path d="M12 13v3.5"/><path d="M8.5 20.5h7"/><path d="M9.5 16.5h5v4h-5z"/></svg><span>Ranks</span></button>
       <button class="tab" data-tab="ideas" title="Suggestions"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6"/><path d="M10 21h4"/><path d="M12 3a6 6 0 0 0-3.6 10.8c.7.5 1.1 1.3 1.1 2.2h5c0-.9.4-1.7 1.1-2.2A6 6 0 0 0 12 3z"/></svg><span>Ideas</span></button>
   </nav>
@@ -1182,6 +1223,9 @@
   </button>
   <div class="whoami"><span class="net" id="net" style="display:none"></span><span id="whoami"></span>
     <button class="link-btn acct-btn" id="acct-btn">Log in</button></div>
+  <button class="icon-btn rw-btn" id="rw-btn" title="Rewards" aria-label="Rewards" style="display:none">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="10" width="17" height="10.5" rx="1.5"/><path d="M2.5 7.5h19v3h-19z"/><path d="M12 7.5v13"/><path d="M12 7.5C9.2 7.5 6.8 6.4 7.2 4.6c.4-1.8 3.2-1.4 4.8 2.9c1.6-4.3 4.4-4.7 4.8-2.9c.4 1.8-2 2.9-4.8 2.9z"/></svg><i class="dot"></i>
+  </button>
   <div class="balance" id="balance"><b id="balance-value">0</b><i>coins</i></div>
 </header>
 
@@ -1238,6 +1282,7 @@
         <option value="mythic">Mythic</option>
       </select>
       <button class="chip" id="tracker-only">Tracker only</button>
+      <button class="chip" id="locked-only" title="Items you've locked">Locked</button>
       <div class="search-wrap">
         <input class="control" id="inv-search" type="search" placeholder="Search your inventory" autocomplete="off">
         <button class="btn btn-ghost btn-sm" id="sell-filtered">Sell shown</button>
@@ -1422,6 +1467,12 @@
         </div>
       </div>
 
+      <div id="bt-invite-row" style="display:none;margin-top:14px">
+        <span class="label">Invite players (optional)</span>
+        <input class="control" id="bt-invite" placeholder="Usernames, separated by commas" autocomplete="off" spellcheck="false" style="width:100%;margin-top:6px">
+        <label class="check" style="margin-top:8px"><input type="checkbox" id="bt-private"> Invite only: hide it from the open list</label>
+      </div>
+
       <div class="kv"><span>Cases you open</span><b id="bt-count">3</b></div>
       <div class="kv"><span>Your entry cost</span><b id="bt-cost">0</b></div>
       <div class="kv"><span>Items on the table</span><b id="bt-pool">6</b></div>
@@ -1499,6 +1550,29 @@
               <button class="btn btn-ghost btn-sm" id="adm-announce-clear">Clear</button>
             </div>
           </div>
+          <div class="card rwa-card">
+            <h4>Rewards</h4>
+            <p class="hint">Players claim one reward a day, in order. The track starts over every week (from Monday) or every month.</p>
+            <div class="adm-line">
+              <input class="control" id="rwa-title" maxlength="40" placeholder="Title, like Winter rewards" style="flex:1 1 160px">
+              <select class="control" id="rwa-period" style="width:auto"><option value="week">Weekly</option><option value="month">Monthly</option></select>
+              <label class="check"><input type="number" class="control" id="rwa-days" min="1" max="31" style="width:64px"> days</label>
+              <label class="check"><input type="checkbox" id="rwa-on"> On</label>
+            </div>
+            <div class="rwa-daychips" id="rwa-daychips"></div>
+            <div class="rwa-day">
+              <label class="field"><span class="label" id="rwa-day-label">Day 1 coins</span>
+                <input class="control" id="rwa-coins" type="number" min="0" step="1"></label>
+              <div id="rwa-items" class="rwa-items"></div>
+              <div class="gift-item-row">
+                <select class="control" id="rwa-item-sel" style="flex:1 1 180px"></select>
+                <select class="control" id="rwa-wear" style="width:auto"><option value="-1">Random wear</option><option value="1">Factory New</option><option value="2">Minimal Wear</option><option value="3">Field-Tested</option><option value="4">Well-Worn</option><option value="5">Battle-Scarred</option></select>
+                <label class="check"><input type="checkbox" id="rwa-trk"> Tracker</label>
+                <button class="btn btn-ghost btn-sm" id="rwa-add">Add item</button>
+              </div>
+            </div>
+            <button class="btn btn-primary" id="rwa-save" style="width:100%;margin-top:12px">Save rewards</button>
+          </div>
           <div class="card">
             <h4>Holiday cases</h4>
             <p class="hint">Holiday cases are sold in their season by the calendar. Switch one on early, or off, here.</p>
@@ -1541,6 +1615,8 @@
               <option value="604800">In 7 days</option><option value="2592000">In 30 days</option>
             </select></label>
           <button class="btn btn-primary" id="gift-make" style="width:100%;margin-top:14px">Create gift code</button>
+          <button class="btn btn-ghost" id="gift-login" style="width:100%;margin-top:8px">Give it to everyone when they log in</button>
+          <div class="hint" id="gift-login-state" style="margin-top:8px"></div>
         </div>
 
         <div class="card">
@@ -1638,6 +1714,18 @@
   </div>
 </div>
 
+
+<div class="overlay" id="rw-overlay">
+  <div class="sheet rw-sheet">
+    <div class="sheet-head">
+      <div><h3 id="rw-title">Rewards</h3><p id="rw-sub"></p></div>
+      <button class="link-btn" id="rw-close">Close</button>
+    </div>
+    <div class="rw-days" id="rw-days"></div>
+    <button class="btn btn-primary" id="rw-claim" style="width:100%;margin-top:16px">Claim</button>
+    <p class="hint" id="rw-note" style="text-align:center;margin-bottom:0"></p>
+  </div>
+</div>
 
 <div class="overlay" id="account-overlay">
   <div class="sheet acct-sheet">
@@ -4106,7 +4194,7 @@
   // crates in their season or while you hold one.
   function caseShown(box, seasons) {
     if (!box.locked) return onSale(box, seasons);
-    return !box.season || seasons.indexOf(box.season) >= 0 || heldNamed(box.crate) > 0;
+    return !box.season || seasons.indexOf(box.season) >= 0 || state.inventory.some((it) => it.name === box.crate);
   }
 
   function renderCases() {
@@ -4145,10 +4233,10 @@
     refreshCaseButtons();
   }
 
-  const heldNamed = (name) => state.inventory.filter((it) => it.name === name).length;
+  const heldNamed = (name) => state.inventory.filter((it) => it.name === name && !it.locked).length;
 
   function takeNamed(name) {
-    const i = state.inventory.findIndex((it) => it.name === name);
+    const i = state.inventory.findIndex((it) => it.name === name && !it.locked);
     if (i > -1) state.inventory.splice(i, 1);
   }
 
@@ -4446,7 +4534,29 @@
      Inventory
      ========================================================= */
 
-  let trackerOnly = false;
+  let trackerOnly = false, lockedOnly = false;
+
+  /* ---------- locked items ----------
+     A locked item can't be sold, upgraded, traded, listed or used up opening
+     a case until it's unlocked. Accounts keep locks on the server; guests in
+     their save. */
+  const LOCK_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>';
+  const UNLOCK_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 7.6-1.8"/></svg>';
+  const unlocked = (list) => list.filter((it) => !it.locked);
+
+  async function setLocked(uids, lock) {
+    if (cloud.signedIn()) {
+      if (!(await cloud.lockItems(uids, lock))) return;
+    } else {
+      const set = new Set(uids);
+      state.inventory.forEach((it) => { if (set.has(it.uid)) { if (lock) it.locked = true; else delete it.locked; } });
+      save();
+    }
+    SFX.blip();
+    toast(lock ? 'Locked. It can\'t be sold, traded or upgraded until you unlock it.' : 'Unlocked');
+    renderInventory();
+    refreshCaseButtons();
+  }
 
   function sortedInventory() {
     const filter = $('#inv-filter').value;
@@ -4455,6 +4565,7 @@
     let list = state.inventory.slice();
     if (filter !== 'all') list = list.filter((it) => it.rarity === filter);
     if (trackerOnly) list = list.filter((it) => it.tracker);
+    if (lockedOnly) list = list.filter((it) => it.locked);
     if (q) list = list.filter((it) => it.name.toLowerCase().indexOf(q) !== -1);
     if (sort === 'value-desc') list.sort((a, b) => b.value - a.value);
     else if (sort === 'value-asc') list.sort((a, b) => a.value - b.value);
@@ -4483,13 +4594,24 @@
       return;
     }
 
-    $('#sell-filtered').disabled = false;
-    $('#sell-filtered').textContent = 'Sell shown (' + fmt(list.reduce((s, it) => s + it.value, 0)) + ')';
+    const sellable = unlocked(list);
+    $('#sell-filtered').disabled = !sellable.length;
+    $('#sell-filtered').textContent = sellable.length ? 'Sell shown (' + fmt(sellable.reduce((s, it) => s + it.value, 0)) + ')' : 'Sell shown';
+    $('#sell-filtered').title = sellable.length < list.length ? 'Locked items are kept' : '';
     body.innerHTML = '<div class="inv-grid">' + list.map((it) =>
-      itemMarkup(it).replace(/<\/div>$/,
-        (it.kind === 'crate' && caseForCrate(it.name) ? '<button class="open-crate" data-opencrate="' + escAttr(it.name) + '">Open</button>' : '') +
-        '<button class="sell" data-sell="' + it.uid + '">Sell ' + fmt(it.value) + '</button></div>')
+      itemMarkup(it, it.locked ? 'is-locked' : '').replace(/<\/div>$/,
+        '<button class="lock-btn' + (it.locked ? ' on' : '') + '" data-lock="' + it.uid + '" title="' +
+          (it.locked ? 'Unlock' : 'Lock it so it can\'t be sold, traded or upgraded') + '" aria-label="' + (it.locked ? 'Unlock' : 'Lock') + '">' +
+          (it.locked ? LOCK_ICON : UNLOCK_ICON) + '</button>' +
+        (!it.locked && it.kind === 'crate' && caseForCrate(it.name) ? '<button class="open-crate" data-opencrate="' + escAttr(it.name) + '">Open</button>' : '') +
+        (it.locked ? '' : '<button class="sell" data-sell="' + it.uid + '">Sell ' + fmt(it.value) + '</button>') + '</div>')
     ).join('') + '</div>';
+
+    $$('#inv-body [data-lock]').forEach((btn) => btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const it = state.inventory.find((x) => x.uid === +btn.dataset.lock);
+      if (it) setLocked([it.uid], !it.locked);
+    }));
 
     $$('#inv-body [data-opencrate]').forEach((btn) => btn.addEventListener('click', () => {
       startOpening(caseForCrate(btn.dataset.opencrate), 1);
@@ -4512,7 +4634,7 @@
     const set = new Set(uids);
     let gained = 0;
     state.inventory = state.inventory.filter((it) => {
-      if (!set.has(it.uid)) return true;
+      if (!set.has(it.uid) || it.locked) return true;
       gained += it.value;
       return false;
     });
@@ -4555,10 +4677,11 @@
     upgrade.selected.forEach((uid) => { if (!alive.has(uid)) upgrade.selected.delete(uid); });
 
     const body = $('#stake-body');
-    if (!state.inventory.length) {
-      body.innerHTML = '<div class="empty"><h3>No items</h3></div>';
+    const stakeable = unlocked(state.inventory);
+    if (!stakeable.length) {
+      body.innerHTML = '<div class="empty"><h3>' + (state.inventory.length ? 'Everything is locked' : 'No items') + '</h3></div>';
     } else {
-      const list = state.inventory.slice().sort((a, b) => b.value - a.value);
+      const list = stakeable.sort((a, b) => b.value - a.value);
       body.innerHTML = '<div class="pick-grid">' + list.map((it) =>
         itemMarkup(it, upgrade.selected.has(it.uid) ? 'sel' : '')
           .replace('class="item ', 'data-pick="' + it.uid + '" class="item ')
@@ -5109,7 +5232,7 @@
     return CASES.map((c) => '<optgroup label="' + escHtml(c.name) + '">' +
       c.items.map((it) => '<option value="' + ITEM_INDEX[it.name] + '">' + escHtml(it.name) +
         ' · ' + it.rarity + '</option>').join('') + '</optgroup>').join('') +
-      '<optgroup label="Keys and cases">' + SPECIAL_ITEMS.map((it) =>
+      '<optgroup label="Keys, cases and presents">' + SPECIAL_ITEMS.concat(CRATE_ITEMS).map((it) =>
         '<option value="' + ITEM_INDEX[it.name] + '">' + it.name + '</option>').join('') + '</optgroup>';
   }
 
@@ -5134,9 +5257,9 @@
     if (view === 'overview') loadAdminOverview();
     if (view === 'players' && adminUi.player) openAdminPlayer(adminUi.player.id);
     if (view === 'live') loadAdminLive();
-    if (view === 'settings') loadAdminSettings();
+    if (view === 'settings') { loadAdminSettings(); loadRewardEditor(); }
     if (view === 'log') loadAdminLog();
-    if (view === 'gifts') { renderStaged(); renderGiftLog(); loadGiftClaims(); }
+    if (view === 'gifts') { renderStaged(); renderGiftLog(); loadGiftClaims(); loadLoginGift(); }
   }
 
   const playerLink = (p, extra) => '<div class="adm-row link" data-admp="' + escAttr(p.id) + '">' +
@@ -5489,6 +5612,123 @@
     }));
   }
 
+  /* ---------- rewards (admin) ---------- */
+
+  // A reward item, [item index, wear (-1 random, 1-5), tracker], as a small tile (plus its name).
+  function rewardTile(spec, named) {
+    const base = ALL_ITEMS[spec[0]];
+    if (!base) return '';
+    const wear = NO_WEAR[base.kind] ? '' : spec[1] > 0 ? WEARS[spec[1] - 1].name : 'Random wear';
+    const title = base.name + (wear ? ' · ' + wear : '') + (spec[2] && !NO_TRACKER[base.kind] ? ' · Tracker' : '');
+    return '<span class="mini" title="' + escAttr(title) + '" style="--rc:' + RARITY_COLOR[base.rarity] + '">' +
+      artFor({ kind: base.kind, name: base.name, rarity: base.rarity }, true) + '</span>' + (named ? '<span>' + escHtml(title) + '</span>' : '');
+  }
+
+  const rwEdit = { cfg: null, day: 0 };
+
+  async function loadRewardEditor() {
+    const r = await adminDo('rewards');
+    if (!r) return;
+    rwEdit.cfg = JSON.parse(JSON.stringify(r.rewards));
+    rwEdit.day = Math.min(rwEdit.day, rwEdit.cfg.days.length - 1);
+    if (!$('#rwa-item-sel').options.length) $('#rwa-item-sel').innerHTML = itemOptions();
+    renderRewardEditor();
+  }
+
+  function renderRewardEditor() {
+    const c = rwEdit.cfg;
+    if (!c) return;
+    $('#rwa-title').value = c.title;
+    $('#rwa-period').value = c.period;
+    $('#rwa-on').checked = c.on !== false;
+    $('#rwa-days').value = c.days.length;
+    $('#rwa-days').max = c.period === 'month' ? 31 : 7;
+    $('#rwa-daychips').innerHTML = c.days.map((d, i) => '<button class="chip' + (i === rwEdit.day ? ' active' : '') + '" data-rwday="' + i + '">Day ' + (i + 1) +
+      (d.items.length ? ' +' + d.items.length : '') + '</button>').join('');
+    const d = c.days[rwEdit.day];
+    $('#rwa-day-label').textContent = 'Day ' + (rwEdit.day + 1) + ' coins';
+    $('#rwa-coins').value = d.coins;
+    $('#rwa-items').innerHTML = d.items.length ? d.items.map((spec, i) =>
+      '<span class="rwa-item">' + rewardTile(spec, true) + '<button data-rwrm="' + i + '" title="Remove">✕</button></span>').join('')
+      : '<span class="hint" style="margin:0">No items on day ' + (rwEdit.day + 1) + '</span>';
+    $$('#rwa-daychips [data-rwday]').forEach((b) => b.addEventListener('click', () => { rwEdit.day = +b.dataset.rwday; SFX.blip(); renderRewardEditor(); }));
+    $$('#rwa-items [data-rwrm]').forEach((b) => b.addEventListener('click', () => { d.items.splice(+b.dataset.rwrm, 1); renderRewardEditor(); }));
+  }
+
+  function wireRewardEditor() {
+    const c = () => rwEdit.cfg;
+    $('#rwa-title').addEventListener('input', (e) => { if (c()) c().title = e.target.value; });
+    $('#rwa-on').addEventListener('change', (e) => { if (c()) c().on = e.target.checked; });
+    $('#rwa-period').addEventListener('change', (e) => {
+      if (!c()) return;
+      c().period = e.target.value;
+      if (c().period === 'week' && c().days.length > 7) c().days.length = 7;
+      rwEdit.day = Math.min(rwEdit.day, c().days.length - 1);
+      renderRewardEditor();
+    });
+    $('#rwa-days').addEventListener('change', (e) => {
+      if (!c()) return;
+      const n = Math.max(1, Math.min(c().period === 'month' ? 31 : 7, Math.floor(+e.target.value) || 1));
+      while (c().days.length < n) c().days.push({ coins: c().days.length ? c().days[c().days.length - 1].coins : 100, items: [] });
+      c().days.length = n;
+      rwEdit.day = Math.min(rwEdit.day, n - 1);
+      renderRewardEditor();
+    });
+    $('#rwa-coins').addEventListener('input', (e) => { if (c()) c().days[rwEdit.day].coins = Math.max(0, Math.floor(+e.target.value) || 0); });
+    $('#rwa-add').addEventListener('click', () => {
+      if (!c()) return;
+      const d = c().days[rwEdit.day];
+      if (d.items.length >= 10) { toast('At most 10 items a day', 'bad'); return; }
+      d.items.push([+$('#rwa-item-sel').value, +$('#rwa-wear').value, $('#rwa-trk').checked ? 1 : 0]);
+      SFX.blip();
+      renderRewardEditor();
+    });
+    $('#rwa-save').addEventListener('click', async () => {
+      if (!c()) return;
+      const out = await adminDo('rewards', { on: c().on !== false, title: c().title, period: c().period, days: c().days }, 'Rewards saved');
+      if (out) { rwEdit.cfg = JSON.parse(JSON.stringify(out.rewards)); renderRewardEditor(); }
+    });
+  }
+
+  /* ---------- the login gift (admin) ---------- */
+
+  async function startLoginGift() {
+    if (!hasAdmin() || adminState.busy) return;
+    const coins = Math.floor(Number($('#gift-coins-in').value) || 0);
+    if (!coins && !adminState.staged.length) { toast('Add coins or items first', 'bad'); return; }
+    if (!confirm('Give this to every account the next time they log in (once each)?' +
+      (loginGiftNow ? ' It replaces the login gift running now.' : ''))) return;
+    const out = await adminDo('login_gift', {
+      coins: coins, items: adminState.staged.map(itemTuple), message: $('#gift-msg-in').value.trim(), ttl: Number($('#gift-exp').value) || 0
+    }, 'Login gift started: every account gets it once');
+    if (out) {
+      adminState.staged = [];
+      $('#gift-coins-in').value = '0';
+      $('#gift-msg-in').value = '';
+      renderStaged();
+      renderLoginGift(out.gift);
+    }
+  }
+
+  let loginGiftNow = null;
+  async function loadLoginGift() {
+    const out = await adminDo('login_gift');
+    if (out) renderLoginGift(out.gift);
+  }
+
+  function renderLoginGift(g) {
+    loginGiftNow = g;
+    const host = $('#gift-login-state');
+    if (!g) { host.innerHTML = 'No login gift running.'; return; }
+    const what = [g.coins ? fmt(g.coins) + ' coins' : '', g.items.length ? g.items.length + ' item' + (g.items.length > 1 ? 's' : '') : ''].filter(Boolean).join(' + ');
+    host.innerHTML = '<b>Login gift running:</b> ' + escHtml(what) + ' · claimed by ' + fmt(g.claims) +
+      (g.expires ? ' · ' + (g.expired ? 'expired' : 'ends ' + new Date(g.expires * 1000).toLocaleString()) : '') +
+      ' <button class="link-btn" id="gift-login-end">End it</button>';
+    $('#gift-login-end').addEventListener('click', async () => {
+      if (await adminDo('login_gift', { end: true }, 'Login gift ended')) renderLoginGift(null);
+    });
+  }
+
   async function loadAdminSettings() {
     const c = await cloud.config(true);
     if (!c) { $('#adm-maint-state').textContent = 'Can\'t reach the server'; return; }
@@ -5573,7 +5813,7 @@
     card.className = 'gift-card';
     $('#gift-reveal').classList.remove('show');
 
-    $('#gift-title').textContent = preview ? 'Gift preview' : 'You’ve got a gift';
+    $('#gift-title').textContent = preview ? 'Gift preview' : res.title || 'You’ve got a gift';
     $('#gift-msg').innerHTML = res.message ? '“' + escHtml(res.message) + '”' : '';
     $('#gift-coins').innerHTML = res.coins
       ? '<b id="gift-coin-count">0</b><span>coins</span>' : '';
@@ -5755,6 +5995,7 @@
       : 'Guest';
     const btn = $('#acct-btn');
     btn.textContent = acct ? 'Account' : 'Log in';
+    $('#rw-btn').style.display = acct ? '' : 'none';
     $('#reset-btn').style.display = acct ? 'none' : '';
   }
 
@@ -5809,6 +6050,7 @@
 
     const net = cloud.signedIn() && battle.src !== 'solo';
     $('#bt-src').style.display = cloud.signedIn() ? '' : 'none';
+    $('#bt-invite-row').style.display = net ? '' : 'none';
     $$('#bt-src .chip').forEach((c) => c.classList.toggle('active', c.dataset.src === (net ? 'online' : 'solo')));
     if (!battle.live) {
       const seated = net && cloud.battleBusy();
@@ -6048,7 +6290,7 @@
     const ui = {
       offers: [], pending: 0, results: [], searched: false, partner: null, partnerInv: [],
       give: new Set(), want: new Set(), giveCoins: 0, wantCoins: 0, message: '',
-      lobbies: [], lobby: null, busy: false
+      lobbies: [], lobby: null, busy: false, invites: [], invitesSeen: new Set()
     };
 
     const signedIn = () => !!(token && acct);
@@ -6252,6 +6494,29 @@
     function applyInventory(rows, me) {
       state.inventory = rows.map(rowToItem).filter(Boolean);
       if (me) invRev = me.rev;
+      applyLocks();
+    }
+
+    // Which of our items are locked (the server keeps the list).
+    let lockSet = new Set();
+    function applyLocks(ids) {
+      if (ids) lockSet = new Set(ids);
+      state.inventory.forEach((it) => { if (lockSet.has(it.uid)) it.locked = true; else delete it.locked; });
+    }
+
+    async function lockItems(uids, lock) {
+      try {
+        applyLocks((await api('POST', '/api/lock', { ids: uids, lock: !!lock })).locks);
+        return true;
+      } catch (e) { actionFailed(e); return false; }
+    }
+
+    // Extras that come with the account: locks, rewards, the login gift, battle invites.
+    function applyExtras(r) {
+      if (Array.isArray(r.locks)) applyLocks(r.locks);
+      if ('reward_ready' in r) setRewardReady(r.reward_ready);
+      if ('login_gift' in r) offerLoginGift(r.login_gift);
+      if (Array.isArray(r.invites)) setInvites(r.invites);
     }
 
     // After our own change: take the new account state, and our inventory
@@ -6293,6 +6558,7 @@
         if (animating()) { refreshWanted = true; return; }
         applyMe(r.me);
         applyInventory(r.inventory, r.me);
+        applyExtras(r);
         lastFull = Date.now();
         refreshAll();
       } catch (e) { /* try again on the next tick */ }
@@ -6310,6 +6576,7 @@
         const r = await api('GET', '/api/me');
         applyMe(r.me);
         applyInventory(r.inventory, r.me);
+        applyExtras(r);
         lastFull = Date.now();
         refreshAll();
         afterLogin();
@@ -6386,6 +6653,7 @@
         storeToken();
         applyMe(r.me);
         applyInventory(r.inventory, r.me);
+        applyExtras(r);
         lastFull = Date.now();
         setStatus('online');
         hideLogin();
@@ -6426,6 +6694,9 @@
     function signOut(message) {
       token = null;
       acct = null;
+      lockSet = new Set();
+      setRewardReady(false);
+      setInvites([]);
       storeToken();
       setLobby(null);
       ui.offers = []; ui.partner = null; ui.lobby = null;
@@ -6821,7 +7092,7 @@
     }
 
     function renderPickers() {
-      const mine = state.inventory.slice().sort((a, b) => b.value - a.value);
+      const mine = unlocked(state.inventory).sort((a, b) => b.value - a.value);
       $('#to-give').innerHTML = mine.length ? mine.map((it) =>
         itemMarkup(it, ui.give.has(it.uid) ? 'sel' : '', true).replace('class="item ', 'data-tg="' + it.uid + '" class="item ')
       ).join('') : '<div class="empty" style="grid-column:1/-1;padding:20px"><h3>No items</h3></div>';
@@ -6905,10 +7176,13 @@
       if (state.coins < box.price * battle.rounds) { toast('Not enough coins', 'bad'); return; }
       ui.busy = true;
       try {
+        const names = bots ? [] : ($('#bt-invite').value || '').split(/[\s,]+/).map((x) => x.trim()).filter(Boolean).slice(0, 3);
         const b = await api('POST', '/api/battles', {
           case_id: box.id, rounds: battle.rounds, max_players: battle.players, mode: battle.mode,
-          version: GAME_VERSION, bots: !!bots
+          version: GAME_VERSION, bots: !!bots, invite: names.length ? names : undefined, private: names.length ? $('#bt-private').checked : undefined
         });
+        if (b.invited && b.invited.length) toast('Invited ' + b.invited.join(', '), 'good');
+        $('#bt-invite').value = '';
         applyMe(b.me);
         renderBalance();
         refreshCaseButtons();
@@ -6925,6 +7199,7 @@
       ui.busy = true;
       try {
         const r = await api('POST', '/api/battles/' + b.id + '/join', { version: GAME_VERSION });
+        setInvites((ui.invites || []).filter((x) => x.id !== b.id));
         applyMe(r.me);
         renderBalance();
         setLobby(r.id);
@@ -7028,8 +7303,11 @@
 
     async function loadLobbies() {
       lastLobbies = Date.now();
-      try { ui.lobbies = (await api('GET', '/api/battles')).battles || []; }
-      catch (e) { ui.lobbies = null; }
+      try {
+        const [open, mine] = await Promise.all([api('GET', '/api/battles'), api('GET', '/api/invites')]);
+        ui.lobbies = open.battles || [];
+        setInvites(mine.invites || []);
+      } catch (e) { ui.lobbies = null; }
       if ($('#panel-battles').classList.contains('active') && battle.src !== 'solo' && !battle.live) renderBattles();
     }
 
@@ -7051,20 +7329,29 @@
           seats += p ? '<div class="seat' + (p.id === acct.id ? ' you' : '') + '">' + escHtml(p.name) + '</div>'
                      : '<div class="seat open">Waiting…</div>';
         }
+        const typed = $('#lobby-invite') ? $('#lobby-invite').value : '', focused = document.activeElement === $('#lobby-invite');
         host.innerHTML = '<div class="card lobby-card">' +
-          '<h4>' + escHtml(box ? box.name : b.case_id) + '</h4>' +
+          '<h4>' + escHtml(box ? box.name : b.case_id) + (b.private ? ' <span class="adm-badge">Invite only</span>' : '') + '</h4>' +
           '<p class="hint">' + b.rounds + ' round' + (b.rounds > 1 ? 's' : '') + ' · ' +
             (b.mode === 'high' ? 'Highest total wins' : 'Lowest total wins') + ' · entry ' + (b.cost ? fmt(b.cost) : 'free') + '</p>' +
           '<div class="seats">' + seats + '</div>' +
           '<p class="hint">' + (b.players.length < b.max_players
             ? 'Starts when every seat is taken.' + (creator ? ' Or start now and bots take the empty seats.' : '')
             : 'Starting…') + '</p>' +
+          (b.players.length < b.max_players ? '<div class="adm-line"><input class="control" id="lobby-invite" placeholder="Invite a player by username" ' +
+            'autocomplete="off" spellcheck="false" style="flex:1 1 180px"><button class="btn btn-ghost btn-sm" id="lobby-invite-go">Invite</button></div>' : '') +
           '<div class="row">' +
             (creator ? '<button class="btn btn-primary" id="lobby-start">Start now</button>' : '') +
             '<button class="btn btn-ghost" id="lobby-leave">' + (creator ? 'Cancel battle' : 'Leave') + '</button>' +
           '</div></div>';
         if (creator) $('#lobby-start').addEventListener('click', () => { SFX.blip(); startNow(); });
         $('#lobby-leave').addEventListener('click', leaveLobby);
+        if ($('#lobby-invite')) {
+          $('#lobby-invite').value = typed;
+          if (focused) $('#lobby-invite').focus();
+          $('#lobby-invite-go').addEventListener('click', inviteToLobby);
+          $('#lobby-invite').addEventListener('keydown', (e) => { if (e.key === 'Enter') inviteToLobby(); });
+        }
         return;
       }
 
@@ -7090,11 +7377,144 @@
               : mine ? 'Yours' : state.coins < cost ? 'Need coins' : 'Join') + '</button>' +
         '</div>';
       }).join('');
-      host.innerHTML = '<div class="card" style="margin-top:18px"><h4>Open battles</h4>' + rows + '</div>';
+      const invites = (ui.invites || []).map((b) => {
+        const box = caseById(b.case_id);
+        const can = box && b.version === GAME_VERSION && state.coins >= b.cost && !battle.running;
+        return '<div class="lobby">' +
+          '<span class="mini" style="--rc:' + (box ? box.accent : '#888') + '">' +
+            (box ? artFor({ kind: 'crate', name: box.name, rarity: 'common' }) : '') + '</span>' +
+          '<div><b>' + escHtml(box ? box.name : 'Unknown case') + '</b><span>from ' + escHtml(b.from_name) + ' · ' +
+            b.rounds + ' round' + (b.rounds > 1 ? 's' : '') + ' · ' + b.players.length + '/' + b.max_players + ' players</span></div>' +
+          '<div class="cost">' + (b.cost ? fmt(b.cost) : 'FREE') + '</div>' +
+          '<div class="inv-acts"><button class="btn btn-primary btn-sm" data-inv-join="' + escAttr(b.id) + '"' + (can ? '' : ' disabled') + '>' +
+            (!box || b.version !== GAME_VERSION ? 'Update game' : state.coins < b.cost ? 'Need coins' : 'Join') + '</button>' +
+          '<button class="btn btn-ghost btn-sm" data-inv-no="' + escAttr(b.id) + '">Decline</button></div>' +
+        '</div>';
+      }).join('');
+      host.innerHTML = (invites ? '<div class="card invite-card" style="margin-top:18px"><h4>Invites</h4>' + invites + '</div>' : '') +
+        '<div class="card" style="margin-top:18px"><h4>Open battles</h4>' + rows + '</div>';
       $$('#bt-online [data-join]').forEach((btn) => btn.addEventListener('click', () => {
         SFX.blip();
         joinLobby((ui.lobbies || []).find((b) => b.id === btn.dataset.join));
       }));
+      $$('#bt-online [data-inv-join]').forEach((btn) => btn.addEventListener('click', () => {
+        SFX.blip();
+        joinLobby((ui.invites || []).find((b) => b.id === btn.dataset.invJoin));
+      }));
+      $$('#bt-online [data-inv-no]').forEach((btn) => btn.addEventListener('click', () => { SFX.blip(); declineInvite(btn.dataset.invNo); }));
+    }
+
+    /* ---------- rewards and the login gift ---------- */
+
+    const rewards = { ready: false, data: null, told: false, seenGift: '' };
+
+    function setRewardReady(ready) {
+      rewards.ready = !!ready && !!token;
+      const btn = $('#rw-btn');
+      btn.classList.toggle('ready', rewards.ready);
+      btn.title = rewards.ready ? 'Your daily reward is ready' : 'Rewards';
+      if (rewards.ready && !rewards.told) { rewards.told = true; toast('Your daily reward is ready: tap the gift at the top.', 'good'); }
+      if (!rewards.ready) rewards.told = false;
+    }
+
+    const untilText = (s) => {
+      s = Math.max(60, Math.round(s));
+      const d = Math.floor(s / 86400), h = Math.floor(s % 86400 / 3600), m = Math.floor(s % 3600 / 60);
+      return d ? d + 'd ' + h + 'h' : h ? h + 'h ' + m + 'm' : m + 'm';
+    };
+
+    async function openRewards() {
+      if (!signedIn()) { showLogin('Log in to claim rewards.'); return; }
+      SFX.blip();
+      $('#rw-overlay').classList.add('open');
+      if (!rewards.data) renderRewards();
+      try { rewards.data = Object.assign(await api('GET', '/api/rewards'), { at: Date.now() }); }
+      catch (e) { $('#rw-days').innerHTML = '<div class="online-note">' + escHtml(e.message) + '</div>'; return; }
+      setRewardReady(rewards.data.ready);
+      renderRewards();
+    }
+
+    function renderRewards() {
+      const d = rewards.data, btn = $('#rw-claim');
+      if (!d) {
+        $('#rw-days').innerHTML = '<div class="online-note">Loading…</div>';
+        btn.disabled = true; btn.textContent = 'Claim'; $('#rw-note').textContent = '';
+        return;
+      }
+      const left = (t) => untilText(t - d.now - (Date.now() - d.at) / 1000);
+      $('#rw-title').textContent = d.title;
+      $('#rw-sub').textContent = (d.period === 'month' ? 'Monthly' : 'Weekly') + ' · one a day, in order · starts over in ' + left(d.ends);
+      $('#rw-days').innerHTML = d.days.map((day, i) => {
+        const st = i < d.claimed ? 'done' : i === d.claimed && d.ready ? 'today' : 'later';
+        return '<div class="rw-day ' + st + '"><b>Day ' + (i + 1) + '</b>' +
+          (day.coins ? '<span class="rw-coins">' + fmt(day.coins) + ' coins</span>' : '') +
+          (day.items.length ? '<span class="rw-items">' + day.items.map((it) => rewardTile(it)).join('') + '</span>' : '') + '</div>';
+      }).join('');
+      const all = d.claimed >= d.days.length;
+      btn.disabled = !d.ready;
+      btn.textContent = !d.on ? 'Rewards are off right now' : d.ready ? 'Claim day ' + (d.claimed + 1) : all ? 'All claimed' : 'Come back tomorrow';
+      $('#rw-note').textContent = !d.on ? '' : all ? 'A new set starts in ' + left(d.ends) + '.' : d.ready ? '' : 'Your next reward unlocks in ' + left(d.next_at) + '.';
+    }
+
+    async function claimReward() {
+      if (!rewards.data || !rewards.data.ready || ui.busy) return;
+      ui.busy = true;
+      $('#rw-claim').disabled = true;
+      try {
+        const r = await api('POST', '/api/rewards/claim');
+        took(r, r.items);
+        rewards.data = Object.assign(r.rewards, { at: Date.now() });
+        setRewardReady(false);
+        const got = [r.coins ? fmt(r.coins) + ' coins' : '', r.items.length ? r.items.length + ' item' + (r.items.length > 1 ? 's' : '') : '']
+          .filter(Boolean).join(' and ');
+        SFX.win('rare');
+        toast('Claimed ' + (got || 'your reward'), 'good');
+        refreshAll();
+      } catch (e) { toast(e.message, 'bad'); }
+      ui.busy = false;
+      renderRewards();
+    }
+
+    // The admin's login gift pops up (once a visit) until it's claimed.
+    function offerLoginGift(g) {
+      if (!g || rewards.seenGift === g.code) return;
+      if (document.querySelector('.overlay.open')) return;              // busy: the next heartbeat tries again
+      rewards.seenGift = g.code;
+      openGift({ type: 'gift', title: 'Login gift', coins: g.coins, items: g.items.map(tupleToItem).filter(Boolean),
+                 message: g.message, code: 'gift:' + g.code.slice(6), raw: g.code, expires: g.expires });
+    }
+
+    /* ---------- battle invites ---------- */
+
+    function setInvites(list) {
+      const known = new Set((ui.invites || []).map((b) => b.id));
+      ui.invites = list || [];
+      const pill = $('#battle-count');
+      pill.textContent = ui.invites.length;
+      pill.style.display = ui.invites.length ? '' : 'none';
+      ui.invites.filter((b) => !known.has(b.id) && !ui.invitesSeen.has(b.id)).forEach((b) => {
+        ui.invitesSeen.add(b.id);
+        const box = caseById(b.case_id);
+        toast(b.from_name + ' invited you to a ' + (box ? box.name : 'case') + ' battle', 'good');
+        SFX.blip();
+      });
+      if ($('#panel-battles').classList.contains('active') && battle.src !== 'solo' && !battle.live && !ui.lobbyId) renderBattles();
+    }
+
+    async function declineInvite(id) {
+      try { await api('POST', '/api/battles/' + encodeURIComponent(id) + '/decline'); } catch (e) { /* it's gone anyway */ }
+      setInvites((ui.invites || []).filter((b) => b.id !== id));
+    }
+
+    async function inviteToLobby() {
+      const input = $('#lobby-invite');
+      const name = input.value.trim();
+      if (!name || !ui.lobbyId) return;
+      try {
+        const r = await api('POST', '/api/battles/' + ui.lobbyId + '/invite', { to: name });
+        input.value = '';
+        toast(r.invited.length ? 'Invited ' + r.invited.join(', ') : name + ' is already in', 'good');
+      } catch (e) { toast(e.message, 'bad'); }
     }
 
     /* ---------- market ---------- */
@@ -7184,7 +7604,7 @@
 
     function renderSell() {
       const host = $('#mk-pick');
-      const items = state.inventory.slice().sort((a, b) => b.value - a.value);
+      const items = unlocked(state.inventory).sort((a, b) => b.value - a.value);
       if (market.pick != null && !items.some((it) => it.uid === market.pick)) market.pick = null;
       host.innerHTML = items.length ? items.slice(0, 400).map((it) =>
         itemMarkup(it, market.pick === it.uid ? 'sel' : '', true).replace('class="item ', 'data-mkpick="' + it.uid + '" class="item ')).join('')
@@ -7462,6 +7882,7 @@
           if (changed || now - lastFull > 5 * 60000) refresh();
           if (r.pending !== ui.offers.filter((o) => o.status === 'pending' && o.to === acct.id).length) syncOffers();
           tellSales(r.sold);
+          applyExtras(r);
         } catch (e) { /* offline for now */ }
       }
       if (now - lastOffers > (tradeVisible() ? 5000 : 20000)) syncOffers();
@@ -7483,7 +7904,7 @@
       showAccount: showAccount, hideAccount: hideAccount, changePassword: changePassword, logoutEverywhere: logoutEverywhere,
       renderTradeView: renderTradeView, search: search, pickPartner: pickPartner,
       battleBusy: battleBusy, createBattle: createBattle, renderBattles: renderBattles, finishBattle: finishBattle,
-      renderMarketView: renderMarketView, setMarketView: setMarketView, setMarketSort: setMarketSort, searchMarket: searchMarket,
+      lockItems: lockItems, openRewards: openRewards, claimReward: claimReward, renderMarketView: renderMarketView, setMarketView: setMarketView, setMarketSort: setMarketSort, searchMarket: searchMarket,
       moreMarket: moreMarket, renderIdeasView: renderIdeasView, setIdeasSort: setIdeasSort, postIdea: postIdea
     };
   })();
@@ -7619,6 +8040,12 @@
     $('#inv-sort').addEventListener('change', renderInventory);
     $('#inv-filter').addEventListener('change', renderInventory);
     $('#inv-search').addEventListener('input', renderInventory);
+    $('#locked-only').addEventListener('click', function () {
+      lockedOnly = !lockedOnly;
+      this.classList.toggle('active', lockedOnly);
+      SFX.blip();
+      renderInventory();
+    });
     $('#tracker-only').addEventListener('click', function () {
       trackerOnly = !trackerOnly;
       this.classList.toggle('active', trackerOnly);
@@ -7626,7 +8053,7 @@
       renderInventory();
     });
     $('#sell-filtered').addEventListener('click', () => {
-      const list = sortedInventory();
+      const list = unlocked(sortedInventory());
       if (!list.length) return;
       if (list.length > 1 && !confirm('Sell ' + list.length + ' items for ' +
           fmt(list.reduce((s, it) => s + it.value, 0)) + ' coins?')) return;
@@ -7680,6 +8107,12 @@
     $('#login-pass').addEventListener('keydown', (e) => { if (e.key === 'Enter') cloud.submitLogin(); });
     $('#login-guest').addEventListener('click', cloud.playAsGuest);
     $('#trade-login').addEventListener('click', () => cloud.showLogin());
+    $('#rw-btn').addEventListener('click', cloud.openRewards);
+    $('#rw-claim').addEventListener('click', cloud.claimReward);
+    $('#rw-close').addEventListener('click', () => $('#rw-overlay').classList.remove('open'));
+    $('#rw-overlay').addEventListener('click', (e) => { if (e.target.id === 'rw-overlay') $('#rw-overlay').classList.remove('open'); });
+    $('#gift-login').addEventListener('click', startLoginGift);
+    wireRewardEditor();
     $('#mk-rarity').innerHTML += RARITIES.map((r) => '<option value="' + r + '">' + r.charAt(0).toUpperCase() + r.slice(1) + '</option>').join('');
     $$('#mk-views [data-mkview]').forEach((c) => c.addEventListener('click', () => cloud.setMarketView(c.dataset.mkview)));
     $$('#mk-sort [data-mksort]').forEach((c) => c.addEventListener('click', () => cloud.setMarketSort(c.dataset.mksort)));
