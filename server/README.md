@@ -13,6 +13,7 @@ It deploys with the site whenever `site/`, `server/` or `functions/` changes on 
 - **Accounts.** Players sign up with a username and password. Passwords are stored as salted PBKDF2 hashes, never as plain text. Logging in gives the game a random session token, which it keeps until the player logs out. Five wrong passwords in a row lock that account's login for a minute.
 - **Usernames.** Rude usernames are refused, including disguised ones like `sh1t`, `fuuuck` or `Big_Dick`. So are names that pose as staff: anything that looks like `admin`, `moderator` or `LILBEAN`, including look-alikes such as `L1LBEAN`. The rules are `nameProblem()` in the CORE block of `site/index.html`, so the game warns as you type and the server enforces the same rules. The word list is stored in ROT13 so the file isn't a wall of slurs. To change it, edit `BLOCKED_NAMES` there (run `rot13` on the words). Names that were made before these rules show up under **Names that break the rules** in the admin Overview, where you can rename them.
 - **No bot accounts.** Before signing up, the game fetches a challenge from `/api/challenge` and works out a matching answer (a small proof of work: about a second of the browser's time, done while the player types). The server checks the answer, and each challenge works for one account only. Sign-ups are also refused if the form's hidden "website" field is filled in (people never see it; bots fill in every field), or if the form comes back quicker than a person could type. On top of that, each network can make 20 accounts an hour and 60 a day, and the whole game takes at most 300 new accounts an hour.
+- **Devices.** The game sends a random id it keeps on the device and a hash of the browser's traits with every request. The server records these for each account, along with the network, all as keyed hashes (never raw IP addresses). A device can make at most 5 accounts a day. A blocked device can't make accounts or log in. Once any account on a device is banned, that device can't make new ones. Device ids are the strong signal. Browser hashes and networks are weak ones, because a class of identical school laptops shares both.
 - **Rate limits.** Every API route is limited. Each request first passes a quick check held in memory, per network and per logged-in account (about 4 requests a second per account, with room for bursts). Actions worth abusing are also counted in the database, so their limits hold across all of Cloudflare's servers:
 
   | What | Limit |
@@ -44,9 +45,15 @@ There are two ways in:
 
 Tabs:
 
-- **Overview:** accounts, who's online, new today, coins and item value in circulation, cases opened, open trades and battles, gifts claimed. Also lists of the richest, newest and most recently active players, and any names that break the name rules. Click a name to manage that player.
+- **Overview:** accounts, who's online, new today, coins and item value in circulation, cases opened, open trades and battles, gifts claimed. Also lists of the richest, newest and most recently active players. Click a name to manage that player. Clean-up tools:
+  - **Names that break the rules:** ban all or delete all of them at once.
+  - **Flagged devices:** devices shared by 3 or more accounts, or used by an account with a rude name. Browsers are flagged at 6 or more accounts and networks at 10. Click one to see every account on it, then ban them all, ban them and block the device, block it only, or delete them all.
+  - **Blocked devices,** with a link to unblock each one.
+  - **Banned accounts:** delete every banned account for good (type DELETE to confirm).
+
+  Bulk actions never touch admin accounts.
 - **Players:** find anyone by username. For each player you can:
-  - see their stats, devices, recent trades and full inventory
+  - see their stats, recent trades and full inventory, and the devices, browsers and networks they've used, each with how many other accounts share it (click one to open it)
   - give, take or set coins
   - give any item (choose the wear, a tracker, and up to 100 at once)
   - remove selected items
@@ -104,7 +111,7 @@ A logged-in player sends a request for each case, sale, upgrade and trade, plus 
 
 ## API
 
-JSON in and out. Logged-in routes take `Authorization: Bearer <token>`. Items are sent as `[id, item index, wear 0-5, float × 10000, tracker 0/1]`.
+JSON in and out. Logged-in routes take `Authorization: Bearer <token>`. The game also sends `X-Device` and `X-Device-FP` (see **Devices**); signing up needs `X-Device`. Items are sent as `[id, item index, wear 0-5, float × 10000, tracker 0/1]`.
 
 | Method | Path | Login | Body / query |
 | --- | --- | --- | --- |
@@ -133,6 +140,6 @@ JSON in and out. Logged-in routes take `Authorization: Bearer <token>`. Items ar
 | POST | `/api/account/logout-all` | ✓ | |
 | POST | `/api/admin` | signed or admin account | `{ p: '{"a": action, "n": one-time id, "ts", ...}', g: signature }`, or `{ p }` with an admin account's login |
 
-Admin actions: `stats`, `find {q}`, `player {id}`, `coins {id, delta \| set}`, `give {id, idx, wear, tracker, count}`, `take {id, ids}`, `rename {id, name}`, `ban {id, reason}`, `unban {id}`, `reset {id, password}`, `logout {id}`, `delete {id, confirm}`, `offers`, `cancel_offer {offer}`, `lobbies`, `cancel_lobby {lobby}`, `settings {announcement, maintenance}`, `gifts {gifts}`, `revoke_gift {gift, undo}`, `make_gift {coins, items, message, ttl}`, `log`. Key only: `grant_admin {id}`, `revoke_admin {id}`. `id` can be a player id or a username.
+Admin actions: `stats`, `find {q}`, `player {id}`, `coins {id, delta \| set}`, `give {id, idx, wear, tracker, count}`, `take {id, ids}`, `rename {id, name}`, `ban {id, reason}`, `unban {id}`, `reset {id, password}`, `logout {id}`, `delete {id, confirm}`, `offers`, `cancel_offer {offer}`, `lobbies`, `cancel_lobby {lobby}`, `settings {announcement, maintenance}`, `gifts {gifts}`, `revoke_gift {gift, undo}`, `make_gift {coins, items, message, ttl}`, `devices`, `device {kind, value}`, `ban_device {kind, value, reason, block}`, `block_device {kind, value, reason}`, `unblock_device {kind, value}`, `delete_device {kind, value, confirm}`, `bad_names {mode, confirm}`, `delete_banned {confirm}`, `log`. Key only: `grant_admin {id}`, `revoke_admin {id}`. `id` can be a player id or a username.
 
 Limits: usernames are 3–16 letters, numbers, `_` or `-` and must pass the name rules, and passwords are 6–72 characters. The free case opens at most once every 3 seconds. See **Rate limits** above for the rest. Each account holds up to 3,000 items and can have 20 open offers. Unfilled lobbies close after 15 minutes and refund everyone.

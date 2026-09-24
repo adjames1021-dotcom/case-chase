@@ -105,7 +105,7 @@ const sha = async (text) => b64u(new Uint8Array(await crypto.subtle.digest('SHA-
 const CORS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Device, X-Device-FP',
   'Access-Control-Max-Age': '86400'
 };
 
@@ -284,22 +284,22 @@ async function limit(db, name, who, message) {
 // doesn't store them), expire, and work for one account only. Signing up
 // also fails if the form's hidden "website" field is filled in, which only
 // bots do, or if it comes back quicker than a person could type.
-let powKey = null;
-async function powSig(db, text) {
-  if (!powKey) {
+let serverKey = null;
+async function serverSig(db, text) {
+  if (!serverKey) {
     let row = await db.prepare("SELECT v FROM server_keys WHERE k = 'pow'").first();
     if (!row) {
       await db.prepare("INSERT OR IGNORE INTO server_keys (k, v) VALUES ('pow', ?)").bind(randomId(32)).run();
       row = await db.prepare("SELECT v FROM server_keys WHERE k = 'pow'").first();
     }
-    powKey = await crypto.subtle.importKey('raw', utf8.encode(row.v), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+    serverKey = await crypto.subtle.importKey('raw', utf8.encode(row.v), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
   }
-  return b64u(new Uint8Array(await crypto.subtle.sign('HMAC', powKey, utf8.encode(text)))).slice(0, 22);
+  return b64u(new Uint8Array(await crypto.subtle.sign('HMAC', serverKey, utf8.encode(text)))).slice(0, 22);
 }
 
 async function challenge(env) {
   const text = nowS() + '.' + randomId(9);
-  return json({ challenge: text + '.' + await powSig(env.DB, text), bits: POW_BITS });
+  return json({ challenge: text + '.' + await serverSig(env.DB, text), bits: POW_BITS });
 }
 
 function leadingZeroBits(bytes, bits) {
@@ -314,7 +314,7 @@ async function checkHuman(db, b) {
   const m = /^(\d{10})\.([A-Za-z0-9_-]{12})\.([A-Za-z0-9_-]{22})$/.exec(String(b.challenge || ''));
   const nonce = String(b.nonce || '');
   if (!m || !/^[0-9a-z]{1,12}$/.test(nonce)) fail(400, again);
-  if (await powSig(db, m[1] + '.' + m[2]) !== m[3]) fail(400, again);
+  if (await serverSig(db, m[1] + '.' + m[2]) !== m[3]) fail(400, again);
   const age = nowS() - Number(m[1]);
   if (age < POW_MIN_AGE) fail(400, 'That was quick! Wait a second and try again.');
   if (age > POW_MAX_AGE) fail(400, 'The sign-up check expired. Try again.', { expired: true });
@@ -324,6 +324,53 @@ async function checkHuman(db, b) {
     fail(400, 'That sign-up check was already used. Try again.', { expired: true });
   }
   return m[2];
+}
+
+/* ---------- devices ----------
+   The game sends a random id it keeps on the device (X-Device) and a hash of
+   the browser's traits (X-Device-FP). With the network the request came
+   from, they're recorded for each account as keyed hashes (never raw
+   addresses), so the admin panel can see which accounts were made on the
+   same device and ban or block them together.
+   Device ids are the strong signal. Browser fingerprints and networks are
+   weak ones: a class of identical school laptops shares both. */
+
+const DEVICE_KINDS = { d: 'Device', f: 'Browser', n: 'Network' };
+const DEVICE_FLAG = { d: 3, f: 6, n: 10 };      // accounts on one before it's flagged
+const DEVICE_SIGNUPS_PER_DAY = 5;
+
+function deviceLabel(ua) {
+  ua = String(ua || '');
+  const browser = /Edg\//.test(ua) ? 'Edge' : /OPR\/|Opera/.test(ua) ? 'Opera' : /Firefox\//.test(ua) ? 'Firefox'
+    : /Chrome\//.test(ua) ? 'Chrome' : /Safari\//.test(ua) ? 'Safari' : ua ? 'Unknown browser' : 'No browser (a script?)';
+  const os = /CrOS/.test(ua) ? 'ChromeOS' : /iPhone|iPad|iPod/.test(ua) ? 'iOS' : /Android/.test(ua) ? 'Android'
+    : /Windows/.test(ua) ? 'Windows' : /Mac OS X|Macintosh/.test(ua) ? 'Mac' : /Linux/.test(ua) ? 'Linux' : '';
+  return browser + (os ? ' on ' + os : '');
+}
+
+// The device, browser and network a request came from, as [kind, key] pairs.
+async function deviceKeys(request, db) {
+  const dev = request.headers.get('X-Device') || '', fp = request.headers.get('X-Device-FP') || '';
+  const keys = [];
+  if (/^[A-Za-z0-9_-]{16,64}$/.test(dev)) keys.push(['d', await serverSig(db, 'device:' + dev)]);
+  if (/^[A-Za-z0-9_-]{8,64}$/.test(fp)) keys.push(['f', await serverSig(db, 'browser:' + fp)]);
+  keys.push(['n', await serverSig(db, 'network:' + ipOf(request))]);
+  return keys;
+}
+
+// Remembers what an account was used on. Only writes when something is new
+// or an hour has passed, so the heartbeat can call it freely.
+const recordDevices = (db, account, keys, request) => keys.map(([kind, value]) => db.prepare(
+  `INSERT INTO account_devices (account, kind, value, label, first_at, last_at) VALUES (?, ?, ?, ?, ?, ?)
+     ON CONFLICT (account, kind, value) DO UPDATE SET last_at = excluded.last_at, label = excluded.label
+     WHERE account_devices.last_at < excluded.last_at - 3600`)
+  .bind(account, kind, value, kind === 'n' ? '' : deviceLabel(request.headers.get('User-Agent')), nowS(), nowS()));
+
+// Refuses a request from a blocked device, browser or network.
+async function checkBlocked(db, keys) {
+  const row = await db.prepare(`SELECT reason FROM device_bans WHERE (kind || ':' || value) IN (SELECT value FROM json_each(?)) LIMIT 1`)
+    .bind(JSON.stringify(keys.map((k) => k.join(':')))).first();
+  if (row) fail(403, 'This device is blocked from making or using accounts.' + (row.reason ? ' Reason: ' + row.reason : ''));
 }
 
 async function newSession(db, id) {
@@ -351,6 +398,15 @@ async function signup(request, env) {
   await limit(db, 'signup_try', ip, 'Too many sign-up attempts from this network. Try again in a few minutes.');
   const challengeId = await checkHuman(db, b);
   const t = nowS();
+  const keys = await deviceKeys(request, db);
+  const device = keys.find((k) => k[0] === 'd');
+  if (!device) fail(400, 'Reload the page and try again.');          // the game always sends one
+  await checkBlocked(db, keys);
+  const onDevice = await db.prepare(
+    `SELECT COALESCE(SUM(a.banned), 0) AS banned, COALESCE(SUM(d.first_at > ?), 0) AS today
+       FROM account_devices d JOIN accounts a ON a.id = d.account WHERE d.kind = 'd' AND d.value = ?`).bind(t - 86400, device[1]).first();
+  if (onDevice.banned) fail(403, 'An account on this device is banned, so it can\'t make new ones.');
+  if (onDevice.today >= DEVICE_SIGNUPS_PER_DAY) fail(429, 'This device has made a lot of accounts today. Try again tomorrow.');
   const [hour, day, everyone, taken] = (await db.batch([
     db.prepare('SELECT COUNT(*) AS n FROM signups WHERE ip = ? AND at > ?').bind(ip, t - 3600),
     db.prepare('SELECT COUNT(*) AS n FROM signups WHERE ip = ? AND at > ?').bind(ip, t - 86400),
@@ -371,7 +427,8 @@ async function signup(request, env) {
     db.prepare('INSERT INTO signups (ip, at) VALUES (?, ?)').bind(ip, t),
     db.prepare('DELETE FROM signups WHERE at < ?').bind(t - 86400),
     db.prepare('INSERT INTO used_challenges (id, at) VALUES (?, ?)').bind(challengeId, t),
-    db.prepare('DELETE FROM used_challenges WHERE at < ?').bind(t - POW_MAX_AGE - 60)
+    db.prepare('DELETE FROM used_challenges WHERE at < ?').bind(t - POW_MAX_AGE - 60),
+    ...recordDevices(db, id, keys, request)
   ]).catch((e) => { if (e.status === 409) fail(409, 'That username is taken'); throw e; });
   return json({ token: session.token, me: meOut(await account(db, id)), inventory: [] });
 }
@@ -398,9 +455,12 @@ async function login(request, env) {
     fail(401, 'Wrong username or password');
   }
   if (a.banned) fail(403, 'banned', { reason: await banReason(db, a.id) });
+  const keys = await deviceKeys(request, db);
+  await checkBlocked(db, keys);
   const session = await newSession(db, a.id);
   await db.batch([session.stmt,
-    db.prepare('UPDATE accounts SET fail_count = 0, last_seen = ?, last_ping = ? WHERE id = ?').bind(t, t, a.id)]);
+    db.prepare('UPDATE accounts SET fail_count = 0, last_seen = ?, last_ping = ? WHERE id = ?').bind(t, t, a.id),
+    ...recordDevices(db, a.id, keys, request)]);
   return json({ token: session.token, me: await meFull(db, await account(db, a.id)), inventory: await inventory(db, a.id) });
 }
 
@@ -427,8 +487,9 @@ async function authed(request, env) {
   return row;
 }
 
-async function ping(env, me) {
+async function ping(request, env, me) {
   const t = nowS();
+  await env.DB.batch(recordDevices(env.DB, me.id, await deviceKeys(request, env.DB), request));
   // Adds the time since the last ping, as long as the game has been pinging steadily.
   await env.DB.prepare(
     `UPDATE accounts SET played = played + CASE WHEN ? - last_ping BETWEEN 1 AND 120 THEN ? - last_ping ELSE 0 END,
@@ -965,6 +1026,54 @@ async function findAccount(db, who) {
   return a;
 }
 
+// Deletes accounts and everything in them; their open trades and battles are
+// cancelled and refunded. Works on many at once in a handful of queries,
+// because Cloudflare's free plan allows 50 database calls per request.
+async function deleteAccounts(db, ids) {
+  if (!ids.length) return;
+  const list = JSON.stringify(ids), t = nowS();
+  const offers = (await db.prepare(`SELECT * FROM offers WHERE status = 'pending'
+      AND (from_id IN (SELECT value FROM json_each(?)) OR to_id IN (SELECT value FROM json_each(?)))`).bind(list, list).all()).results;
+  const lobbies = (await db.prepare(`SELECT * FROM lobbies WHERE status = 'open'`).all()).results
+    .filter((l) => ids.some((id) => l.players.indexOf('"' + id + '"') >= 0));
+  const refundsDue = offers.map((o) => offerRefund(db, o, 'cancelled', t)).concat(lobbies.map((l) => lobbyCancel(db, l, t)));
+  for (const stmts of refundsDue.slice(0, 20)) await db.batch(stmts).catch(() => {});
+  await db.batch(['DELETE FROM items WHERE owner IN', 'DELETE FROM sessions WHERE account IN', 'DELETE FROM ban_reasons WHERE account IN',
+    'DELETE FROM account_devices WHERE account IN', 'DELETE FROM admin_accounts WHERE account IN', 'DELETE FROM accounts WHERE id IN']
+    .map((sql) => db.prepare(sql + ' (SELECT value FROM json_each(?))').bind(list)));
+}
+const deleteAccount = (db, a) => deleteAccounts(db, [a.id]);
+
+// Account ids from `ids` that aren't admins (bulk actions never touch admins).
+async function withoutAdmins(db, ids) {
+  const admins = new Set((await db.prepare('SELECT account FROM admin_accounts').all()).results.map((r) => r.account));
+  return ids.filter((id) => !admins.has(id) && !isPermanentAdmin(id));
+}
+
+// Bans or deletes a list of accounts (at most 500 at a time). Returns how many.
+async function banOrDelete(db, ids, mode, reason) {
+  ids = (await withoutAdmins(db, ids)).slice(0, 500);
+  if (!ids.length) return 0;
+  if (mode === 'delete') {
+    await deleteAccounts(db, ids);
+  } else {
+    const list = JSON.stringify(ids), t = nowS();
+    await db.batch([
+      db.prepare('UPDATE accounts SET banned = 1 WHERE id IN (SELECT value FROM json_each(?))').bind(list),
+      db.prepare('INSERT OR REPLACE INTO ban_reasons (account, reason, at) SELECT value, ?, ? FROM json_each(?)').bind(reason, t, list)
+    ]);
+  }
+  return ids.length;
+}
+
+function deviceArg(p) {
+  const kind = String(p.kind || ''), value = String(p.value || '');
+  if (!DEVICE_KINDS[kind] || !/^[A-Za-z0-9_-]{10,40}$/.test(value)) fail(400, 'Unknown device');
+  return { kind, value, label: DEVICE_KINDS[kind] + ' ' + value.slice(0, 6) };
+}
+const accountsOn = async (db, kind, value) => (await db.prepare(
+  'SELECT account FROM account_devices WHERE kind = ? AND value = ?').bind(kind, value).all()).results.map((r) => r.account);
+
 const adminRow = (a) => ({
   id: a.id, name: a.name, coins: a.coins, inv_value: a.inv_value, inv_count: a.inv_count, opened: a.opened,
   best_value: a.best_value, best_item: a.best_item, played: a.played, banned: !!a.banned,
@@ -1010,13 +1119,15 @@ const ADMIN = {
               (SELECT COUNT(*) FROM gift_claims) AS gift_claims`).bind(t - 86400, t - 86400).first();
     const list = async (sql) => (await db.prepare(sql).all()).results.map(adminRow);
     // Accounts made before the name rules (or renamed around them) that break them now.
-    const names = (await db.prepare('SELECT id, name FROM accounts LIMIT 20000').all()).results;
-    const badIds = names.filter((a) => nameProblem(a.name, true)).slice(0, 20).map((a) => a.id);
+    const names = (await db.prepare('SELECT id, name, banned FROM accounts LIMIT 20000').all()).results;
+    const allBad = names.filter((a) => nameProblem(a.name, true)).sort((x, y) => x.banned - y.banned);   // not yet banned first
+    const badIds = allBad.slice(0, 20).map((a) => a.id);
     const badNames = badIds.length ? (await db.prepare('SELECT * FROM accounts WHERE id IN (SELECT value FROM json_each(?))')
       .bind(JSON.stringify(badIds)).all()).results.map(adminRow) : [];
     return {
       totals: Object.assign(totals, counts),
       bad_names: badNames,
+      bad_names_total: allBad.length,
       richest: await list('SELECT * FROM accounts ORDER BY coins DESC LIMIT 5'),
       top_items: await list('SELECT * FROM accounts ORDER BY inv_value DESC LIMIT 5'),
       newest: await list('SELECT * FROM accounts ORDER BY created_at DESC LIMIT 5'),
@@ -1041,8 +1152,13 @@ const ADMIN = {
          FROM offers o JOIN accounts f ON f.id = o.from_id JOIN accounts r ON r.id = o.to_id
         WHERE o.from_id = ? OR o.to_id = ? ORDER BY o.updated_at DESC LIMIT 20`).bind(a.id, a.id).all()).results;
     const sessions = await db.prepare('SELECT COUNT(*) AS n, MAX(last_used) AS last FROM sessions WHERE account = ?').bind(a.id).first();
+    const devices = (await db.prepare(
+      `SELECT d.kind, d.value, d.label, d.first_at, d.last_at,
+              (SELECT COUNT(*) FROM account_devices o WHERE o.kind = d.kind AND o.value = d.value) - 1 AS others,
+              EXISTS (SELECT 1 FROM device_bans b WHERE b.kind = d.kind AND b.value = d.value) AS blocked
+         FROM account_devices d WHERE d.account = ? ORDER BY d.kind, d.last_at DESC LIMIT 30`).bind(a.id).all()).results;
     return Object.assign(adminRow(a), {
-      ban_reason: await banReason(db, a.id), fail_count: a.fail_count, sessions: sessions.n, items: items, offers: offers,
+      ban_reason: await banReason(db, a.id), fail_count: a.fail_count, sessions: sessions.n, items: items, offers: offers, devices: devices,
       admin: await isAdminAccount(db, a.id), permanent_admin: isPermanentAdmin(a.id)
     });
   },
@@ -1164,19 +1280,7 @@ const ADMIN = {
   async delete(db, p) {
     const a = await findAccount(db, p.id);
     if (p.confirm !== a.name) fail(400, 'Type the username exactly to confirm');
-    const t = nowS();
-    const offers = (await db.prepare(`SELECT * FROM offers WHERE status = 'pending' AND (from_id = ? OR to_id = ?)`)
-      .bind(a.id, a.id).all()).results;
-    for (const o of offers) await db.batch(offerRefund(db, o, 'cancelled', t)).catch(() => {});
-    const lobbies = (await db.prepare(`SELECT * FROM lobbies WHERE status = 'open' AND instr(players, ?) > 0`)
-      .bind('"' + a.id + '"').all()).results;
-    for (const l of lobbies) await db.batch(lobbyCancel(db, l, t)).catch(() => {});
-    await db.batch([
-      db.prepare('DELETE FROM items WHERE owner = ?').bind(a.id),
-      db.prepare('DELETE FROM sessions WHERE account = ?').bind(a.id),
-      db.prepare('DELETE FROM ban_reasons WHERE account = ?').bind(a.id),
-      db.prepare('DELETE FROM accounts WHERE id = ?').bind(a.id)
-    ]);
+    await deleteAccount(db, a);
     return { log: [a.name, 'account deleted (' + a.coins + ' coins, ' + a.inv_count + ' items)'] };
   },
 
@@ -1205,6 +1309,97 @@ const ADMIN = {
     if (!l || l.status !== 'open') fail(409, 'That battle isn\'t open');
     await transact(db, lobbyCancel(db, l, nowS()));
     return { log: ['battle ' + l.id, 'cancelled and refunded'] };
+  },
+
+  // Devices, browsers and networks shared by several accounts or used by an
+  // account with a rude name, most suspicious first; plus blocked ones.
+  async devices(db) {
+    const rows = (await db.prepare(
+      `SELECT d.kind, d.value, d.label, d.last_at, a.id, a.name, a.banned FROM account_devices d
+         JOIN accounts a ON a.id = d.account ORDER BY d.last_at DESC LIMIT 50000`).all()).results;
+    const groups = new Map();
+    for (const r of rows) {
+      const key = r.kind + ':' + r.value;
+      let g = groups.get(key);
+      if (!g) groups.set(key, g = { kind: r.kind, value: r.value, label: '', last_at: 0, accounts: 0, banned: 0, rude: 0, names: [] });
+      g.label = g.label || r.label;
+      g.last_at = Math.max(g.last_at, r.last_at);
+      g.accounts++;
+      g.banned += r.banned ? 1 : 0;
+      if (nameProblem(r.name, true)) g.rude++;
+      if (g.names.length < 6) g.names.push(r.name);
+    }
+    const blocked = (await db.prepare('SELECT kind, value, reason, at FROM device_bans ORDER BY at DESC LIMIT 100').all()).results;
+    const isBlocked = new Set(blocked.map((b) => b.kind + ':' + b.value));
+    const flagged = [...groups.values()]
+      .filter((g) => (g.rude && (g.kind === 'd' || g.accounts > 1)) || g.accounts >= DEVICE_FLAG[g.kind])
+      .map((g) => Object.assign(g, { blocked: isBlocked.has(g.kind + ':' + g.value) }))
+      .sort((x, y) => (y.rude - y.banned > 0) - (x.rude - x.banned > 0) || y.accounts - x.accounts)
+      .slice(0, 40);
+    return { flagged, blocked, limits: DEVICE_FLAG };
+  },
+
+  async device(db, p) {
+    const { kind, value } = deviceArg(p);
+    const rows = (await db.prepare(
+      `SELECT a.*, d.label AS dev_label, d.first_at AS dev_first, d.last_at AS dev_last FROM account_devices d
+         JOIN accounts a ON a.id = d.account WHERE d.kind = ? AND d.value = ? ORDER BY a.created_at DESC LIMIT 500`).bind(kind, value).all()).results;
+    const admins = new Set(await withoutAdmins(db, rows.map((r) => r.id)));
+    const ban = await db.prepare('SELECT reason, at FROM device_bans WHERE kind = ? AND value = ?').bind(kind, value).first();
+    return {
+      kind, value, label: (rows.find((r) => r.dev_label) || {}).dev_label || '', blocked: ban || null,
+      accounts: rows.map((r) => Object.assign(adminRow(r), {
+        rude: !!nameProblem(r.name, true), admin: !admins.has(r.id), seen_first: r.dev_first, seen_last: r.dev_last
+      }))
+    };
+  },
+
+  // Bans every account seen on it (never admins) and, with `block`, stops it making or using accounts.
+  async ban_device(db, p) {
+    const d = deviceArg(p);
+    const reason = String(p.reason || '').trim().slice(0, 200);
+    const n = await banOrDelete(db, await accountsOn(db, d.kind, d.value), 'ban', reason);
+    if (p.block) await db.prepare('INSERT OR REPLACE INTO device_bans (kind, value, reason, at) VALUES (?, ?, ?, ?)').bind(d.kind, d.value, reason, nowS()).run();
+    return { count: n, log: [d.label, 'banned ' + n + ' account(s)' + (p.block ? ' and blocked it' : '') + (reason ? ': ' + reason : '')] };
+  },
+
+  async block_device(db, p) {
+    const d = deviceArg(p);
+    const reason = String(p.reason || '').trim().slice(0, 200);
+    await db.prepare('INSERT OR REPLACE INTO device_bans (kind, value, reason, at) VALUES (?, ?, ?, ?)').bind(d.kind, d.value, reason, nowS()).run();
+    return { log: [d.label, 'blocked' + (reason ? ': ' + reason : '')] };
+  },
+
+  async unblock_device(db, p) {
+    const d = deviceArg(p);
+    await db.prepare('DELETE FROM device_bans WHERE kind = ? AND value = ?').bind(d.kind, d.value).run();
+    return { log: [d.label, 'unblocked'] };
+  },
+
+  async delete_device(db, p) {
+    const d = deviceArg(p);
+    if (p.confirm !== 'DELETE') fail(400, 'Type DELETE to confirm');
+    const n = await banOrDelete(db, await accountsOn(db, d.kind, d.value), 'delete');
+    return { count: n, log: [d.label, 'deleted ' + n + ' account(s)'] };
+  },
+
+  // Deletes every banned account (never admins), 500 at a time.
+  async delete_banned(db, p) {
+    if (p.confirm !== 'DELETE') fail(400, 'Type DELETE to confirm');
+    const ids = (await db.prepare('SELECT id FROM accounts WHERE banned = 1 LIMIT 600').all()).results.map((r) => r.id);
+    const n = await banOrDelete(db, ids, 'delete');
+    const left = (await db.prepare('SELECT COUNT(*) AS n FROM accounts WHERE banned = 1').first()).n;
+    return { count: n, left: left, log: ['banned accounts', 'deleted ' + n + ' banned account(s)'] };
+  },
+
+  // Bans or deletes every account whose name breaks the name rules (never admins).
+  async bad_names(db, p) {
+    const mode = p.mode === 'delete' ? 'delete' : 'ban';
+    if (mode === 'delete' && p.confirm !== 'DELETE') fail(400, 'Type DELETE to confirm');
+    const names = (await db.prepare('SELECT id, name FROM accounts WHERE banned = 0 OR ? LIMIT 20000').bind(mode === 'delete' ? 1 : 0).all()).results;
+    const ids = names.filter((a) => nameProblem(a.name, true)).map((a) => a.id);
+    const n = await banOrDelete(db, ids, mode, String(p.reason || 'Username breaks the rules').slice(0, 200));
+    return { count: n, log: ['rule-breaking names', (mode === 'delete' ? 'deleted ' : 'banned ') + n + ' account(s)'] };
   },
 
   async settings(db, p) {
@@ -1330,7 +1525,7 @@ export default {
         return json({ ok: true });
       }
       if (method === 'GET' && a === 'me') return json({ me: await meFull(env.DB, me), inventory: await inventory(env.DB, me.id) });
-      if (method === 'POST' && a === 'ping') return await ping(env, me);
+      if (method === 'POST' && a === 'ping') return await ping(request, env, me);
       if (method === 'POST' && a === 'account' && b === 'password') return await changePassword(request, env, me);
       if (method === 'POST' && a === 'account' && b === 'logout-all') {
         await env.DB.prepare('DELETE FROM sessions WHERE account = ?').bind(me.id).run();

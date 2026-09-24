@@ -726,6 +726,8 @@
 
   /* ---------- Admin panel ---------- */
   .adm-tabs .chip { padding: 6px 10px; }
+  .adm-tabs { flex-wrap: wrap; }
+  @media (max-width: 760px) { .adm-tabs { margin-right: 0; } .adm-tabs .chip { flex: 1 1 auto; } }
   .adm-tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 10px; }
   .tile { border: 1px solid var(--line); background: rgba(0,0,0,.18); padding: 12px 14px; }
   .tile b { display: block; font-size: 22px; font-weight: 800; font-variant-numeric: tabular-nums; }
@@ -4700,7 +4702,7 @@
 
   async function loadAdminOverview() {
     $('#adm-tiles').innerHTML = '<div class="online-note">Loading…</div>';
-    const r = await adminDo('stats');
+    const [r, dv] = await Promise.all([adminDo('stats'), adminDo('devices')]);
     if (!r) { $('#adm-tiles').innerHTML = '<div class="online-note">Can\'t reach the server.</div>'; return; }
     const t = r.totals;
     const tiles = [
@@ -4718,8 +4720,45 @@
       list('Most item value', r.top_items, (p) => fmt(p.inv_value)) +
       list('Newest accounts', r.newest, (p) => ago(p.created_at)) +
       list('Recently online', r.recent, (p) => ago(p.last_seen)) +
-      (r.bad_names && r.bad_names.length ? list('Names that break the rules', r.bad_names, () => 'Rename') : '');
+      (r.bad_names && r.bad_names.length ? '<div class="card"><h4>Names that break the rules (' + fmt(r.bad_names_total) + ')</h4>' +
+        r.bad_names.map((p) => playerLink(p, '<b class="num">Manage</b>')).join('') +
+        '<div class="adm-line"><button class="btn btn-ghost btn-sm" id="adm-bad-ban">Ban all</button>' +
+        '<input class="control" id="adm-bad-confirm" placeholder="Type DELETE" autocomplete="off" style="max-width:130px">' +
+        '<button class="btn btn-danger btn-sm" id="adm-bad-delete">Delete all</button></div>' +
+        '<p class="hint">Admin accounts are never touched.</p></div>' : '') +
+      (dv ? '<div class="card"><h4>Flagged devices</h4>' +
+        (dv.flagged.length ? dv.flagged.map(deviceRow).join('') : '<p class="hint">Nothing suspicious yet</p>') +
+        '<p class="hint">Flagged when ' + dv.limits.d + '+ accounts share a device, or an account on it has a rude name. ' +
+        'Browsers and networks are flagged at ' + dv.limits.f + '+ and ' + dv.limits.n + '+ accounts: whole classes share those.</p></div>' +
+        (dv.blocked.length ? '<div class="card"><h4>Blocked devices</h4>' + dv.blocked.map((b) =>
+          '<div class="adm-row link" data-admdev="' + b.kind + ':' + escAttr(b.value) + '"><span class="grow"><b>' + DEVICE_NAMES[b.kind] +
+          '</b> <i>#' + escHtml(b.value.slice(0, 6)) + (b.reason ? ' · ' + escHtml(b.reason) : '') + '</i></span><i>' + ago(b.at) + '</i></div>').join('') +
+          '</div>' : '') : '');
+    if (t.banned) $('#adm-lists').insertAdjacentHTML('beforeend', '<div class="card"><h4>Banned accounts (' + fmt(t.banned) + ')</h4>' +
+      '<p class="hint">Deletes every banned account and everything in it, for good. Admin accounts are never touched.</p>' +
+      '<div class="adm-line"><input class="control" id="adm-banned-confirm" placeholder="Type DELETE" autocomplete="off" style="max-width:130px">' +
+      '<button class="btn btn-danger btn-sm" id="adm-banned-delete">Delete all banned</button></div></div>');
     wirePlayerLinks('#adm-lists');
+    wireDeviceLinks('#adm-lists');
+    if ($('#adm-banned-delete')) $('#adm-banned-delete').addEventListener('click', async () => {
+      if ($('#adm-banned-confirm').value.trim() !== 'DELETE') return toast('Type DELETE to confirm', 'bad');
+      const out = await adminDo('delete_banned', { confirm: 'DELETE' });
+      if (!out) return;
+      toast('Deleted ' + out.count + ' banned account' + (out.count === 1 ? '' : 's') +
+        (out.left ? '. ' + out.left + ' left: press again.' : ''), 'good');
+      loadAdminOverview();
+    });
+    const badAll = async (mode) => {
+      const confirmText = $('#adm-bad-confirm').value.trim();
+      if (mode === 'delete' && confirmText !== 'DELETE') return toast('Type DELETE to confirm', 'bad');
+      if (mode === 'ban' && !confirm('Ban every account whose name breaks the rules?')) return;
+      const out = await adminDo('bad_names', { mode: mode, confirm: confirmText });
+      if (out) { toast((mode === 'delete' ? 'Deleted ' : 'Banned ') + out.count + ' account' + (out.count === 1 ? '' : 's'), 'good'); loadAdminOverview(); }
+    };
+    if ($('#adm-bad-ban')) {
+      $('#adm-bad-ban').addEventListener('click', () => badAll('ban'));
+      $('#adm-bad-delete').addEventListener('click', () => badAll('delete'));
+    }
   }
 
   function searchAdminPlayers(q) {
@@ -4732,6 +4771,87 @@
         : '<p class="hint" style="margin-top:10px">No players found</p>';
       wirePlayerLinks('#adm-results');
     }, q ? 250 : 0);
+  }
+
+  const DEVICE_NAMES = { d: 'Device', f: 'Browser', n: 'Network' };
+  const DEVICE_HINTS = {
+    d: 'Accounts made or used on this device. The game keeps a random id on each device, so this is a strong sign they belong to the same person.',
+    f: 'Accounts used from browsers that look identical. Identical school laptops look the same too, so check the names before banning.',
+    n: 'Accounts used from this network. Everyone at a school or on the same home Wi-Fi shares one, so be careful blocking it.'
+  };
+  const deviceRow = (g) => '<div class="adm-row link" data-admdev="' + g.kind + ':' + escAttr(g.value) + '">' +
+    '<span class="grow"><b>' + DEVICE_NAMES[g.kind] + '</b> <i>' + escHtml(g.label || '#' + g.value.slice(0, 6)) + '</i><br>' +
+    '<i>' + escHtml(g.names.join(', ')) + (g.accounts > g.names.length ? ' …' : '') + '</i></span>' +
+    (g.rude ? '<span class="adm-badge">' + g.rude + ' rude</span>' : '') +
+    (g.banned ? '<span class="adm-badge" style="background:var(--line)">' + g.banned + ' banned</span>' : '') +
+    (g.blocked ? '<span class="adm-badge">Blocked</span>' : '') +
+    '<b class="num">' + g.accounts + '</b></div>';
+
+  function wireDeviceLinks(host) {
+    $$(host + ' [data-admdev]').forEach((row) => row.addEventListener('click', () => {
+      SFX.blip();
+      const [kind, value] = row.dataset.admdev.split(':');
+      adminUi.player = null;
+      setAdminView('players');
+      openAdminDevice(kind, value);
+    }));
+  }
+
+  async function openAdminDevice(kind, value) {
+    const host = $('#adm-player');
+    host.innerHTML = '<div class="online-note">Loading…</div>';
+    const d = await adminDo('device', { kind: kind, value: value });
+    if (!d) { host.innerHTML = '<div class="empty" style="padding:28px"><h3>Couldn\'t load that device</h3></div>'; return; }
+    const open = d.accounts.filter((a) => !a.banned && !a.admin).length;
+    host.innerHTML =
+      '<div class="to-partner" style="margin-top:0"><span><b style="font-size:18px">' + DEVICE_NAMES[kind] + '</b> <i>' +
+        escHtml((d.label ? d.label + ' · ' : '') + '#' + value.slice(0, 6)) + '</i></span>' +
+        (d.blocked ? '<span class="adm-badge">Blocked</span>' : '') + '</div>' +
+      '<p class="hint">' + DEVICE_HINTS[kind] + '</p>' +
+      (d.blocked ? '<p class="hint">Blocked ' + ago(d.blocked.at) + (d.blocked.reason ? ': ' + escHtml(d.blocked.reason) : '') +
+        '. It can\'t make new accounts or log in.</p>' : '') +
+      '<div class="adm-sec"><h5>Accounts (' + d.accounts.length + ')</h5><div id="admd-list">' +
+        d.accounts.map((a) => playerLink(a, (a.rude ? '<span class="adm-badge">Rude name</span>' : '') +
+          (a.admin ? '<span class="adm-badge" style="background:var(--orange)">Admin</span>' : '') +
+          '<i>made ' + ago(a.created_at) + '</i>')).join('') + '</div></div>' +
+      '<div class="adm-sec"><h5>Deal with them</h5>' +
+        '<div class="adm-line"><input class="control" id="admd-reason" placeholder="Reason (shown to them)" autocomplete="off"></div>' +
+        '<div class="adm-line">' +
+          '<button class="btn btn-ghost btn-sm" id="admd-ban"' + (open ? '' : ' disabled') + '>Ban ' + open + ' account' + (open === 1 ? '' : 's') + '</button>' +
+          (d.blocked ? '<button class="btn btn-ghost btn-sm" id="admd-unblock">Unblock</button>'
+            : '<button class="btn btn-primary btn-sm" id="admd-banblock">Ban all and block ' + DEVICE_NAMES[kind].toLowerCase() + '</button>' +
+              '<button class="btn btn-ghost btn-sm" id="admd-block">Only block</button>') +
+        '</div>' +
+        '<p class="hint">Blocking stops it making new accounts or logging in. Admin accounts are never banned or deleted.</p>' +
+        '<div class="adm-line"><input class="control" id="admd-confirm" placeholder="Type DELETE to confirm" autocomplete="off">' +
+          '<button class="btn btn-danger btn-sm" id="admd-delete">Delete all ' + open + ' account' + (open === 1 ? '' : 's') + '</button></div>' +
+      '</div>';
+    wirePlayerLinks('#admd-list');
+    const again = () => openAdminDevice(kind, value);
+    const reason = () => $('#admd-reason').value.trim();
+    const warn = kind === 'd' ? '' : '\n\n' + DEVICE_HINTS[kind];
+    if ($('#admd-ban')) $('#admd-ban').addEventListener('click', async () => {
+      if (!confirm('Ban all ' + open + ' account(s) seen on this ' + DEVICE_NAMES[kind].toLowerCase() + '?' + warn)) return;
+      const out = await adminDo('ban_device', { kind: kind, value: value, reason: reason() });
+      if (out) { toast('Banned ' + out.count + ' account' + (out.count === 1 ? '' : 's'), 'good'); again(); }
+    });
+    if ($('#admd-banblock')) $('#admd-banblock').addEventListener('click', async () => {
+      if (!confirm('Ban all ' + open + ' account(s) and block this ' + DEVICE_NAMES[kind].toLowerCase() + '?' + warn)) return;
+      const out = await adminDo('ban_device', { kind: kind, value: value, reason: reason(), block: true });
+      if (out) { toast('Banned ' + out.count + ' and blocked it', 'good'); again(); }
+    });
+    if ($('#admd-block')) $('#admd-block').addEventListener('click', async () => {
+      if (!confirm('Block this ' + DEVICE_NAMES[kind].toLowerCase() + ' from making or using accounts?' + warn)) return;
+      if (await adminDo('block_device', { kind: kind, value: value, reason: reason() }, 'Blocked')) again();
+    });
+    if ($('#admd-unblock')) $('#admd-unblock').addEventListener('click', async () => {
+      if (await adminDo('unblock_device', { kind: kind, value: value }, 'Unblocked')) again();
+    });
+    $('#admd-delete').addEventListener('click', async () => {
+      if ($('#admd-confirm').value.trim() !== 'DELETE') return toast('Type DELETE to confirm', 'bad');
+      const out = await adminDo('delete_device', { kind: kind, value: value, confirm: 'DELETE' });
+      if (out) { toast('Deleted ' + out.count + ' account' + (out.count === 1 ? '' : 's'), 'good'); again(); }
+    });
   }
 
   async function openAdminPlayer(id) {
@@ -4794,6 +4914,14 @@
             : '<button class="btn btn-ghost btn-sm" id="admp-admin">' + (p.admin ? 'Remove admin' : 'Make admin') + '</button>') : '') +
         '</div></div>' +
 
+      '<div class="adm-sec"><h5>Devices</h5><div id="admp-devices">' + ((p.devices || []).length ? p.devices.map((d) =>
+        '<div class="adm-row link" data-admdev="' + d.kind + ':' + escAttr(d.value) + '"><span class="grow"><b>' + DEVICE_NAMES[d.kind] + '</b> <i>' +
+        escHtml((d.label ? d.label + ' · ' : '') + '#' + d.value.slice(0, 6)) + '</i></span>' +
+        (d.blocked ? '<span class="adm-badge">Blocked</span>' : '') +
+        '<i>' + (d.others ? d.others + ' other account' + (d.others === 1 ? '' : 's') : 'only this account') + '</i>' +
+        '<i>' + ago(d.last_at) + '</i></div>').join('')
+        : '<p class="hint">None recorded yet. Devices are recorded when a player signs up, logs in or plays.</p>') + '</div></div>' +
+
       (p.offers.length ? '<div class="adm-sec"><h5>Recent trades</h5>' + p.offers.map((o) =>
         '<div class="adm-row"><span class="grow">' + escHtml(o.from_name) + ' → ' + escHtml(o.to_name) +
         ' <i>' + o.give_n + ' item(s)' + (o.give_coins ? ' + ' + fmt(o.give_coins) : '') + ' for ' + o.want_n + ' item(s)' +
@@ -4805,6 +4933,7 @@
         '<button class="btn btn-danger btn-sm" id="admp-delete">Delete</button></div></div>';
 
     const again = () => openAdminPlayer(p.id);
+    wireDeviceLinks('#admp-devices');
     const amount = () => Math.floor(Number($('#admp-coins').value));
     $('#admp-give-coins').addEventListener('click', async () => {
       if (!(amount() > 0)) return toast('Enter an amount', 'bad');
@@ -5512,6 +5641,41 @@
       }
     }
 
+    /* ---------- which device this is ----------
+       Sent with every request so the admin panel can spot accounts made on
+       the same device (bots): a random id kept on the device, and a hash of
+       the browser's traits for when that id gets cleared. */
+    const DEVICE_KEY = 'case-sim-device';
+    const deviceId = (() => {
+      const fresh = () => b64u(crypto.getRandomValues(new Uint8Array(18)));
+      try {
+        let id = localStorage.getItem(DEVICE_KEY);
+        if (!/^[A-Za-z0-9_-]{16,64}$/.test(id || '')) { id = fresh(); localStorage.setItem(DEVICE_KEY, id); }
+        return id;
+      } catch (e) { return fresh(); }                     // storage blocked: this visit only
+    })();
+    let fingerprint = '';
+    function browserFingerprint() {
+      if (fingerprint) return fingerprint;
+      const n = navigator, parts = [n.userAgent, n.language, (n.languages || []).join(','), n.platform, n.hardwareConcurrency,
+        n.deviceMemory, screen.width + 'x' + screen.height + 'x' + screen.colorDepth, new Date().getTimezoneOffset()];
+      try { parts.push(Intl.DateTimeFormat().resolvedOptions().timeZone); } catch (e) { /* ignore */ }
+      try {
+        const c = document.createElement('canvas'), g = c.getContext('2d');
+        c.width = 220; c.height = 30;
+        g.textBaseline = 'top'; g.font = '16px Arial'; g.fillStyle = '#f60'; g.fillRect(100, 1, 62, 20);
+        g.fillStyle = '#069'; g.fillText('Case Sim \u{1F4E6} 0.1', 2, 4);
+        parts.push(c.toDataURL());
+      } catch (e) { /* ignore */ }
+      try {
+        const gl = document.createElement('canvas').getContext('webgl');
+        const info = gl && gl.getExtension('WEBGL_debug_renderer_info');
+        if (info) parts.push(gl.getParameter(info.UNMASKED_VENDOR_WEBGL), gl.getParameter(info.UNMASKED_RENDERER_WEBGL));
+      } catch (e) { /* ignore */ }
+      fingerprint = sha256Words(parts.join('|')).slice(0, 4).map((w) => w.toString(36)).join('');
+      return fingerprint;
+    }
+
     // Starts (or reuses) a sign-up check. Challenges last 15 minutes on the
     // server; this gets a new one after 10.
     function prepareHuman(fresh) {
@@ -5552,6 +5716,8 @@
       const headers = {};
       if (body) headers['Content-Type'] = 'application/json';
       if (token) headers.Authorization = 'Bearer ' + token;
+      headers['X-Device'] = deviceId;
+      headers['X-Device-FP'] = browserFingerprint();
       let res;
       try {
         res = await fetch(base + path, {

@@ -56,6 +56,23 @@ CREATE INDEX IF NOT EXISTS hits_at ON hits (at);
 CREATE TABLE IF NOT EXISTS used_challenges (id TEXT PRIMARY KEY, at INTEGER NOT NULL);
 CREATE TABLE IF NOT EXISTS server_keys (k TEXT PRIMARY KEY, v TEXT NOT NULL);
 
+-- The device, browser and network each account was used on, as keyed
+-- hashes (never raw addresses), so the admin panel can link accounts made
+-- on the same device. kind: d device id, f browser fingerprint, n network.
+CREATE TABLE IF NOT EXISTS account_devices (
+  account   TEXT NOT NULL,
+  kind      TEXT NOT NULL,
+  value     TEXT NOT NULL,
+  label     TEXT NOT NULL DEFAULT '',                 -- e.g. "Chrome on Windows"
+  first_at  INTEGER NOT NULL,
+  last_at   INTEGER NOT NULL,
+  PRIMARY KEY (account, kind, value)
+);
+CREATE INDEX IF NOT EXISTS account_devices_value ON account_devices (kind, value);
+-- Devices, browsers or networks that can't make or log in to accounts.
+CREATE TABLE IF NOT EXISTS device_bans (kind TEXT NOT NULL, value TEXT NOT NULL, reason TEXT NOT NULL DEFAULT '', at INTEGER NOT NULL,
+                                        PRIMARY KEY (kind, value));
+
 -- Every item in the game. Item identity is the drop-table index plus wear,
 -- float and tracker; value is computed from those when the item is made.
 CREATE TABLE IF NOT EXISTS items (

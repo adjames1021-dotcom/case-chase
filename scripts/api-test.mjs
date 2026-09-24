@@ -29,8 +29,10 @@ const b64u = (buf) => Buffer.from(buf).toString('base64').replace(/\+/g, '-').re
 // per-network limits only kick in where a test means them to. (Cloudflare
 // sets CF-Connecting-IP itself on the live site; players can't choose it.)
 const randomIp = () => '10.' + [0, 0, 0].map(() => Math.floor(Math.random() * 256)).join('.');
-async function call(method, path, body, token, ip) {
-  const headers = { 'CF-Connecting-IP': ip || randomIp() };
+// Likewise each call comes from a made-up device unless `device` is given.
+const randomDevice = () => 'dev' + Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2);
+async function call(method, path, body, token, ip, device) {
+  const headers = { 'CF-Connecting-IP': ip || randomIp(), 'X-Device': device || randomDevice(), 'X-Device-FP': 'fp' + (device || 'x').slice(0, 20) };
   if (body) headers['Content-Type'] = 'application/json';
   if (token) headers.Authorization = 'Bearer ' + token;
   if (path === '/signup' && body && body.challenge === undefined) body = Object.assign(await human(), body);
@@ -112,7 +114,7 @@ for (const fine of ['classic', 'Grape', 'peacock', 'Sussex']) {
 
 /* ---- sign-up checks (bots) ---- */
 const botName = () => 'newbie' + Math.floor(Math.random() * 1e6);
-const tryJoin = (extra, ip) => call('POST', '/signup', Object.assign({ name: botName(), password: 'botpass1' }, extra), null, ip);
+const tryJoin = (extra, ip, device) => call('POST', '/signup', Object.assign({ name: botName(), password: 'botpass1' }, extra), null, ip, device);
 let rr;
 const [h1, h2, h3, h4] = await humans(4);
 ok('no sign-up check -> refused', (await tryJoin({ challenge: '', nonce: '' })).status === 400);
@@ -132,6 +134,13 @@ const school = '203.0.113.9';
 const joined = [];
 for (const h of lots) joined.push((await tryJoin(h, school)).status);
 ok('20 new accounts an hour per network', joined.slice(0, 20).every((s) => s === 200) && joined[20] === 429, joined.slice(-3));
+
+const noDevice = await fetch(BASE + '/signup', { method: 'POST', headers: { 'Content-Type': 'application/json', 'CF-Connecting-IP': randomIp() },
+  body: JSON.stringify(Object.assign(await human(), { name: botName(), password: 'botpass1' })) });
+ok('sign-up without a device id -> refused', noDevice.status === 400);
+const farm = 'device-farm-zzzzzzzzzzzz', farmed = [];
+for (let i = 0; i < 6; i++) farmed.push((await tryJoin({}, null, farm)).status);
+ok('5 new accounts a day per device', farmed.slice(0, 5).every((s) => s === 200) && farmed[5] === 429, farmed);
 
 /* ---- rate limits ---- */
 for (let i = 0; i < 50; i++) await call('POST', '/login', { name: 'nobody' + i, password: 'wrong-pass' }, null, '198.51.100.7');
@@ -467,6 +476,59 @@ await admin({ a: 'revoke_admin', id: 'modguy' });
 ok('removing admin takes the tools away', (await acctAdmin(mt, { a: 'stats' })).status === 403 && (await me(mt)).me.admin === false);
 ok('the heartbeat notices it', (await call('POST', '/ping', null, mt)).data.me.admin === false);
 
+
+  /* ---- devices ---- */
+  const onDevice = (dev, name, pass) => call('POST', '/signup', { name, password: pass || 'devpass1' }, null, null, dev);
+  const D1 = 'device-one-aaaaaaaaaaaa', D2 = 'device-two-bbbbbbbbbbbb', D3 = 'device-three-ccccccccccc';
+  const d1 = [];
+  for (const n of ['botone', 'bottwo', 'botthree']) d1.push((await onDevice(D1, n)).data.me.id);
+  r = await admin({ a: 'player', id: 'botone' });
+  const devRow = r.data.devices.find((d) => d.kind === 'd');
+  ok('player page lists devices', devRow && devRow.others === 2, r.data.devices);
+  r = await admin({ a: 'devices' });
+  ok('3 accounts on one device get flagged', r.data.flagged.some((g) => g.kind === 'd' && g.value === devRow.value && g.accounts === 3), r.data.flagged.length);
+  r = await admin({ a: 'device', kind: 'd', value: devRow.value });
+  ok('device page lists its accounts', r.data.accounts.length === 3 && d1.every((id) => r.data.accounts.some((a) => a.id === id)));
+  const elsewhere = (await onDevice(D3, 'elsewhere')).data;     // not on D1 yet
+  ok('logging in records a new device', (await call('POST', '/login', { name: 'elsewhere', password: 'devpass1' }, null, null, D1)).status === 200);
+  r = await admin({ a: 'ban_device', kind: 'd', value: devRow.value, reason: 'bot farm', block: true });
+  ok('ban all on a device', r.status === 200 && r.data.count === 4, r.data);
+  r = await call('POST', '/login', { name: 'botone', password: 'devpass1' });
+  ok('...they are banned', r.status === 403 && r.data.reason === 'bot farm', r.data);
+  r = await onDevice(D1, 'botfour');
+  ok('blocked device can\'t sign up', r.status === 403 && /blocked/.test(r.data.error), r.data);
+  await admin({ a: 'unban', id: 'elsewhere' });
+  r = await call('POST', '/login', { name: 'elsewhere', password: 'devpass1' }, null, null, D1);
+  ok('blocked device can\'t log in', r.status === 403 && /blocked/.test(r.data.error), r.data);
+  ok('same account on another device is fine', (await call('POST', '/login', { name: 'elsewhere', password: 'devpass1' }, null, null, D3)).status === 200);
+  await admin({ a: 'unblock_device', kind: 'd', value: devRow.value });
+  ok('unblock', (await call('POST', '/login', { name: 'elsewhere', password: 'devpass1' }, null, null, D1)).status === 200);
+  // One banned account stops its device making more (ban evasion).
+  await onDevice(D2, 'evader1');
+  await admin({ a: 'ban', id: 'evader1', reason: 'x' });
+  r = await onDevice(D2, 'evader2');
+  ok('a device with a banned account can\'t make new ones', r.status === 403 && /banned/.test(r.data.error), r.data);
+  // Admins are never swept up.
+  const D4 = 'device-four-dddddddddddd';
+  await onDevice(D4, 'modhelper'); await onDevice(D4, 'modalt');
+  await admin({ a: 'grant_admin', id: 'modhelper' });
+  const d4 = (await admin({ a: 'player', id: 'modalt' })).data.devices.find((d) => d.kind === 'd').value;
+  r = await admin({ a: 'ban_device', kind: 'd', value: d4, reason: 'test' });
+  ok('ban all skips admin accounts', r.data.count === 1 && (await call('POST', '/login', { name: 'modhelper', password: 'devpass1' })).status === 200, r.data);
+  ok('delete all needs DELETE typed', (await admin({ a: 'delete_device', kind: 'd', value: d4 })).status === 400);
+  r = await admin({ a: 'delete_device', kind: 'd', value: d4, confirm: 'DELETE' });
+  ok('delete all on a device (not admins)', r.data.count === 1 && (await admin({ a: 'player', id: 'modalt' })).status === 404 &&
+    (await admin({ a: 'player', id: 'modhelper' })).status === 200, r.data);
+  r = await admin({ a: 'bad_names', mode: 'ban' });
+  ok('ban all rule-breaking names runs', r.status === 200 && r.data.count === 0, r.data);
+  ok('stats count rule-breaking names', (await admin({ a: 'stats' })).data.bad_names_total === 0);
+  ok('delete all banned needs DELETE typed', (await admin({ a: 'delete_banned' })).status === 400);
+  const bannedBefore = (await admin({ a: 'stats' })).data.totals.banned;
+  r = await admin({ a: 'delete_banned', confirm: 'DELETE' });
+  ok('delete all banned accounts', r.status === 200 && r.data.count === bannedBefore && bannedBefore >= 4 && r.data.left === 0, [bannedBefore, r.data]);
+  ok('...they are gone', (await call('POST', '/login', { name: 'botone', password: 'devpass1' })).status === 401 &&
+    (await admin({ a: 'stats' })).data.totals.banned === 0);
+  ok('...and nobody else', (await call('POST', '/login', { name: 'elsewhere', password: 'devpass1' })).status === 200);
 } else console.log('SKIP moderation (no ADMIN_KEY)');
 
 /* ---- consistency ---- */
