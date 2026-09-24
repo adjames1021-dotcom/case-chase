@@ -135,3 +135,13 @@ CREATE TABLE IF NOT EXISTS admin_log (
 CREATE TABLE IF NOT EXISTS admin_nonces (n TEXT PRIMARY KEY, at INTEGER NOT NULL);   -- each signed request works once
 CREATE TABLE IF NOT EXISTS revoked_gifts (gift_id TEXT PRIMARY KEY, at INTEGER NOT NULL);
 CREATE TABLE IF NOT EXISTS ban_reasons (account TEXT PRIMARY KEY, reason TEXT NOT NULL, at INTEGER NOT NULL);
+CREATE TABLE IF NOT EXISTS admin_accounts (account TEXT PRIMARY KEY, at INTEGER NOT NULL);   -- made admin with the key
+CREATE TABLE IF NOT EXISTS server_gifts (
+  id          TEXT PRIMARY KEY,                   -- the code is GIFT2.<id>
+  coins       INTEGER NOT NULL,
+  items       TEXT NOT NULL,                      -- [[idx, wear, float, tracker, value], ...]
+  message     TEXT NOT NULL DEFAULT '',
+  expires     INTEGER NOT NULL DEFAULT 0,
+  created_at  INTEGER NOT NULL,
+  created_by  TEXT NOT NULL
+);

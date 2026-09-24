@@ -1,4 +1,4 @@
 node_modules
 .wrangler
 .DS_Store
-server/src/core.js
+server/core.js

@@ -1349,7 +1349,7 @@
         </svg>
       </div>
       <h4>Admin</h4>
-      <p class="hint">Stays unlocked until you close the tab.</p>
+      <p class="hint">Stays unlocked until you close the tab. Admin accounts get these tools just by logging in.</p>
       <div class="admin-unlock">
         <input class="control" id="admin-key-in" type="password" placeholder="ADMK-..." autocomplete="off" spellcheck="false">
         <button class="btn btn-primary" id="admin-unlock">Unlock</button>
@@ -1407,6 +1407,7 @@
       <div class="up-layout trade-layout">
         <div class="card">
           <h4>Build a gift</h4>
+          <p class="hint" id="gift-key-note" style="display:none">Without the admin key, gift codes are made on the server: players need an account to claim them.</p>
           <label class="field"><span class="label">Coins</span>
             <input class="control" id="gift-coins-in" type="number" min="0" step="1" value="0"></label>
           <div class="field"><span class="label">Add an item</span>
@@ -4374,7 +4375,14 @@
     const host = $('#code-preview');
     if (!raw) { host.innerHTML = '<div class="err-box">Paste a gift code</div>'; return; }
     host.innerHTML = '<div class="ok-box">Checking…</div>';
-    const res = raw.indexOf('GIFT.') === 0 ? await parseGift(raw) : { error: 'That isn\'t a gift code' };
+    let res;
+    if (raw.indexOf('GIFT2.') === 0) {
+      // Stored on the server: only accounts can claim these.
+      res = cloud.signedIn() ? await cloud.peekGift(raw) : { error: 'Log in to claim this gift' };
+      if (res.claimed) res = { error: 'Already claimed' };
+    } else {
+      res = raw.indexOf('GIFT.') === 0 ? await parseGift(raw) : { error: 'That isn\'t a gift code' };
+    }
     if (res.error) {
       host.innerHTML = res.update
         ? '<div class="update-box"><b>Update needed</b>' + res.error + '</div>'
@@ -4406,14 +4414,19 @@
     try { localStorage.setItem(ADMIN_LOG_KEY, JSON.stringify(list.slice(0, 80))); } catch (e) { /* ignore */ }
   }
 
+  // Admin tools open with the admin key, or for an admin account (like
+  // LILBEAN) while it's logged in.
+  const hasAdmin = () => !!adminState.key || cloud.isAdminAccount();
+
   function renderAdmin() {
-    const open = !!adminState.key;
+    const open = hasAdmin();
     $('#admin-locked').style.display = open ? 'none' : '';
     $('#admin-open').style.display = open ? '' : 'none';
-    $('#admin-lock').style.display = open ? '' : 'none';
+    $('#admin-lock').style.display = adminState.key ? '' : 'none';
     $('#adm-tabs').style.display = open ? '' : 'none';
     $('#admin-btn').classList.toggle('on', open);
     if (!open) return;
+    $('#gift-key-note').style.display = adminState.key ? 'none' : '';
 
     const sel = $('#gift-item-sel');
     if (!sel.options.length) sel.innerHTML = itemOptions();
@@ -4488,7 +4501,7 @@
   }
 
   async function createGift() {
-    if (!adminState.key || adminState.busy) return;
+    if (!hasAdmin() || adminState.busy) return;
     const coins = Math.floor(Number($('#gift-coins-in').value) || 0);
     if (coins < 0 || coins > 1e9) { toast('Invalid coin amount', 'bad'); return; }
     if (!coins && !adminState.staged.length) { toast('Add coins or items first', 'bad'); return; }
@@ -4502,10 +4515,19 @@
 
     adminState.busy = true;
     let code, check;
-    try {
-      code = await makeGiftCode(adminState.key, spec);
-      check = await parseGift(code);           // prove the code round-trips before handing it out
-    } catch (e) { check = { error: 'Signing failed.' }; }
+    if (adminState.key) {
+      try {
+        code = await makeGiftCode(adminState.key, spec);
+        check = await parseGift(code);           // prove the code round-trips before handing it out
+      } catch (e) { check = { error: 'Signing failed.' }; }
+    } else {
+      // No key: the server makes and stores the code (accounts can claim it; guests can't).
+      try {
+        code = (await cloud.admin('make_gift', { coins: coins, items: spec.items.map(itemTuple), message: spec.message, ttl: ttl })).code;
+        check = { type: 'gift', coins: coins, items: spec.items.slice(), message: spec.message, code: 'gift:' + code.slice(6),
+                  raw: code, expires: spec.expires };
+      } catch (e) { check = { error: e.message }; }
+    }
     adminState.busy = false;
     if (!code || check.error) { toast(check && check.error || 'Could not create the gift', 'bad'); return; }
 
@@ -4668,7 +4690,8 @@
     const wear = '<option value="-1">Random wear</option>' + WEARS.map((w, i) => '<option value="' + (i + 1) + '">' + w.name + '</option>').join('');
     host.innerHTML =
       '<div class="to-partner" style="margin-top:0"><span><b style="font-size:18px">' + escHtml(p.name) + '</b> <i>#' + escHtml(tagOf(p.id)) +
-        ' · ' + escHtml(p.id) + '</i></span>' + (p.banned ? '<span class="adm-badge">Banned</span>' : '') + '</div>' +
+        ' · ' + escHtml(p.id) + '</i></span>' + (p.banned ? '<span class="adm-badge">Banned</span>' : '') +
+        (p.admin ? '<span class="adm-badge" style="background:var(--orange)">Admin</span>' : '') + '</div>' +
       (p.banned && p.ban_reason ? '<p class="hint">Ban reason: ' + escHtml(p.ban_reason) + '</p>' : '') +
       '<div class="acct-stats">' +
         [['Coins', fmt(p.coins)], ['Items', fmt(p.inv_count) + ' · ' + fmt(p.inv_value)], ['Cases opened', fmt(p.opened)],
@@ -4704,7 +4727,10 @@
         '<div class="adm-line"><input class="control" id="admp-reason" placeholder="Ban reason (shown to them)" value="' + escAttr(p.ban_reason || '') + '">' +
           (p.banned ? '<button class="btn btn-ghost btn-sm" id="admp-unban">Unban</button>'
                     : '<button class="btn btn-ghost btn-sm" id="admp-ban">Ban</button>') + '</div>' +
-        '<div class="adm-line"><button class="btn btn-ghost btn-sm" id="admp-logout">Log out on all devices</button></div></div>' +
+        '<div class="adm-line"><button class="btn btn-ghost btn-sm" id="admp-logout">Log out on all devices</button>' +
+          (adminState.key ? (p.permanent_admin ? '<span class="hint" style="margin:0">Always an admin (set in wrangler.toml)</span>'
+            : '<button class="btn btn-ghost btn-sm" id="admp-admin">' + (p.admin ? 'Remove admin' : 'Make admin') + '</button>') : '') +
+        '</div></div>' +
 
       (p.offers.length ? '<div class="adm-sec"><h5>Recent trades</h5>' + p.offers.map((o) =>
         '<div class="adm-row"><span class="grow">' + escHtml(o.from_name) + ' → ' + escHtml(o.to_name) +
@@ -4764,6 +4790,10 @@
     });
     if ($('#admp-unban')) $('#admp-unban').addEventListener('click', async () => {
       if (await adminDo('unban', { id: p.id }, p.name + ' unbanned')) again();
+    });
+    if ($('#admp-admin')) $('#admp-admin').addEventListener('click', async () => {
+      if (!p.admin && !confirm('Give ' + p.name + ' the admin tools? They\'ll have them whenever they\'re logged in.')) return;
+      if (await adminDo(p.admin ? 'revoke_admin' : 'grant_admin', { id: p.id }, p.admin ? p.name + ' is no longer an admin' : p.name + ' is now an admin')) again();
     });
     $('#admp-logout').addEventListener('click', async () => {
       if (await adminDo('logout', { id: p.id }, p.name + ' logged out everywhere')) again();
@@ -4843,6 +4873,7 @@
   }
 
   const giftIdOf = (code) => {
+    if (code.indexOf('GIFT2.') === 0) return code.slice(6);
     try { return JSON.parse(unutf8.decode(unb64u(code.split('.')[1]))).id; } catch (e) { return null; }
   };
 
@@ -5350,6 +5381,8 @@
 
     const signedIn = () => !!(token && acct);
     const account = () => acct;
+    const isAdminAccount = () => signedIn() && !!acct.admin;
+    const adminAccess = () => !!adminState.key || isAdminAccount();
     const isOnline = (p, now) => (now || Date.now() / 1000) - (p.last_seen || 0) < ONLINE_WINDOW;
 
     function setStatus(next) {
@@ -5410,7 +5443,11 @@
 
     function applyMe(me) {
       if (!me) return;
+      // Only some replies say whether the account is an admin; the rest keep what we knew.
+      const wasAdmin = !!(acct && acct.id === me.id && acct.admin);
+      if (!('admin' in me)) me = Object.assign({}, me, { admin: wasAdmin });
       acct = me;
+      if (me.admin !== wasAdmin && token) setTimeout(refreshAll, 0);   // made or unmade an admin since
       state.coins = me.coins;
       state.opened = me.opened;
       state.played = me.played;
@@ -5441,6 +5478,8 @@
     const animating = () => !!opening || upgrade.spinning || battle.running;
 
     function refreshAll() {
+      $('#admin-btn').classList.toggle('on', adminAccess());
+      if ($('#panel-admin').classList.contains('active')) renderAdmin();
       renderBalance();
       refreshCaseButtons();
       renderInventory();
@@ -5535,6 +5574,7 @@
         afterLogin();
         SFX.win('rare');
         toast(authMode === 'signup' ? 'Welcome, ' + r.me.name : 'Welcome back, ' + r.me.name, 'good');
+        if (r.me.admin) setTimeout(() => toast('Admin tools unlocked', 'good'), 400);
       } catch (e) {
         err.textContent = e.message;
         SFX.lose();
@@ -5661,8 +5701,8 @@
       host.innerHTML = rows.map((r, i) => {
         let actions = '';
         if (!r.me && signedIn()) actions += '<button class="lb-act" data-lbtrade="' + escAttr(r.p.id) + '">Trade</button>';
-        if (adminState.key) actions += '<button class="lb-act" data-lbmanage="' + escAttr(r.p.id) + '">Manage</button>';
-        if (!r.me && adminState.key) actions += '<button class="lb-act bad" data-lbban="' + escAttr(r.p.id) + '">Ban</button>';
+        if (adminAccess()) actions += '<button class="lb-act" data-lbmanage="' + escAttr(r.p.id) + '">Manage</button>';
+        if (!r.me && adminAccess()) actions += '<button class="lb-act bad" data-lbban="' + escAttr(r.p.id) + '">Ban</button>';
         return boardRow(r.e, i, r.me, actions);
       }).join('');
       $$('#lb-body [data-lbtrade]').forEach((b) => b.addEventListener('click', () => {
@@ -5688,10 +5728,21 @@
        they're from you and a copied request can't be replayed. */
 
     async function adminCall(action, fields) {
-      if (!adminState.key) throw new Error('Unlock admin first');
       const p = JSON.stringify(Object.assign({}, fields, { a: action, n: randomId(), ts: Math.floor(Date.now() / 1000) }));
-      const g = b64u(new Uint8Array(await crypto.subtle.sign(SIGN, adminState.key, utf8.encode(p))));
-      return api('POST', '/api/admin', { p: p, g: g });
+      if (adminState.key) {
+        const g = b64u(new Uint8Array(await crypto.subtle.sign(SIGN, adminState.key, utf8.encode(p))));
+        return api('POST', '/api/admin', { p: p, g: g });
+      }
+      if (isAdminAccount()) return api('POST', '/api/admin', { p: p });   // the login is the proof
+      throw new Error('Unlock admin first');
+    }
+
+    async function peekGift(code) {
+      try {
+        const r = await api('POST', '/api/gift', { code: code, peek: true });
+        return { type: 'gift', coins: r.coins, items: r.items.map(tupleToItem).filter(Boolean), message: r.message || '',
+                 code: 'gift:' + code.slice(6), raw: code, expires: r.expires, claimed: r.claimed };
+      } catch (e) { return { error: e.message }; }
     }
 
     async function moderate(action, who, extra) {
@@ -5745,7 +5796,8 @@
       const a = acct;
       const best = a.best_item >= 0 ? ALL_ITEMS[a.best_item] : null;
       $('#acct-name').innerHTML = escHtml(a.name) + ' <i style="font-style:normal;color:var(--ink-3)">#' + escHtml(tagOf(a.id)) + '</i>';
-      $('#acct-since').textContent = a.created_at ? 'Playing since ' + new Date(a.created_at * 1000).toLocaleDateString() : '';
+      $('#acct-since').textContent = (a.created_at ? 'Playing since ' + new Date(a.created_at * 1000).toLocaleDateString() : '') +
+        (a.admin ? ' · Admin' : '');
       $('#acct-stats').innerHTML = [['Coins', fmt(a.coins)], ['Item value', fmt(a.inv_value)], ['Items', fmt(a.inv_count)],
         ['Cases opened', fmt(a.opened)], ['Best drop', best ? fmt(a.best_value) : '—'], ['Time played', fmtTime(a.played)]]
         .map((x) => '<div class="tile"><b style="font-size:17px">' + x[1] + '</b><span>' + x[0] + '</span></div>').join('');
@@ -6253,7 +6305,7 @@
       submitLogin: submitLogin, playAsGuest: playAsGuest, logout: logout, refresh: refresh,
       open: open, sell: sell, upgrade: upgradeItems, claimGift: claimGift,
       renderBoard: renderBoard, moderate: moderate, renderTradeBadge: renderTradeBadge,
-      admin: adminCall, config: config, dismissBanner: dismissBanner,
+      admin: adminCall, config: config, dismissBanner: dismissBanner, isAdminAccount: isAdminAccount, peekGift: peekGift,
       showAccount: showAccount, hideAccount: hideAccount, changePassword: changePassword, logoutEverywhere: logoutEverywhere,
       renderTradeView: renderTradeView, search: search, pickPartner: pickPartner,
       battleBusy: battleBusy, createBattle: createBattle, renderBattles: renderBattles, finishBattle: finishBattle

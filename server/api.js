@@ -1,12 +1,13 @@
 /*
   Case Sim — cloud server.
 
-  A Cloudflare Worker with a D1 database. Accounts log in with a username and
+  Runs on the game's own site as a Cloudflare Pages Function
+  (functions/api/[[path]].js), with a D1 database. Accounts log in with a username and
   password, and the server owns every account's coins and items: it rolls
   cases, runs the upgrader, settles trades and pays out battles. The game
   only shows what the server says, so editing a save can't create anything.
 
-  The game's rules come from server/src/core.js, which scripts/sync-core.mjs
+  The game's rules come from server/core.js, which scripts/sync-core.mjs
   builds from the CORE block in site/index.html. The server and the game
   therefore always agree on items, odds and battle rolls.
 
@@ -66,6 +67,15 @@ const utf8 = new TextEncoder();
 const nowS = () => Math.floor(Date.now() / 1000);
 const rand = () => crypto.getRandomValues(new Uint32Array(1))[0] / 4294967296;
 const KEY_IDX = ITEM_INDEX[VAULT_KEY.name], CRATE_IDX = ITEM_INDEX[VAULT_CRATE.name];
+
+// Accounts that are always admins: ADMIN_ACCOUNTS in wrangler.toml (account
+// ids, so a renamed or re-registered name can never inherit it). The admin
+// key can also make other accounts admins (the admin_accounts table).
+let permanentAdmins = new Set();
+const isPermanentAdmin = (id) => permanentAdmins.has(id);
+async function isAdminAccount(db, id) {
+  return isPermanentAdmin(id) || !!(await db.prepare('SELECT 1 FROM admin_accounts WHERE account = ?').bind(id).first());
+}
 
 /* ---------- helpers ---------- */
 
@@ -190,6 +200,9 @@ const meOut = (a) => ({
   played: a.played, inv_value: a.inv_value, inv_count: a.inv_count, rev: a.rev, created_at: a.created_at
 });
 
+// The account as its owner sees it, including whether it has admin tools.
+const meFull = async (db, a) => Object.assign(meOut(a), { admin: await isAdminAccount(db, a.id) });
+
 async function inventory(db, id) {
   const { results } = await db.prepare(
     'SELECT id, idx, wear, float, tracker FROM items WHERE owner = ? AND locked IS NULL ORDER BY id').bind(id).all();
@@ -251,7 +264,7 @@ async function login(request, env) {
   const session = await newSession(db, a.id);
   await db.batch([session.stmt,
     db.prepare('UPDATE accounts SET fail_count = 0, last_seen = ?, last_ping = ? WHERE id = ?').bind(t, t, a.id)]);
-  return json({ token: session.token, me: meOut(await account(db, a.id)), inventory: await inventory(db, a.id) });
+  return json({ token: session.token, me: await meFull(db, await account(db, a.id)), inventory: await inventory(db, a.id) });
 }
 
 async function authed(request, env) {
@@ -284,7 +297,7 @@ async function ping(env, me) {
     `UPDATE accounts SET played = played + CASE WHEN ? - last_ping BETWEEN 1 AND 120 THEN ? - last_ping ELSE 0 END,
             last_ping = ?, last_seen = ? WHERE id = ?`).bind(t, t, t, t, me.id).run();
   const pending = await env.DB.prepare(`SELECT COUNT(*) AS n FROM offers WHERE to_id = ? AND status = 'pending'`).bind(me.id).first();
-  return json({ me: meOut(await account(env.DB, me.id)), pending: pending.n });
+  return json({ me: await meFull(env.DB, await account(env.DB, me.id)), pending: pending.n });
 }
 
 /* ---------- cases, selling, upgrades ---------- */
@@ -400,9 +413,41 @@ async function signedByAdmin(env, text, sig) {
   } catch (e) { return false; }
 }
 
+// Gift codes made on the server (by admins without the key): GIFT2.<id>,
+// with the contents stored in server_gifts.
+async function serverGift(db, me, code, peek) {
+  const id = code.slice(6);
+  const g = /^[A-Za-z0-9_-]{12,40}$/.test(id) && await db.prepare('SELECT * FROM server_gifts WHERE id = ?').bind(id).first();
+  if (!g) fail(400, 'Invalid gift code');
+  if (g.expires && nowS() > g.expires) fail(410, 'This gift has expired');
+  if (await db.prepare('SELECT 1 FROM revoked_gifts WHERE gift_id = ?').bind(id).first()) fail(410, 'This gift was cancelled');
+  const rows = JSON.parse(g.items);
+  if (peek) {
+    const claimed = !!(await db.prepare('SELECT 1 FROM gift_claims WHERE gift_id = ? AND account = ?').bind(id, me.id).first());
+    return json({ coins: g.coins, items: rows.map((r) => r.slice(0, 4)), message: g.message, expires: g.expires, claimed: claimed });
+  }
+  if (me.inv_count + rows.length > MAX_ITEMS) fail(409, 'Your inventory is full. Sell something first.');
+  const ts = nowS();
+  const stmts = [
+    db.prepare('INSERT INTO gift_claims (gift_id, account, at) VALUES (?, ?, ?)').bind(id, me.id, ts),
+    check(db, 'NOT EXISTS (SELECT 1 FROM revoked_gifts WHERE gift_id = ?)', id),
+    db.prepare('UPDATE accounts SET coins = coins + ? WHERE id = ?').bind(g.coins, me.id)
+  ];
+  const itemsAt = rows.length ? stmts.push(insertItems(db, me.id, rows, ts)) - 1 : -1;
+  let res;
+  try { res = await db.batch(stmts); }
+  catch (e) {
+    if (/UNIQUE|constraint/i.test(String(e && e.message))) fail(409, 'You already claimed this gift');
+    throw e;
+  }
+  return json({ me: meOut(await account(db, me.id)), coins: g.coins, items: itemsAt >= 0 ? sorted(res[itemsAt]) : [], message: g.message });
+}
+
 async function gift(request, env, me) {
   const db = env.DB;
-  const code = String((await body(request)).code || '').trim().replace(/\s+/g, '');
+  const req = await body(request);
+  const code = String(req.code || '').trim().replace(/\s+/g, '');
+  if (code.indexOf('GIFT2.') === 0) return serverGift(db, me, code, !!req.peek);
   const parts = code.split('.');
   if (parts.length !== 3 || parts[0] !== 'GIFT') fail(400, 'That isn\'t a gift code');
   if (!(await signedByAdmin(env, parts[1], parts[2]))) fail(400, 'Invalid gift code');
@@ -850,8 +895,43 @@ const ADMIN = {
         WHERE o.from_id = ? OR o.to_id = ? ORDER BY o.updated_at DESC LIMIT 20`).bind(a.id, a.id).all()).results;
     const sessions = await db.prepare('SELECT COUNT(*) AS n, MAX(last_used) AS last FROM sessions WHERE account = ?').bind(a.id).first();
     return Object.assign(adminRow(a), {
-      ban_reason: await banReason(db, a.id), fail_count: a.fail_count, sessions: sessions.n, items: items, offers: offers
+      ban_reason: await banReason(db, a.id), fail_count: a.fail_count, sessions: sessions.n, items: items, offers: offers,
+      admin: await isAdminAccount(db, a.id), permanent_admin: isPermanentAdmin(a.id)
     });
+  },
+
+  async grant_admin(db, p) {
+    const a = await findAccount(db, p.id);
+    await db.prepare('INSERT OR IGNORE INTO admin_accounts (account, at) VALUES (?, ?)').bind(a.id, nowS()).run();
+    return { log: [a.name, 'made an admin'] };
+  },
+
+  async revoke_admin(db, p) {
+    const a = await findAccount(db, p.id);
+    if (isPermanentAdmin(a.id)) fail(409, a.name + ' is always an admin (set in wrangler.toml)');
+    await db.prepare('DELETE FROM admin_accounts WHERE account = ?').bind(a.id).run();
+    return { log: [a.name, 'no longer an admin'] };
+  },
+
+  // A gift code stored on the server, for admins without the key.
+  async make_gift(db, p, actor) {
+    const coins = p.coins || 0;
+    if (!isInt(coins, 0, 1e12)) fail(400, 'Bad coin amount');
+    const list = Array.isArray(p.items) ? p.items : [];
+    if (list.length > 50) fail(400, 'At most 50 items');
+    const rows = list.map((t) => {
+      const it = tupleToItem(t);
+      if (!it) fail(400, 'One of those items isn\'t valid');
+      return t.concat([it.value]);
+    });
+    if (!coins && !rows.length) fail(400, 'Add coins or items first');
+    const ttl = isInt(p.ttl, 0, 365 * 86400) ? p.ttl : 0;
+    const id = randomId(12);
+    await db.prepare('INSERT INTO server_gifts (id, coins, items, message, expires, created_at, created_by) VALUES (?, ?, ?, ?, ?, ?, ?)')
+      .bind(id, coins, JSON.stringify(rows), String(p.message || '').slice(0, 120), ttl ? nowS() + ttl : 0, nowS(),
+            actor ? actor.name : 'admin key').run();
+    return { code: 'GIFT2.' + id, log: ['gift ' + id, 'created: ' + (coins ? coins + ' coins' : '') + (coins && rows.length ? ' + ' : '') +
+      (rows.length ? rows.length + ' item(s)' : '')] };
   },
 
   async coins(db, p) {
@@ -1022,27 +1102,48 @@ const ADMIN = {
   }
 };
 
+// Actions only the admin key can do, and actions that can't touch an admin
+// account unless the key is used.
+const KEY_ONLY = { grant_admin: 1, revoke_admin: 1 };
+const PROTECTS_ADMINS = { ban: 1, delete: 1, reset: 1, rename: 1, logout: 1, coins: 1, take: 1 };
+
+// Two ways in: a request signed with the admin key, or the session of an
+// admin account (like LILBEAN), which needs no key.
 async function admin(request, env) {
   const db = env.DB;
   const b = await body(request);
-  if (typeof b.p !== 'string' || typeof b.g !== 'string' || !(await signedByAdmin(env, b.p, b.g))) fail(403, 'Not admin');
   let p = null;
   try { p = JSON.parse(b.p); } catch (e) { p = null; }
-  if (!p || !isInt(p.ts, 0, 1e12) || Math.abs(nowS() - p.ts) > 300) fail(400, 'Request expired. Check your device clock.');
-  if (typeof p.n !== 'string' || !/^[A-Za-z0-9_-]{8,40}$/.test(p.n)) fail(400, 'Missing request id');
+  if (!p || typeof p.a !== 'string') fail(400, 'Bad request');
+  let actor = null;
+  if (typeof b.g === 'string') {
+    if (!(await signedByAdmin(env, b.p, b.g))) fail(403, 'Not admin');
+    if (!isInt(p.ts, 0, 1e12) || Math.abs(nowS() - p.ts) > 300) fail(400, 'Request expired. Check your device clock.');
+    if (typeof p.n !== 'string' || !/^[A-Za-z0-9_-]{8,40}$/.test(p.n)) fail(400, 'Missing request id');
+    // A signed request works once: a copied request can't be replayed.
+    try {
+      await db.batch([
+        db.prepare('DELETE FROM admin_nonces WHERE at < ?').bind(nowS() - 86400),
+        db.prepare('INSERT INTO admin_nonces (n, at) VALUES (?, ?)').bind(p.n, nowS())
+      ]);
+    } catch (e) { fail(409, 'That request was already used'); }
+  } else {
+    const me = await authed(request, env).catch(() => null);
+    if (!me || !(await isAdminAccount(db, me.id))) fail(403, 'Not admin');
+    actor = me;
+  }
   const run = Object.prototype.hasOwnProperty.call(ADMIN, p.a) && ADMIN[p.a];
   if (!run) fail(400, 'Unknown action');
-  // A signed request works once: a copied request can't be replayed.
-  try {
-    await db.batch([
-      db.prepare('DELETE FROM admin_nonces WHERE at < ?').bind(nowS() - 86400),
-      db.prepare('INSERT INTO admin_nonces (n, at) VALUES (?, ?)').bind(p.n, nowS())
-    ]);
-  } catch (e) { fail(409, 'That request was already used'); }
-  const out = (await run(db, p)) || {};
+  if (actor && KEY_ONLY[p.a]) fail(403, 'Only the admin key can do that');
+  if (actor && PROTECTS_ADMINS[p.a]) {
+    const target = await findAccount(db, p.id);
+    if (target.id !== actor.id && await isAdminAccount(db, target.id)) fail(403, 'Admin accounts can only be changed with the admin key');
+    if (target.id === actor.id && (p.a === 'ban' || p.a === 'delete')) fail(403, 'You can\'t do that to your own account');
+  }
+  const out = (await run(db, p, actor)) || {};
   if (Array.isArray(out.log)) {
     await db.prepare('INSERT INTO admin_log (at, action, target, detail) VALUES (?, ?, ?, ?)')
-      .bind(nowS(), p.a, String(out.log[0]).slice(0, 80), String(out.log[1]).slice(0, 300)).run();
+      .bind(nowS(), p.a, String(out.log[0]).slice(0, 80), ((actor ? 'by ' + actor.name + ': ' : '') + String(out.log[1])).slice(0, 300)).run();
     delete out.log;
   }
   return json(Object.assign({ ok: true }, out));
@@ -1055,9 +1156,10 @@ export default {
     if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: CORS });
     const url = new URL(request.url);
     const [root, a, b, c] = url.pathname.replace(/\/+$/, '').split('/').slice(1);
+    permanentAdmins = new Set(String(env.ADMIN_ACCOUNTS || '').split(',').map((x) => x.trim()).filter(Boolean));
     const method = request.method;
     try {
-      if (root !== 'api') return json({ ok: true, service: 'case-sim-server', version: GAME_VERSION });
+      if (root !== 'api') return json({ ok: true, service: 'case-sim', version: GAME_VERSION });
 
       if (method === 'POST' && a === 'signup') return await signup(request, env);
       if (method === 'POST' && a === 'login') return await login(request, env);
@@ -1075,7 +1177,7 @@ export default {
         await env.DB.prepare('DELETE FROM sessions WHERE token_hash = ?').bind(me.s_hash).run();
         return json({ ok: true });
       }
-      if (method === 'GET' && a === 'me') return json({ me: meOut(me), inventory: await inventory(env.DB, me.id) });
+      if (method === 'GET' && a === 'me') return json({ me: await meFull(env.DB, me), inventory: await inventory(env.DB, me.id) });
       if (method === 'POST' && a === 'ping') return await ping(env, me);
       if (method === 'POST' && a === 'account' && b === 'password') return await changePassword(request, env, me);
       if (method === 'POST' && a === 'account' && b === 'logout-all') {

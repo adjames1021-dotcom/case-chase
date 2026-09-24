@@ -2,18 +2,20 @@
 // moderation and race conditions, against a local server with an empty
 // database. The deploy workflow runs these before anything goes live.
 //
-// Run with (from server/):
-//   npm run db:init:local && npx wrangler dev --local --port 8787 &
-//   node ../scripts/api-test.mjs
+// Run with (from the repo root):
+//   node scripts/sync-core.mjs
+//   npx wrangler d1 execute case-sim --local --file server/schema.sql
+//   npx wrangler pages dev --port 8787 &
+//   node scripts/api-test.mjs
 // Gift and admin tests need the admin key: set ADMIN_KEY=ADMK-... to include them.
 
 import { readFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
-const core = await import(join(root, 'server/src/core.js'));
+const core = await import(join(root, 'server/core.js'));
 const BASE = (process.env.API_BASE || 'http://127.0.0.1:8787') + '/api';
-const toml = readFileSync(join(root, 'server/wrangler.toml'), 'utf8');
+const toml = readFileSync(join(root, 'wrangler.toml'), 'utf8');
 const ADMIN = {
   x: /ADMIN_X = "([^"]+)"/.exec(toml)[1], y: /ADMIN_Y = "([^"]+)"/.exec(toml)[1],
   d: String(process.env.ADMIN_KEY || '').replace(/^ADMK-/, '') || null
@@ -344,6 +346,41 @@ ok('new password works', !!(await login('alice', 'brandnew1')));
 await call('POST', '/account/logout-all', null, at);
 ok('log out everywhere', (await call('GET', '/me', null, at)).status === 401);
 await admin({ a: 'reset', id: 'alice', password: 'newpass99' });
+
+
+// admin accounts: no key needed, but some limits
+const acctAdmin = (t, p) => call('POST', '/admin', { p: JSON.stringify(p) }, t);
+const mt = (await call('POST', '/signup', { name: 'modguy', password: 'modpass1' })).data.token;
+ok('normal players can\'t use admin', (await acctAdmin(mt, { a: 'stats' })).status === 403);
+ok('nor with no login at all', (await call('POST', '/admin', { p: JSON.stringify({ a: 'stats' }) })).status === 403);
+await admin({ a: 'grant_admin', id: 'modguy' });
+ok('/me says admin', (await me(mt)).me.admin === true);
+ok('the heartbeat says admin too', (await call('POST', '/ping', null, mt)).data.me.admin === true);
+ok('admin account uses tools without the key', (await acctAdmin(mt, { a: 'stats' })).status === 200);
+r = await acctAdmin(mt, { a: 'coins', id: 'bob', delta: 5 });
+ok('admin account can give coins', r.status === 200);
+ok('admin account can\'t make admins', (await acctAdmin(mt, { a: 'grant_admin', id: 'bob' })).status === 403);
+const ht = (await call('POST', '/signup', { name: 'helper2', password: 'helppass' })).data.token;
+await admin({ a: 'grant_admin', id: 'helper2' });
+ok('admin account can\'t ban another admin', (await acctAdmin(mt, { a: 'ban', id: 'helper2', reason: 'x' })).status === 403);
+ok('admin account can\'t ban itself', (await acctAdmin(mt, { a: 'ban', id: 'modguy' })).status === 403);
+r = await acctAdmin(mt, { a: 'log' });
+ok('log says who did it', r.data.entries.some((e) => /^by modguy: /.test(e.detail)));
+r = await acctAdmin(mt, { a: 'make_gift', coins: 300, items: [[core.ITEM_INDEX['Sticker | Paper Crane'], 0, 0, 0]], message: 'from mod', ttl: 3600 });
+ok('admin account makes a server gift code', r.status === 200 && /^GIFT2\.[A-Za-z0-9_-]{16}$/.test(r.data.code), r.data);
+const g2code = r.data.code;
+const peek = await call('POST', '/gift', { code: g2code, peek: true }, bt);
+ok('peek shows the gift without claiming', peek.status === 200 && peek.data.coins === 300 && peek.data.items.length === 1 && peek.data.claimed === false);
+const bc2 = (await me(bt)).me.coins;
+r = await call('POST', '/gift', { code: g2code }, bt);
+ok('claim a server gift', r.status === 200 && (await me(bt)).me.coins === bc2 + 300 && r.data.items.length === 1);
+ok('server gift claimed once per account', (await call('POST', '/gift', { code: g2code }, bt)).status === 409);
+ok('bad server gift code refused', (await call('POST', '/gift', { code: 'GIFT2.notarealcode123' }, bt)).status === 400);
+await acctAdmin(mt, { a: 'revoke_gift', gift: g2code.slice(6) });
+ok('cancelled server gift refused', (await call('POST', '/gift', { code: g2code }, ht)).status === 410);
+await admin({ a: 'revoke_admin', id: 'modguy' });
+ok('removing admin takes the tools away', (await acctAdmin(mt, { a: 'stats' })).status === 403 && (await me(mt)).me.admin === false);
+ok('the heartbeat notices it', (await call('POST', '/ping', null, mt)).data.me.admin === false);
 
 } else console.log('SKIP moderation (no ADMIN_KEY)');
 

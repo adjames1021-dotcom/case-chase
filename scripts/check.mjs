@@ -2,7 +2,7 @@
 // The deploy workflow runs this first and stops if anything fails, so a
 // broken update never reaches the live site.
 
-import { readFileSync, writeFileSync, mkdtempSync, readdirSync, statSync } from 'node:fs';
+import { readFileSync, writeFileSync, mkdtempSync, readdirSync, statSync, existsSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import { join, dirname } from 'node:path';
@@ -79,7 +79,7 @@ if (core) {
   else pass(names.length + ' items in their saved order' + (names.length > order.items.length ? ' (' + (names.length - order.items.length) + ' new at the end)' : ''));
   const gone = order.cases.filter((id) => !cases.includes(id));
   if (gone.length) fail('Case ids removed or renamed: ' + gone.join(', '));
-  const worker = readFileSync(join(root, 'server/src/worker.js'), 'utf8');
+  const worker = readFileSync(join(root, 'server/api.js'), 'utf8');
   const wanted = (/import \{([^}]+)\} from '\.\/core\.js'/.exec(worker) || ['', ''])[1].split(',').map((x) => x.trim()).filter(Boolean);
   const missing = wanted.filter((n) => !(n in core));
   if (missing.length) fail('The server needs these from the CORE block: ' + missing.join(', '));
@@ -90,31 +90,29 @@ if (core) {
 
 /* ---------- the server ---------- */
 
-syntax('server/src/worker.js', readFileSync(join(root, 'server/src/worker.js'), 'utf8'), '.mjs');
-
-const toml = readFileSync(join(root, 'server/wrangler.toml'), 'utf8');
-if (/REPLACE_WITH/.test(toml)) fail('server/wrangler.toml still has a REPLACE_WITH placeholder');
+syntax('server/api.js', readFileSync(join(root, 'server/api.js'), 'utf8'), '.mjs');
 
 // The site runs the server as a Pages Function (functions/), configured by the
-// root wrangler.toml; it must use the same database and admin key.
-try {
-  const pages = readFileSync(join(root, 'wrangler.toml'), 'utf8');
-  const val = (text, key) => (new RegExp(key + ' = "([^"]+)"').exec(text) || [])[1];
-  if (val(pages, 'pages_build_output_dir') !== 'site') fail('wrangler.toml must have pages_build_output_dir = "site"');
-  for (const key of ['database_id', 'ADMIN_X', 'ADMIN_Y']) {
-    if (!val(pages, key) || val(pages, key) !== val(toml, key)) fail(key + ' differs between wrangler.toml and server/wrangler.toml');
+// root wrangler.toml. There is no separate worker any more.
+const toml = readFileSync(join(root, 'wrangler.toml'), 'utf8');
+if (/REPLACE_WITH/.test(toml)) fail('wrangler.toml still has a REPLACE_WITH placeholder');
+{
+  const val = (key) => (new RegExp(key + ' = "([^"]+)"').exec(toml) || [])[1];
+  if (val('pages_build_output_dir') !== 'site') fail('wrangler.toml must have pages_build_output_dir = "site"');
+  for (const key of ['database_id', 'ADMIN_X', 'ADMIN_Y']) if (!val(key)) fail('wrangler.toml is missing ' + key);
+  for (const old of ['server/wrangler.toml', 'server/package.json', 'server/src']) {
+    if (existsSync(join(root, old))) fail(old + ' is from the old separate worker; the server runs on the site now');
   }
-  const fn = readFileSync(join(root, 'functions/api/[[path]].js'), 'utf8');
-  if (!fn.includes("from '../../server/src/worker.js'")) fail('functions/api/[[path]].js must run server/src/worker.js');
-  pass('the site runs the server, with the same database and admin key');
-} catch (e) {
-  fail('Missing the site\'s server setup: ' + e.message);
+  let fn = '';
+  try { fn = readFileSync(join(root, 'functions/api/[[path]].js'), 'utf8'); } catch (e) {}
+  if (!fn.includes("from '../../server/api.js'")) fail('functions/api/[[path]].js must run server/api.js');
+  else pass('the site runs the server, set up by wrangler.toml');
 }
 
 // Bans only work if the server knows the same admin public key as the game.
 const gx = /x: '([A-Za-z0-9_-]{43})'/.exec(html), gy = /y: '([A-Za-z0-9_-]{43})'/.exec(html);
 const sx = /ADMIN_X = "([^"]+)"/.exec(toml), sy = /ADMIN_Y = "([^"]+)"/.exec(toml);
-if (!gx || !gy || !sx || !sy || gx[1] !== sx[1] || gy[1] !== sy[1]) fail('Admin public key in the game and server/wrangler.toml do not match');
+if (!gx || !gy || !sx || !sy || gx[1] !== sx[1] || gy[1] !== sy[1]) fail('Admin public key in the game and wrangler.toml do not match');
 else pass('admin public key matches between game and server');
 
 /* ---------- secrets ---------- */

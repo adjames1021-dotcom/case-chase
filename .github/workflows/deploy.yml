@@ -1,6 +1,6 @@
 # Every push to main is checked, then deployed to Cloudflare Pages:
 #   https://case-sim.pages.dev       the game (site/)
-#   https://case-sim.pages.dev/api   its server (functions/ runs server/src/worker.js)
+#   https://case-sim.pages.dev/api   its server (functions/ runs server/api.js)
 # If a check or test fails, nothing is deployed and the live site keeps
 # running the last good version.
 #
@@ -104,10 +104,9 @@ jobs:
       # Tables first, so new code never runs against old tables.
       - name: Update database tables
         if: steps.plan.outputs.schema == 'true'
-        working-directory: server
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-        run: npx --yes wrangler@4 d1 execute case-sim --remote --file schema.sql --yes
+        run: npx --yes wrangler@4 d1 execute case-sim --remote --file server/schema.sql --yes
 
       - name: Deploy game
         if: steps.plan.outputs.site == 'true'

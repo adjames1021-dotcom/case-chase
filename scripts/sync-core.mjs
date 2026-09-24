@@ -1,7 +1,7 @@
-// Builds server/src/core.js from the CORE block in site/index.html, so the
+// Builds server/core.js from the CORE block in site/index.html, so the
 // server rolls cases, battles and upgrades with exactly the game's rules.
-// Runs automatically before `npm run dev` / `npm run deploy` in server/ and
-// in the deploy workflow. The output is generated: edit site/index.html.
+// Run it before `npx wrangler pages dev`; the deploy workflow runs it too.
+// The output is generated: edit site/index.html.
 //
 // Run with: node scripts/sync-core.mjs
 
@@ -27,6 +27,6 @@ export function buildCore(html) {
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   const out = buildCore(readFileSync(join(root, 'site/index.html'), 'utf8'));
-  writeFileSync(join(root, 'server/src/core.js'), out);
-  console.log('server/src/core.js rebuilt from site/index.html');
+  writeFileSync(join(root, 'server/core.js'), out);
+  console.log('server/core.js rebuilt from site/index.html');
 }

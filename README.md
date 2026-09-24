@@ -16,9 +16,11 @@ Made by lilbean.
 site/                  the game (this folder is what goes live)
   index.html           the whole game in one file; its CORE block holds the rules
   assets/              optional custom item images
-server/                the account server: logins, inventories, trades, battles
-functions/             runs the server on the site itself, under /api
-wrangler.toml          the Pages site's settings (database, admin key)
+server/
+  api.js               the account server: logins, inventories, trades, battles
+  schema.sql           the database tables
+functions/             runs server/api.js on the site itself, under /api
+wrangler.toml          the site's only Cloudflare settings (database, admin key, admins)
 scripts/
   check.mjs            pre-deploy checks
   smoke.mjs            plays the game in a headless browser
@@ -33,7 +35,7 @@ Everything is one website:
 | Part | Lives at | Deployed from |
 | --- | --- | --- |
 | Game | https://case-sim.pages.dev | `site/` |
-| Server | https://case-sim.pages.dev/api | `server/`, run by `functions/` |
+| Server | https://case-sim.pages.dev/api | `server/api.js`, run by `functions/` |
 
 The game only ever talks to its own site. A copy opened from a file talks to `case-sim.pages.dev`.
 
@@ -44,7 +46,7 @@ Push a change to `main`. That can be an edit on GitHub, a push from your compute
 1. **Checks** the game and server for mistakes: syntax errors, a missing server address, items moved out of their saved order, rules the server can't run, and a leaked admin private key.
 2. **Plays the game** in a headless browser as a guest: it opens a case, keeps the item, visits every tab and reloads.
 3. **Tests the server** on a private copy. It makes accounts, opens cases, sells, upgrades, trades, runs battles and races requests against each other, then checks that every coin and item ends up where it should.
-4. **Deploys** only what changed. The server goes first, then the game.
+4. **Deploys** only what changed. Database table changes go first, then the site, which carries the game and its server together.
 
 If step 1, 2 or 3 fails, **nothing is deployed** and the live site keeps running the last good version. You can see each run under the repo's **Actions** tab. A red ✗ means the update was held back, and clicking it shows why.
 
@@ -58,7 +60,6 @@ GitHub needs a Cloudflare API token before it can deploy. Until you add one, the
    | | | |
    | --- | --- | --- |
    | Account | Cloudflare Pages | Edit |
-   | Account | Workers Scripts | Edit |
    | Account | D1 | Edit |
    | Account | Account Settings | Read |
    | User | User Details | Read |
