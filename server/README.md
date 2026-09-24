@@ -11,6 +11,20 @@ It deploys with the site whenever `site/`, `server/` or `functions/` changes on 
 ## How it works
 
 - **Accounts.** Players sign up with a username and password. Passwords are stored as salted PBKDF2 hashes, never as plain text. Logging in gives the game a random session token, which it keeps until the player logs out. Five wrong passwords in a row lock that account's login for a minute.
+- **Usernames.** Rude usernames are refused, including disguised ones like `sh1t`, `fuuuck` or `Big_Dick`. So are names that pose as staff: anything that looks like `admin`, `moderator` or `LILBEAN`, including look-alikes such as `L1LBEAN`. The rules are `nameProblem()` in the CORE block of `site/index.html`, so the game warns as you type and the server enforces the same rules. The word list is stored in ROT13 so the file isn't a wall of slurs. To change it, edit `BLOCKED_NAMES` there (run `rot13` on the words). Names that were made before these rules show up under **Names that break the rules** in the admin Overview, where you can rename them.
+- **No bot accounts.** Before signing up, the game fetches a challenge from `/api/challenge` and works out a matching answer (a small proof of work: about a second of the browser's time, done while the player types). The server checks the answer, and each challenge works for one account only. Sign-ups are also refused if the form's hidden "website" field is filled in (people never see it; bots fill in every field), or if the form comes back quicker than a person could type. On top of that, each network can make 20 accounts an hour and 60 a day, and the whole game takes at most 300 new accounts an hour.
+- **Rate limits.** Every API route is limited. Each request first passes a quick check held in memory, per network and per logged-in account (about 4 requests a second per account, with room for bursts). Actions worth abusing are also counted in the database, so their limits hold across all of Cloudflare's servers:
+
+  | What | Limit |
+  | --- | --- |
+  | Sign-up attempts | 60 per network per 10 minutes |
+  | New accounts | 20 per network per hour, 60 a day; 300 per hour overall |
+  | Wrong passwords | 5 in a row locks that account for a minute; 50 per network per 10 minutes |
+  | Trade offers, battles made | 40 each per account per 10 minutes |
+  | Gift codes tried | 30 per account per 10 minutes |
+  | Password changes | 10 per account per hour |
+
+  Networks get far more room than accounts, because a whole school can share one IP address. A refused request gets HTTP 429 with a `Retry-After` header, and the game shows the message.
 - **The server is in charge.** The game asks the server to open a case, sell, upgrade, trade or join a battle. The server checks that the account can afford it and owns the items, rolls the result and saves it. The game then shows what came back. Editing the game or its save can't create coins or items for an account.
 - **Same rules everywhere.** The server doesn't keep its own copy of the items, cases and odds. `core.js` is built from the CORE block in `site/index.html` by `scripts/sync-core.mjs`, before every deploy and every test run. Don't edit `core.js` itself; it isn't committed.
 - **All or nothing.** Each change to coins or items runs as a single database transaction. If any part fails, for example the coins ran out or an item was sold a moment earlier, none of it happens. Coins can never go below zero, and every item belongs to exactly one account.
@@ -30,13 +44,13 @@ There are two ways in:
 
 Tabs:
 
-- **Overview:** accounts, who's online, new today, coins and item value in circulation, cases opened, open trades and battles, gifts claimed. Also lists of the richest, newest and most recently active players. Click a name to manage that player.
+- **Overview:** accounts, who's online, new today, coins and item value in circulation, cases opened, open trades and battles, gifts claimed. Also lists of the richest, newest and most recently active players, and any names that break the name rules. Click a name to manage that player.
 - **Players:** find anyone by username. For each player you can:
   - see their stats, devices, recent trades and full inventory
   - give, take or set coins
   - give any item (choose the wear, a tracker, and up to 100 at once)
   - remove selected items
-  - rename them, set a new password, or log them out on every device
+  - rename them (the name rules apply, but admins may use staff names like `Moderator`), set a new password, or log them out on every device
   - ban them with a reason (they're shown it) or unban them
   - delete the account. You have to type the name to confirm. Their open trades and battles are cancelled and refunded.
 - **Gifts:** build gift codes. With the key they're signed codes (`GIFT.`) that also work for guests. From an admin account they're stored on the server (`GIFT2.`) and work for accounts only. Each code now shows how many accounts claimed it. You can cancel a code so nobody else can claim it (existing claims are kept), or reinstate it.
@@ -53,7 +67,7 @@ Players manage their own account from the **Account** button in the top bar. It 
 To wipe every account and start over:
 
 ```bash
-npx wrangler d1 execute case-sim --remote --command "DELETE FROM accounts; DELETE FROM sessions; DELETE FROM items; DELETE FROM offers; DELETE FROM lobbies; DELETE FROM gift_claims; DELETE FROM admin_accounts; DELETE FROM server_gifts;"
+npx wrangler d1 execute case-sim --remote --command "DELETE FROM accounts; DELETE FROM sessions; DELETE FROM items; DELETE FROM offers; DELETE FROM lobbies; DELETE FROM gift_claims; DELETE FROM admin_accounts; DELETE FROM server_gifts; DELETE FROM signups; DELETE FROM hits;"
 ```
 
 ## Deploying by hand
@@ -94,7 +108,8 @@ JSON in and out. Logged-in routes take `Authorization: Bearer <token>`. Items ar
 
 | Method | Path | Login | Body / query |
 | --- | --- | --- | --- |
-| POST | `/api/signup` | | `{ name, password }` → `{ token, me, inventory }` |
+| GET | `/api/challenge` | | → `{ challenge, bits }` (the sign-up check) |
+| POST | `/api/signup` | | `{ name, password, challenge, nonce }` → `{ token, me, inventory }` |
 | POST | `/api/login` | | `{ name, password }` → `{ token, me, inventory }` |
 | POST | `/api/logout` | ✓ | |
 | GET | `/api/me` | ✓ | → `{ me, inventory }` |
@@ -120,4 +135,4 @@ JSON in and out. Logged-in routes take `Authorization: Bearer <token>`. Items ar
 
 Admin actions: `stats`, `find {q}`, `player {id}`, `coins {id, delta \| set}`, `give {id, idx, wear, tracker, count}`, `take {id, ids}`, `rename {id, name}`, `ban {id, reason}`, `unban {id}`, `reset {id, password}`, `logout {id}`, `delete {id, confirm}`, `offers`, `cancel_offer {offer}`, `lobbies`, `cancel_lobby {lobby}`, `settings {announcement, maintenance}`, `gifts {gifts}`, `revoke_gift {gift, undo}`, `make_gift {coins, items, message, ttl}`, `log`. Key only: `grant_admin {id}`, `revoke_admin {id}`. `id` can be a player id or a username.
 
-Limits: usernames are 3–16 letters, numbers, `_` or `-`, and passwords are 6–72 characters. There can be at most 20 new accounts per network per hour, and the free case opens at most once every 3 seconds. Each account holds up to 3,000 items and can have 20 open offers. Unfilled lobbies close after 15 minutes and refund everyone.
+Limits: usernames are 3–16 letters, numbers, `_` or `-` and must pass the name rules, and passwords are 6–72 characters. The free case opens at most once every 3 seconds. See **Rate limits** above for the rest. Each account holds up to 3,000 items and can have 20 open offers. Unfilled lobbies close after 15 minutes and refund everyone.

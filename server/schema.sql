@@ -44,6 +44,17 @@ CREATE INDEX IF NOT EXISTS sessions_account ON sessions (account);
 
 CREATE TABLE IF NOT EXISTS signups (ip TEXT NOT NULL, at INTEGER NOT NULL);
 CREATE INDEX IF NOT EXISTS signups_ip ON signups (ip, at);
+CREATE INDEX IF NOT EXISTS signups_at ON signups (at);
+
+-- Rate limits kept in the database: one row per counted request, cleared after a day.
+CREATE TABLE IF NOT EXISTS hits (k TEXT NOT NULL, at INTEGER NOT NULL);
+CREATE INDEX IF NOT EXISTS hits_k  ON hits (k, at);
+CREATE INDEX IF NOT EXISTS hits_at ON hits (at);
+
+-- Sign-up checks already used (each works for one account), and the key
+-- that signs them. The key is made on first use and never leaves the server.
+CREATE TABLE IF NOT EXISTS used_challenges (id TEXT PRIMARY KEY, at INTEGER NOT NULL);
+CREATE TABLE IF NOT EXISTS server_keys (k TEXT PRIMARY KEY, v TEXT NOT NULL);
 
 -- Every item in the game. Item identity is the drop-table index plus wear,
 -- float and tracker; value is computed from those when the item is made.

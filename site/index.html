@@ -689,6 +689,7 @@
   .name-gate.open { display: grid; }
   .name-gate h2 { margin: 0 0 20px; font-family: var(--cond); font-size: 28px; font-weight: 700; letter-spacing: 6px; text-transform: uppercase; }
   .name-gate input { width: min(300px, 80vw); text-align: center; font-size: 18px; font-weight: 700; padding: 12px; cursor: text; }
+  .hp-field { position: absolute; left: -10000px; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
   .name-err { min-height: 18px; margin: 10px 0 14px; font-size: 12.5px; color: var(--mythic); }
 
   .whoami { font-family: var(--cond); font-size: 14px; font-weight: 700; letter-spacing: 1px; color: var(--ink); }
@@ -1064,6 +1065,8 @@
     </div>
     <input class="control" id="login-name" maxlength="16" autocomplete="username" spellcheck="false" placeholder="username">
     <input class="control" id="login-pass" type="password" maxlength="72" autocomplete="current-password" placeholder="password">
+    <!-- Hidden from people; bots that fill in every field give themselves away. -->
+    <input class="hp-field" id="login-website" name="website" tabindex="-1" autocomplete="off" aria-hidden="true" placeholder="website">
     <div class="name-err" id="login-err"></div>
     <button class="btn btn-primary" id="login-go">Log in</button>
     <button class="link-btn login-guest" id="login-guest">Play offline as a guest</button>
@@ -3464,6 +3467,64 @@
     return { pulls: pulls, totals: totals, winner: tied[Math.floor(rng() * tied.length)] };
   }
 
+  /* ---------- usernames ---------- */
+  // The game checks a name as it's typed and the server checks it for real,
+  // both with this code. Blocked words are stored in ROT13 so this file isn't
+  // a wall of slurs; rot13() turns them back.
+  const NAME_RULE = /^[A-Za-z0-9_-]{3,16}$/;
+  const rot13 = (s) => s.replace(/[a-z]/g, (c) => String.fromCharCode((c.charCodeAt(0) - 84) % 26 + 97));
+  const BLOCKED_NAMES = {
+    // anywhere in the name
+    any: 'shpx shx spx fuvg ovgpu phag avttre avttn snttbg sntbg juber fyhg chffl cravf intvan cbea uvgyre anmv ergneq ' +
+         'gjng jnaxre wvmm qvyqb onfgneq genaal nffubyr qhzonff wnpxnff nffjvcr pbpxfhpx oybjwbo unaqwbo zbyrfg uragnv ' +
+         'phzfubg betnfz grfgvpyr fpebghz xvxr tbbx ornare jrgonpx enturnq gbjryurnq zvys kkk xxx obbo ahqr',
+    // at the start or end of a word in the name
+    edge: 'qvpx',
+    // at the start of a word
+    start: 'crqb',
+    // a whole word in the name (these hide inside ordinary words: class, grape, peacock)
+    word: 'nff nefr pbpx encr encvfg phz gvg gvgf nany nahf frk frkl pbba fcvp puvax cnxv qlxr ubzb snt sntf gubg ubr ' +
+          'xlf avt avtn arteb jnax ubeal'
+  };
+  const NAME_WORDS = {};
+  Object.keys(BLOCKED_NAMES).forEach((k) => { NAME_WORDS[k] = rot13(BLOCKED_NAMES[k]).split(' '); });
+  const RESERVED_NAMES = ['admin', 'moderator', 'lilbean'];     // nobody can pose as staff or the owner
+  const LEET = { 0: 'o', 1: 'i', 3: 'e', 4: 'a', 5: 's', 7: 't', 8: 'b', 9: 'g' };
+
+  // The words in a name, lower case: split at _ and -, at BigName-style
+  // capitals, and at digits, except digits between letters (sh1t), which
+  // are read as the letters they stand for. `one` is what 1 stands for.
+  function nameWords(name, one) {
+    return name.replace(/([a-z])([A-Z])/g, '$1 $2')
+      .replace(/[0-9]+/g, (d, at, s) => /[A-Za-z]/.test(s[at - 1] || '') && /[A-Za-z]/.test(s[at + d.length] || '')
+        ? d.replace(/[0-9]/g, (x) => (x === '1' ? one : LEET[x] || '')) : ' ')
+      .toLowerCase().split(/[\s_-]+/).filter(Boolean);
+  }
+
+  // Why a username can't be used, or '' if it's fine.
+  function nameProblem(name, allowReserved) {
+    name = String(name || '');
+    if (!NAME_RULE.test(name)) return 'Usernames are 3-16 letters, numbers, _ or -';
+    const squash = (s) => s.replace(/(.)\1+/g, '$1');           // fuuuck -> fuck
+    const bad = 'That username isn\'t allowed. Pick another one.';
+    for (const one of ['i', 'l']) {
+      const words = nameWords(name, one), all = words.join('');
+      if (NAME_WORDS.any.some((w) => all.indexOf(w) >= 0 || squash(all).indexOf(w) >= 0)) return bad;
+      for (const p of words.concat(words.length > 1 ? [all] : [])) {
+        if (NAME_WORDS.word.some((w) => p === w || p === w + 's' || p === w + 'es' || (p.length > w.length && squash(p) === squash(w)))) return bad;
+        if (NAME_WORDS.edge.some((w) => p.indexOf(w) === 0 || p.slice(-w.length) === w)) return bad;
+        if (NAME_WORDS.start.some((w) => p.indexOf(w) === 0)) return bad;
+      }
+    }
+    if (!allowReserved) {
+      // Look-alikes count: 1 and I for l, rn for m, 0 for o.
+      const plain = (s) => s.toLowerCase().replace(/[0-9]/g, (d) => (d === '1' ? 'l' : LEET[d] || ''))
+        .replace(/i/g, 'l').replace(/rn/g, 'm').replace(/[^a-z]/g, '');
+      if (RESERVED_NAMES.some((w) => plain(name).indexOf(plain(w)) >= 0)) return 'That name is reserved. Pick another one.';
+    }
+    return '';
+  }
+
   /* ===== CORE:END ===================================================== */
 
   const CASE_EMBLEMS = {
@@ -4656,7 +4717,8 @@
       list('Most coins', r.richest, (p) => fmt(p.coins)) +
       list('Most item value', r.top_items, (p) => fmt(p.inv_value)) +
       list('Newest accounts', r.newest, (p) => ago(p.created_at)) +
-      list('Recently online', r.recent, (p) => ago(p.last_seen));
+      list('Recently online', r.recent, (p) => ago(p.last_seen)) +
+      (r.bad_names && r.bad_names.length ? list('Names that break the rules', r.bad_names, () => 'Rename') : '');
     wirePlayerLinks('#adm-lists');
   }
 
@@ -5372,6 +5434,7 @@
     let refreshWanted = false;
     let lastOffers = 0, lastLobbies = 0, lastPing = 0, lastFull = 0, searchTimer = null, lobbyTimer = null;
     let authMode = 'login';
+    let human = null;                     // the sign-up check being solved (see prepareHuman)
     const board = { sort: null, at: 0, list: null, loading: false };
     const ui = {
       offers: [], pending: 0, results: [], searched: false, partner: null, partnerInv: [],
@@ -5380,6 +5443,90 @@
     };
 
     const signedIn = () => !!(token && acct);
+
+    /* ---------- sign-up check ---------- */
+    // Signing up needs a nonce that makes SHA-256(challenge + ':' + nonce)
+    // start with `bits` zero bits (see server/api.js). It's found in the
+    // background as soon as the Sign up tab opens, so it's usually ready
+    // before the player has finished typing. Plain-JS SHA-256 because
+    // crypto.subtle is far slower for a quarter of a million tiny hashes.
+    const SHA_K = new Uint32Array([
+      0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b, 0x59f111f1, 0x923f82a4, 0xab1c5ed5,
+      0xd807aa98, 0x12835b01, 0x243185be, 0x550c7dc3, 0x72be5d74, 0x80deb1fe, 0x9bdc06a7, 0xc19bf174,
+      0xe49b69c1, 0xefbe4786, 0x0fc19dc6, 0x240ca1cc, 0x2de92c6f, 0x4a7484aa, 0x5cb0a9dc, 0x76f988da,
+      0x983e5152, 0xa831c66d, 0xb00327c8, 0xbf597fc7, 0xc6e00bf3, 0xd5a79147, 0x06ca6351, 0x14292967,
+      0x27b70a85, 0x2e1b2138, 0x4d2c6dfc, 0x53380d13, 0x650a7354, 0x766a0abb, 0x81c2c92e, 0x92722c85,
+      0xa2bfe8a1, 0xa81a664b, 0xc24b8b70, 0xc76c51a3, 0xd192e819, 0xd6990624, 0xf40e3585, 0x106aa070,
+      0x19a4c116, 0x1e376c08, 0x2748774c, 0x34b0bcb5, 0x391c0cb3, 0x4ed8aa4a, 0x5b9cca4f, 0x682e6ff3,
+      0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208, 0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2
+    ]);
+    const shaW = new Uint32Array(64);
+
+    // SHA-256 of an ASCII string, as eight 32-bit words.
+    function sha256Words(str) {
+      const n = str.length, blocks = ((n + 8) >> 6) + 1, w = shaW;
+      let h0 = 0x6a09e667, h1 = 0xbb67ae85, h2 = 0x3c6ef372, h3 = 0xa54ff53a,
+          h4 = 0x510e527f, h5 = 0x9b05688c, h6 = 0x1f83d9ab, h7 = 0x5be0cd19;
+      for (let blk = 0; blk < blocks; blk++) {
+        for (let i = 0; i < 16; i++) {
+          let v = 0;
+          for (let j = 0; j < 4; j++) {
+            const p = blk * 64 + i * 4 + j;
+            v = (v << 8) | (p < n ? str.charCodeAt(p) & 0xff : p === n ? 0x80 : 0);
+          }
+          w[i] = v;
+        }
+        if (blk === blocks - 1) w[15] = n * 8;
+        for (let i = 16; i < 64; i++) {
+          const x = w[i - 15], y = w[i - 2];
+          w[i] = w[i - 16] + (((x >>> 7) | (x << 25)) ^ ((x >>> 18) | (x << 14)) ^ (x >>> 3)) +
+                 w[i - 7] + (((y >>> 17) | (y << 15)) ^ ((y >>> 19) | (y << 13)) ^ (y >>> 10));
+        }
+        let a = h0, b = h1, c = h2, d = h3, e = h4, f = h5, g = h6, h = h7;
+        for (let i = 0; i < 64; i++) {
+          const t1 = (h + (((e >>> 6) | (e << 26)) ^ ((e >>> 11) | (e << 21)) ^ ((e >>> 25) | (e << 7))) +
+                      ((e & f) ^ (~e & g)) + SHA_K[i] + w[i]) | 0;
+          const t2 = ((((a >>> 2) | (a << 30)) ^ ((a >>> 13) | (a << 19)) ^ ((a >>> 22) | (a << 10))) +
+                      ((a & b) ^ (a & c) ^ (b & c))) | 0;
+          h = g; g = f; f = e; e = (d + t1) | 0; d = c; c = b; b = a; a = (t1 + t2) | 0;
+        }
+        h0 = (h0 + a) | 0; h1 = (h1 + b) | 0; h2 = (h2 + c) | 0; h3 = (h3 + d) | 0;
+        h4 = (h4 + e) | 0; h5 = (h5 + f) | 0; h6 = (h6 + g) | 0; h7 = (h7 + h) | 0;
+      }
+      return [h0 >>> 0, h1 >>> 0, h2 >>> 0, h3 >>> 0, h4 >>> 0, h5 >>> 0, h6 >>> 0, h7 >>> 0];
+    }
+
+    function zeroBits(words, bits) {
+      for (let i = 0; i < bits; i++) if ((words[i >> 5] >>> (31 - (i & 31))) & 1) return false;
+      return true;
+    }
+
+    async function solveChallenge(challenge, bits, stale) {
+      for (let n = 0; ; n++) {
+        const nonce = n.toString(36);
+        if (zeroBits(sha256Words(challenge + ':' + nonce), bits)) return nonce;
+        if (n % 4000 === 3999) {
+          await new Promise((r) => setTimeout(r, 0));          // keep the page responsive
+          if (stale()) throw new Error('stale');
+        }
+      }
+    }
+
+    // Starts (or reuses) a sign-up check. Challenges last 15 minutes on the
+    // server; this gets a new one after 10.
+    function prepareHuman(fresh) {
+      if (human && !fresh && Date.now() - human.at < 10 * 60000) return human;
+      if (human) human.stale = true;
+      const job = { at: Date.now(), stale: false };
+      job.ready = api('GET', '/api/challenge').then((r) => {
+        job.challenge = r.challenge;
+        job.gotAt = Date.now();
+        return solveChallenge(r.challenge, r.bits, () => job.stale);
+      });
+      job.ready.catch(() => { if (human === job) human = null; });
+      human = job;
+      return job;
+    }
     const account = () => acct;
     const isAdminAccount = () => signedIn() && !!acct.admin;
     const adminAccess = () => !!adminState.key || isAdminAccount();
@@ -5428,6 +5575,7 @@
         const err = new Error(out.error === 'banned' ? 'This account is banned.' + (out.reason ? ' Reason: ' + out.reason : '')
           : out.error || 'Server error');
         err.status = res.status;
+        err.data = out;
         throw err;
       }
       return out;
@@ -5546,6 +5694,18 @@
       $('#login-note').textContent = mode === 'signup'
         ? 'Your coins and items are saved to your account, so you can play from anywhere.'
         : 'Guests play on this device only: no trading or leaderboard.';
+      if (mode === 'signup') prepareHuman();
+    }
+
+    // Tells the player straight away when a name they're typing won't be allowed.
+    let nameTimer = null;
+    function checkNameAsTyped() {
+      clearTimeout(nameTimer);
+      if (authMode !== 'signup') return;
+      nameTimer = setTimeout(() => {
+        const name = $('#login-name').value.trim();
+        if (name.length >= 3 && authMode === 'signup') $('#login-err').textContent = nameProblem(name);
+      }, 350);
     }
 
     async function submitLogin() {
@@ -5554,13 +5714,27 @@
       const password = $('#login-pass').value;
       const err = $('#login-err');
       if (!NAME_RE.test(name)) { err.textContent = 'Usernames are 3-16 letters, numbers, _ or -'; SFX.lose(); return; }
+      const problem = authMode === 'signup' ? nameProblem(name) : '';
+      if (problem) { err.textContent = problem; SFX.lose(); return; }
       if (password.length < 6) { err.textContent = 'Passwords are at least 6 characters'; SFX.lose(); return; }
       ui.busy = true;
       const go = $('#login-go');
       go.disabled = true;
       err.textContent = '';
+      const signingUp = authMode === 'signup';
       try {
-        const r = await api('POST', authMode === 'signup' ? '/api/signup' : '/api/login', { name: name, password: password });
+        const req = { name: name, password: password };
+        if (signingUp) {
+          go.textContent = 'Checking you\'re not a bot…';
+          const job = prepareHuman();
+          req.nonce = await job.ready;
+          req.challenge = job.challenge;
+          req.website = $('#login-website').value;
+          const pause = job.gotAt + 2100 - Date.now();        // the server wants a person-sized pause
+          if (pause > 0) await new Promise((r) => setTimeout(r, pause));
+          human = null;                                        // each check works for one account
+        }
+        const r = await api('POST', signingUp ? '/api/signup' : '/api/login', req);
         save();                                  // keep the guest save as it was
         token = r.token;
         storeToken();
@@ -5576,11 +5750,13 @@
         toast(authMode === 'signup' ? 'Welcome, ' + r.me.name : 'Welcome back, ' + r.me.name, 'good');
         if (r.me.admin) setTimeout(() => toast('Admin tools unlocked', 'good'), 400);
       } catch (e) {
-        err.textContent = e.message;
+        err.textContent = e.message === 'stale' ? 'Try again.' : e.message;
         SFX.lose();
+        if (signingUp && authMode === 'signup') prepareHuman(true);    // a fresh check for the next try
       } finally {
         ui.busy = false;
         go.disabled = false;
+        go.textContent = authMode === 'signup' ? 'Create account' : 'Log in';
       }
     }
 
@@ -6302,7 +6478,7 @@
 
     return {
       signedIn: signedIn, account: account, boot: boot, showLogin: showLogin, setAuthMode: setAuthMode,
-      submitLogin: submitLogin, playAsGuest: playAsGuest, logout: logout, refresh: refresh,
+      submitLogin: submitLogin, checkNameAsTyped: checkNameAsTyped, playAsGuest: playAsGuest, logout: logout, refresh: refresh,
       open: open, sell: sell, upgrade: upgradeItems, claimGift: claimGift,
       renderBoard: renderBoard, moderate: moderate, renderTradeBadge: renderTradeBadge,
       admin: adminCall, config: config, dismissBanner: dismissBanner, isAdminAccount: isAdminAccount, peekGift: peekGift,
@@ -6500,6 +6676,7 @@
     }));
     $('#login-go').addEventListener('click', cloud.submitLogin);
     $('#login-name').addEventListener('keydown', (e) => { if (e.key === 'Enter') $('#login-pass').focus(); });
+    $('#login-name').addEventListener('input', cloud.checkNameAsTyped);
     $('#login-pass').addEventListener('keydown', (e) => { if (e.key === 'Enter') cloud.submitLogin(); });
     $('#login-guest').addEventListener('click', cloud.playAsGuest);
     $('#trade-login').addEventListener('click', () => cloud.showLogin());

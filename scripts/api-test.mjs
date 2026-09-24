@@ -25,13 +25,40 @@ const ok = (label, cond, extra) => { if (!cond) fails++; console.log((cond ? 'PA
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const b64u = (buf) => Buffer.from(buf).toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 
-async function call(method, path, body, token) {
-  const headers = {};
+// Each call comes from a made-up network unless `ip` is given, so the
+// per-network limits only kick in where a test means them to. (Cloudflare
+// sets CF-Connecting-IP itself on the live site; players can't choose it.)
+const randomIp = () => '10.' + [0, 0, 0].map(() => Math.floor(Math.random() * 256)).join('.');
+async function call(method, path, body, token, ip) {
+  const headers = { 'CF-Connecting-IP': ip || randomIp() };
   if (body) headers['Content-Type'] = 'application/json';
   if (token) headers.Authorization = 'Bearer ' + token;
+  if (path === '/signup' && body && body.challenge === undefined) body = Object.assign(await human(), body);
   const r = await fetch(BASE + path, { method, headers, body: body ? JSON.stringify(body) : undefined });
   let data = null; try { data = await r.json(); } catch (e) {}
-  return { status: r.status, data };
+  return { status: r.status, data, retry: r.headers.get('Retry-After') };
+}
+
+// Signing up needs a solved sign-up check that's at least 2 seconds old
+// (see checkHuman in server/api.js). Solving uses the game's own SHA-256
+// code, which also proves the game's answers pass the server's check.
+// Checks are fetched and solved in batches, then used one per sign-up.
+const page = readFileSync(join(root, 'site/index.html'), 'utf8');
+const { sha256Words, zeroBits } = new Function(page.slice(page.indexOf('    const SHA_K = '),
+  page.indexOf('    async function solveChallenge')) + '; return { sha256Words, zeroBits };')();
+function solve(challenge, bits) {
+  for (let n = 0; ; n++) if (zeroBits(sha256Words(challenge + ':' + n.toString(36)), bits)) return n.toString(36);
+}
+async function humans(count, wait) {
+  const got = await Promise.all(Array.from({ length: count }, () => call('GET', '/challenge')));
+  const out = got.map((r) => ({ challenge: r.data.challenge, nonce: solve(r.data.challenge, r.data.bits) }));
+  if (wait !== false) await sleep(2100);
+  return out;
+}
+let pool = [];
+async function human() {
+  if (!pool.length) pool = await humans(12);
+  return pool.shift();
 }
 const valueOf = (row) => core.tupleToItem(row.slice(1)).value;
 const sum = (rows) => rows.reduce((s, r) => s + valueOf(r), 0);
@@ -57,8 +84,8 @@ ok('signup', A.status === 200 && A.data.token && A.data.me.coins === 500, A.stat
 const B = await call('POST', '/signup', { name: 'bob', password: 'bobpass1' });
 const C = await call('POST', '/signup', { name: 'carol', password: 'carolpass' });
 ok('duplicate name refused (any case)', (await call('POST', '/signup', { name: 'ALICE', password: 'whatever' })).status === 409);
-ok('bad name refused', (await call('POST', '/signup', { name: 'a!', password: 'whatever' })).status === 400);
-ok('short password refused', (await call('POST', '/signup', { name: 'dave', password: '123' })).status === 400);
+ok('bad name refused', (await call('POST', '/signup', { name: 'a!', password: 'whatever', challenge: '' })).status === 400);
+ok('short password refused', (await call('POST', '/signup', { name: 'dave', password: '123', challenge: '' })).status === 400);
 ok('wrong password', (await call('POST', '/login', { name: 'alice', password: 'nope-nope' })).status === 401);
 ok('unknown user', (await call('POST', '/login', { name: 'nobody', password: 'nope-nope' })).status === 401);
 const L = await call('POST', '/login', { name: 'Alice', password: 'alicepass' });
@@ -68,6 +95,61 @@ ok('no token -> 401', (await call('GET', '/me')).status === 401);
 ok('garbage token -> 401', (await call('GET', '/me', null, 'x'.repeat(43))).status === 401);
 for (let i = 0; i < 5; i++) await call('POST', '/login', { name: 'carol', password: 'wrongwrong' });
 ok('5 wrong passwords -> locked', (await call('POST', '/login', { name: 'carol', password: 'carolpass' })).status === 429);
+
+/* ---- names ---- */
+// (Names are checked before the sign-up check, so these skip it.)
+for (const bad of ['Sh1tLord', 'xXfuuuckXx', 'Big_Dick', 'a_s_s']) {
+  const rr = await call('POST', '/signup', { name: bad, password: 'whatever1', challenge: '' });
+  ok('rude name refused: ' + bad, rr.status === 400 && /allowed/.test(rr.data.error), rr.data);
+}
+for (const fake of ['L1LBEAN', 'lilbean_fan', 'Adm1n', 'TheModerator']) {
+  const rr = await call('POST', '/signup', { name: fake, password: 'whatever1', challenge: '' });
+  ok('staff look-alike refused: ' + fake, rr.status === 400 && /reserved/.test(rr.data.error), rr.data);
+}
+for (const fine of ['classic', 'Grape', 'peacock', 'Sussex']) {
+  ok('ordinary name allowed: ' + fine, (await call('POST', '/signup', { name: fine, password: 'whatever1' })).status === 200);
+}
+
+/* ---- sign-up checks (bots) ---- */
+const botName = () => 'newbie' + Math.floor(Math.random() * 1e6);
+const tryJoin = (extra, ip) => call('POST', '/signup', Object.assign({ name: botName(), password: 'botpass1' }, extra), null, ip);
+let rr;
+const [h1, h2, h3, h4] = await humans(4);
+ok('no sign-up check -> refused', (await tryJoin({ challenge: '', nonce: '' })).status === 400);
+ok('hidden field filled in -> refused', (await tryJoin(Object.assign({ website: 'http://spam.example' }, h1))).status === 400);
+ok('wrong answer -> refused', (await tryJoin({ challenge: h2.challenge, nonce: 'notit' })).status === 400);
+const forged = h3.challenge.replace(/^\d+/, (t) => String(+t - 5));
+ok('edited challenge -> refused', (await tryJoin({ challenge: forged, nonce: solve(forged, 18) })).status === 400);
+const [quick] = await humans(1, false);
+rr = await tryJoin(quick);
+ok('too quick -> refused', rr.status === 400 && /quick/.test(rr.data.error), rr.data);
+ok('a good check works', (await tryJoin(h4)).status === 200);
+rr = await tryJoin(h4);
+ok('...once', rr.status === 400 && /already used/.test(rr.data.error), rr.data);
+ok('an unused check still works after the others failed', (await tryJoin(h2)).status === 200);
+const lots = await humans(21);
+const school = '203.0.113.9';
+const joined = [];
+for (const h of lots) joined.push((await tryJoin(h, school)).status);
+ok('20 new accounts an hour per network', joined.slice(0, 20).every((s) => s === 200) && joined[20] === 429, joined.slice(-3));
+
+/* ---- rate limits ---- */
+for (let i = 0; i < 50; i++) await call('POST', '/login', { name: 'nobody' + i, password: 'wrong-pass' }, null, '198.51.100.7');
+rr = await call('POST', '/login', { name: 'bob', password: 'bobpass1' }, null, '198.51.100.7');
+ok('50 wrong passwords from one network -> that network waits', rr.status === 429 && +rr.retry > 0, rr);
+ok('other networks unaffected', (await call('POST', '/login', { name: 'bob', password: 'bobpass1' })).status === 200);
+const flood = await Promise.all(Array.from({ length: 500 }, () => call('GET', '/config', null, null, '198.51.100.8')));
+ok('flood from one network gets 429s', flood.some((x) => x.status === 429 && +x.retry > 0) && flood.filter((x) => x.status === 200).length >= 300,
+  flood.filter((x) => x.status === 429).length);
+ok('...while everyone else carries on', (await call('GET', '/config')).status === 200);
+const spammer = (await call('POST', '/signup', { name: 'spammer', password: 'spampass' })).data.token;
+const burstMe = await Promise.all(Array.from({ length: 120 }, () => call('GET', '/me', null, spammer)));
+ok('one account flooding gets 429s', burstMe.some((x) => x.status === 429) && burstMe.filter((x) => x.status === 200).length >= 60,
+  burstMe.filter((x) => x.status === 429).length);
+const gifter = (await call('POST', '/signup', { name: 'codeguesser', password: 'guesspass' })).data.token;
+const guesses = [];
+for (let i = 0; i < 31; i++) guesses.push((await call('POST', '/gift', { code: 'GIFT2.guess' + i + 'aaaaaaaaaa' }, gifter)).status);
+ok('30 gift codes tried per 10 minutes', guesses.slice(0, 30).every((s) => s === 400) && guesses[30] === 429, guesses.slice(-2));
 
 /* ---- cases ---- */
 let r = await call('POST', '/open', { case_id: 'starter', count: 5 }, a);
@@ -281,6 +363,9 @@ await admin({ a: 'rename', id: 'bob', name: 'bobby' });
 ok('rename', !!(await login('bobby', 'bobpass1')));
 ok('rename to a taken name refused', (await admin({ a: 'rename', id: 'bobby', name: 'alice' })).status === 409);
 await admin({ a: 'rename', id: 'bobby', name: 'bob' });
+ok('rename to a rude name refused', (await admin({ a: 'rename', id: 'bob', name: 'Sh1tHead' })).status === 400);
+ok('admins may use staff names', (await admin({ a: 'rename', id: 'bob', name: 'Moderator' })).status === 200);
+await admin({ a: 'rename', id: 'Moderator', name: 'bob' });
 await admin({ a: 'ban', id: 'bob', reason: 'spamming trades' });
 r = await call('POST', '/login', { name: 'bob', password: 'bobpass1' });
 ok('ban shows the reason', r.status === 403 && r.data.reason === 'spamming trades', r.data);

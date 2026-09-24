@@ -17,7 +17,8 @@
   rolls the batch back), and accounts.coins can never go below zero.
 
   Routes (JSON in and out; send the session token as "Authorization: Bearer <token>")
-    POST /api/signup                 { name, password }   -> { token, me, inventory }
+    GET  /api/challenge              sign-up check        -> { challenge, bits }
+    POST /api/signup                 { name, password, challenge, nonce } -> { token, me, inventory }
     POST /api/login                  { name, password }   -> { token, me, inventory }
     POST /api/logout           auth
     GET  /api/me               auth                       -> { me, inventory }
@@ -45,7 +46,7 @@
 import {
   CASES, ALL_ITEMS, ITEM_INDEX, GAME_VERSION, VAULT_KEY, VAULT_CRATE, WEARS, NO_WEAR, NO_TRACKER,
   rollItem, rollWear, instantiate, bonusChance, itemTuple, tupleToItem,
-  pickTarget, upgradeChance, computeBattle, seededRng, hashString
+  pickTarget, upgradeChance, computeBattle, seededRng, hashString, nameProblem
 } from './core.js';
 
 const NAME_RE = /^[A-Za-z0-9_-]{3,16}$/;
@@ -53,7 +54,10 @@ const PASS_MIN = 6, PASS_MAX = 72;
 const PBKDF2_ROUNDS = 20000;            // fits Cloudflare's free-plan CPU budget
 const SESSION_TTL = 60 * 86400;         // s of inactivity before a login expires
 const LOGIN_FAILS = 5, LOGIN_LOCK = 60; // 5 wrong passwords -> wait a minute
-const SIGNUPS_PER_HOUR = 20;            // per IP; schools share one IP, so keep it roomy
+const SIGNUPS_PER_HOUR = 20, SIGNUPS_PER_DAY = 60;   // per IP; schools share one IP, so keep them roomy
+const SIGNUPS_ALL_PER_HOUR = 300;       // across everyone, so a botnet can't flood the game
+const POW_BITS = 18;                    // sign-up proof of work: about a second of a browser's time
+const POW_MIN_AGE = 2, POW_MAX_AGE = 15 * 60;   // s from getting a sign-up challenge to using it
 const FREE_COOLDOWN = 3000;             // ms between free-case openings
 const MAX_ITEMS = 3000;
 const MAX_OFFER_ITEMS = 20, MAX_PENDING = 20;
@@ -105,10 +109,10 @@ const CORS = {
   'Access-Control-Max-Age': '86400'
 };
 
-function json(data, status) {
+function json(data, status, headers) {
   return new Response(JSON.stringify(data), {
     status: status || 200,
-    headers: Object.assign({ 'Content-Type': 'application/json', 'Cache-Control': 'no-store' }, CORS)
+    headers: Object.assign({ 'Content-Type': 'application/json', 'Cache-Control': 'no-store' }, CORS, headers || {})
   });
 }
 
@@ -211,6 +215,117 @@ async function inventory(db, id) {
 
 const account = (db, id) => db.prepare('SELECT * FROM accounts WHERE id = ?').bind(id).first();
 
+/* ---------- rate limits ---------- */
+
+// Two layers:
+// 1. Every request passes a quick check kept in memory, per network and,
+//    once logged in, per account. It costs nothing, but each Cloudflare
+//    server counts on its own, so it's there to stop floods.
+// 2. Actions worth abusing (sign-ups, logins, trades, battles, gifts and
+//    password changes) are also counted in the database, so those limits
+//    hold across every server.
+// Networks get far more room than accounts, because a whole school can
+// share one IP address.
+const QUICK_LIMITS = {                    // requests a minute, and how many can come at once
+  auth:    { rate: 120,  burst: 80 },     // sign-up, login and sign-up checks, per network
+  read:    { rate: 1500, burst: 400 },
+  write:   { rate: 1500, burst: 400 },
+  admin:   { rate: 600,  burst: 200 },
+  account: { rate: 240,  burst: 80 }      // anything logged in, per account
+};
+let buckets = new Map();
+function quickLimit(key, rule) {
+  const now = Date.now();
+  let b = buckets.get(key);
+  if (!b) {
+    if (buckets.size > 20000) buckets = new Map();      // under attack from many addresses: start over
+    b = { left: rule.burst, at: now };
+    buckets.set(key, b);
+  }
+  b.left = Math.min(rule.burst, b.left + (now - b.at) * rule.rate / 60000);
+  b.at = now;
+  if (b.left < 1) fail(429, 'Slow down a little and try again.', { retry: Math.ceil((1 - b.left) * 60 / rule.rate) });
+  b.left -= 1;
+}
+
+const LIMITS = {                          // [how many, in how many seconds]
+  signup_try: [60, 600],                  // sign-up attempts per network
+  login_fail: [50, 600],                  // wrong passwords per network
+  password:   [10, 3600],                 // password changes per account, right or wrong
+  offer:      [40, 600],                  // trade offers made per account
+  battle:     [40, 600],                  // battles made per account
+  gift:       [30, 600]                   // gift codes tried per account
+};
+const ipOf = (request) => request.headers.get('CF-Connecting-IP') || 'local';
+const hitRow = (db, name, who) => db.prepare('INSERT INTO hits (k, at) VALUES (?, ?)').bind(name + ':' + who, nowS());
+
+// Seconds until `who` may do `name` again, or 0 if they can now.
+async function waitFor(db, name, who) {
+  const [max, per] = LIMITS[name], t = nowS();
+  const r = await db.prepare('SELECT COUNT(*) AS n, MIN(at) AS first FROM hits WHERE k = ? AND at > ?')
+    .bind(name + ':' + who, t - per).first();
+  return r.n >= max ? Math.max(1, r.first + per - t) : 0;
+}
+
+// Counts one more `name` for `who`, or refuses it when they're over the limit.
+async function limit(db, name, who, message) {
+  const wait = await waitFor(db, name, who);
+  if (wait) fail(429, message || 'Too many tries. Wait a few minutes and try again.', { retry: wait });
+  await hitRow(db, name, who).run();
+  if (Math.random() < 0.02) await db.prepare('DELETE FROM hits WHERE at < ?').bind(nowS() - 86400).run();
+}
+
+/* ---------- sign-up checks (against bots) ---------- */
+
+// Before signing up, the game fetches a challenge and finds a nonce that
+// makes SHA-256(challenge + ':' + nonce) start with POW_BITS zero bits. A
+// browser does this in about a second while the player types; a bot has to
+// spend that on every account. Challenges are signed by the server (so it
+// doesn't store them), expire, and work for one account only. Signing up
+// also fails if the form's hidden "website" field is filled in, which only
+// bots do, or if it comes back quicker than a person could type.
+let powKey = null;
+async function powSig(db, text) {
+  if (!powKey) {
+    let row = await db.prepare("SELECT v FROM server_keys WHERE k = 'pow'").first();
+    if (!row) {
+      await db.prepare("INSERT OR IGNORE INTO server_keys (k, v) VALUES ('pow', ?)").bind(randomId(32)).run();
+      row = await db.prepare("SELECT v FROM server_keys WHERE k = 'pow'").first();
+    }
+    powKey = await crypto.subtle.importKey('raw', utf8.encode(row.v), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+  }
+  return b64u(new Uint8Array(await crypto.subtle.sign('HMAC', powKey, utf8.encode(text)))).slice(0, 22);
+}
+
+async function challenge(env) {
+  const text = nowS() + '.' + randomId(9);
+  return json({ challenge: text + '.' + await powSig(env.DB, text), bits: POW_BITS });
+}
+
+function leadingZeroBits(bytes, bits) {
+  for (let i = 0; i < bits; i++) if (bytes[i >> 3] & (0x80 >> (i & 7))) return false;
+  return true;
+}
+
+// Checks the sign-up form came from a person. Returns the challenge id to mark as used.
+async function checkHuman(db, b) {
+  const again = 'Sign-up check failed. Reload the page and try again.';
+  if (b.website) fail(400, again);                                   // the hidden field
+  const m = /^(\d{10})\.([A-Za-z0-9_-]{12})\.([A-Za-z0-9_-]{22})$/.exec(String(b.challenge || ''));
+  const nonce = String(b.nonce || '');
+  if (!m || !/^[0-9a-z]{1,12}$/.test(nonce)) fail(400, again);
+  if (await powSig(db, m[1] + '.' + m[2]) !== m[3]) fail(400, again);
+  const age = nowS() - Number(m[1]);
+  if (age < POW_MIN_AGE) fail(400, 'That was quick! Wait a second and try again.');
+  if (age > POW_MAX_AGE) fail(400, 'The sign-up check expired. Try again.', { expired: true });
+  const digest = new Uint8Array(await crypto.subtle.digest('SHA-256', utf8.encode(m[0] + ':' + nonce)));
+  if (!leadingZeroBits(digest, POW_BITS)) fail(400, again);
+  if (await db.prepare('SELECT 1 FROM used_challenges WHERE id = ?').bind(m[2]).first()) {
+    fail(400, 'That sign-up check was already used. Try again.', { expired: true });
+  }
+  return m[2];
+}
+
 async function newSession(db, id) {
   const token = randomId(32);
   const t = nowS();
@@ -228,12 +343,23 @@ function readCredentials(b) {
 
 async function signup(request, env) {
   const db = env.DB;
-  const { name, password } = readCredentials(await body(request));
-  const ip = request.headers.get('CF-Connecting-IP') || 'local';
+  const b = await body(request);
+  const { name, password } = readCredentials(b);
+  const problem = nameProblem(name);
+  if (problem) fail(400, problem);
+  const ip = ipOf(request);
+  await limit(db, 'signup_try', ip, 'Too many sign-up attempts from this network. Try again in a few minutes.');
+  const challengeId = await checkHuman(db, b);
   const t = nowS();
-  const recent = await db.prepare('SELECT COUNT(*) AS n FROM signups WHERE ip = ? AND at > ?').bind(ip, t - 3600).first();
-  if (recent.n >= SIGNUPS_PER_HOUR) fail(429, 'Too many new accounts from this network. Try again later.');
-  if (await db.prepare('SELECT 1 FROM accounts WHERE name_lower = ?').bind(name.toLowerCase()).first()) fail(409, 'That username is taken');
+  const [hour, day, everyone, taken] = (await db.batch([
+    db.prepare('SELECT COUNT(*) AS n FROM signups WHERE ip = ? AND at > ?').bind(ip, t - 3600),
+    db.prepare('SELECT COUNT(*) AS n FROM signups WHERE ip = ? AND at > ?').bind(ip, t - 86400),
+    db.prepare('SELECT COUNT(*) AS n FROM signups WHERE at > ?').bind(t - 3600),
+    db.prepare('SELECT COUNT(*) AS n FROM accounts WHERE name_lower = ?').bind(name.toLowerCase())
+  ])).map((r) => r.results[0].n);
+  if (hour >= SIGNUPS_PER_HOUR || day >= SIGNUPS_PER_DAY) fail(429, 'Too many new accounts from this network. Try again later.');
+  if (everyone >= SIGNUPS_ALL_PER_HOUR) fail(429, 'Lots of people are signing up right now. Try again in a few minutes.');
+  if (taken) fail(409, 'That username is taken');
 
   const id = randomId(9);
   const pass = await hashPassword(password, randomId(16), PBKDF2_ROUNDS);
@@ -243,7 +369,9 @@ async function signup(request, env) {
       .bind(id, name, name.toLowerCase(), pass, t, t, t),
     session.stmt,
     db.prepare('INSERT INTO signups (ip, at) VALUES (?, ?)').bind(ip, t),
-    db.prepare('DELETE FROM signups WHERE at < ?').bind(t - 86400)
+    db.prepare('DELETE FROM signups WHERE at < ?').bind(t - 86400),
+    db.prepare('INSERT INTO used_challenges (id, at) VALUES (?, ?)').bind(challengeId, t),
+    db.prepare('DELETE FROM used_challenges WHERE at < ?').bind(t - POW_MAX_AGE - 60)
   ]).catch((e) => { if (e.status === 409) fail(409, 'That username is taken'); throw e; });
   return json({ token: session.token, me: meOut(await account(db, id)), inventory: [] });
 }
@@ -251,13 +379,22 @@ async function signup(request, env) {
 async function login(request, env) {
   const db = env.DB;
   const { name, password } = readCredentials(await body(request));
+  const ip = ipOf(request);
+  const wait = await waitFor(db, 'login_fail', ip);
+  if (wait) fail(429, 'Too many wrong passwords from this network. Try again in a few minutes.', { retry: wait });
   const a = await db.prepare('SELECT * FROM accounts WHERE name_lower = ?').bind(name.toLowerCase()).first();
-  if (!a) fail(401, 'Wrong username or password');
+  if (!a) {
+    await hitRow(db, 'login_fail', ip).run();
+    fail(401, 'Wrong username or password');
+  }
   const t = nowS();
   if (a.fail_count >= LOGIN_FAILS && t - a.fail_at < LOGIN_LOCK) fail(429, 'Too many wrong passwords. Wait a minute and try again.');
   if (!(await passwordMatches(password, a.pass))) {
-    await db.prepare('UPDATE accounts SET fail_count = CASE WHEN ? - fail_at > ? THEN 1 ELSE fail_count + 1 END, fail_at = ? WHERE id = ?')
-      .bind(t, LOGIN_LOCK * 10, t, a.id).run();
+    await db.batch([
+      db.prepare('UPDATE accounts SET fail_count = CASE WHEN ? - fail_at > ? THEN 1 ELSE fail_count + 1 END, fail_at = ? WHERE id = ?')
+        .bind(t, LOGIN_LOCK * 10, t, a.id),
+      hitRow(db, 'login_fail', ip)
+    ]);
     fail(401, 'Wrong username or password');
   }
   if (a.banned) fail(403, 'banned', { reason: await banReason(db, a.id) });
@@ -447,6 +584,7 @@ async function gift(request, env, me) {
   const db = env.DB;
   const req = await body(request);
   const code = String(req.code || '').trim().replace(/\s+/g, '');
+  await limit(db, 'gift', me.id, 'Too many gift codes tried. Wait a few minutes.');
   if (code.indexOf('GIFT2.') === 0) return serverGift(db, me, code, !!req.peek);
   const parts = code.split('.');
   if (parts.length !== 3 || parts[0] !== 'GIFT') fail(400, 'That isn\'t a gift code');
@@ -517,6 +655,7 @@ const ownedCheck = '(SELECT COUNT(*) FROM items WHERE owner = ? AND locked IS NU
 async function createOffer(request, env, me) {
   const db = env.DB;
   const b = await body(request);
+  await limit(db, 'offer', me.id, 'You\'ve sent a lot of offers. Wait a few minutes.');
   const give = idList(b.give || [], MAX_OFFER_ITEMS), want = idList(b.want || [], MAX_OFFER_ITEMS);
   const giveCoins = b.give_coins || 0, wantCoins = b.want_coins || 0;
   if (!isInt(giveCoins, 0, 1e12) || !isInt(wantCoins, 0, 1e12)) fail(400, 'Bad coin amount');
@@ -658,6 +797,7 @@ async function createBattle(request, env, me) {
   const db = env.DB;
   const b = await body(request);
   if (b.version !== GAME_VERSION) fail(409, 'Update your game to play battles');
+  await limit(db, 'battle', me.id, 'You\'ve made a lot of battles. Wait a few minutes.');
   const box = CASES.find((c) => c.id === b.case_id && !c.locked);
   if (!box) fail(400, 'Unknown case');
   if (!isInt(b.rounds, 1, 10) || !isInt(b.max_players, 2, 4)) fail(400, 'Bad settings');
@@ -787,6 +927,7 @@ async function openForBusiness(env) {
 
 async function changePassword(request, env, me) {
   const db = env.DB;
+  await limit(db, 'password', me.id, 'Too many password changes. Try again later.');
   const b = await body(request);
   const password = String(b.password || '');
   if (password.length < PASS_MIN || password.length > PASS_MAX) fail(400, 'Passwords are ' + PASS_MIN + '-' + PASS_MAX + ' characters');
@@ -868,8 +1009,14 @@ const ADMIN = {
               (SELECT COUNT(*) FROM lobbies WHERE status = 'running' AND updated_at > ?) AS battles_day,
               (SELECT COUNT(*) FROM gift_claims) AS gift_claims`).bind(t - 86400, t - 86400).first();
     const list = async (sql) => (await db.prepare(sql).all()).results.map(adminRow);
+    // Accounts made before the name rules (or renamed around them) that break them now.
+    const names = (await db.prepare('SELECT id, name FROM accounts LIMIT 20000').all()).results;
+    const badIds = names.filter((a) => nameProblem(a.name, true)).slice(0, 20).map((a) => a.id);
+    const badNames = badIds.length ? (await db.prepare('SELECT * FROM accounts WHERE id IN (SELECT value FROM json_each(?))')
+      .bind(JSON.stringify(badIds)).all()).results.map(adminRow) : [];
     return {
       totals: Object.assign(totals, counts),
+      bad_names: badNames,
       richest: await list('SELECT * FROM accounts ORDER BY coins DESC LIMIT 5'),
       top_items: await list('SELECT * FROM accounts ORDER BY inv_value DESC LIMIT 5'),
       newest: await list('SELECT * FROM accounts ORDER BY created_at DESC LIMIT 5'),
@@ -967,7 +1114,8 @@ const ADMIN = {
   async rename(db, p) {
     const a = await findAccount(db, p.id);
     const name = String(p.name || '').trim();
-    if (!NAME_RE.test(name)) fail(400, 'Usernames are 3-16 letters, numbers, _ or -');
+    const problem = nameProblem(name, true);
+    if (problem) fail(400, problem);
     const taken = await db.prepare('SELECT id FROM accounts WHERE name_lower = ?').bind(name.toLowerCase()).first();
     if (taken && taken.id !== a.id) fail(409, 'That username is taken');
     await db.prepare('UPDATE accounts SET name = ?, name_lower = ? WHERE id = ?').bind(name, name.toLowerCase(), a.id).run();
@@ -1160,7 +1308,10 @@ export default {
     const method = request.method;
     try {
       if (root !== 'api') return json({ ok: true, service: 'case-sim', version: GAME_VERSION });
+      const kind = a === 'signup' || a === 'login' || a === 'challenge' ? 'auth' : a === 'admin' ? 'admin' : method === 'GET' ? 'read' : 'write';
+      quickLimit(kind + ':' + ipOf(request), QUICK_LIMITS[kind]);
 
+      if (method === 'GET' && a === 'challenge') return await challenge(env);
       if (method === 'POST' && a === 'signup') return await signup(request, env);
       if (method === 'POST' && a === 'login') return await login(request, env);
       if (method === 'GET' && a === 'leaderboard') return await leaderboard(url, env);
@@ -1173,6 +1324,7 @@ export default {
 
       const me = await authed(request, env);
       if (!me) fail(401, 'Please log in again');
+      quickLimit('account:' + me.id, QUICK_LIMITS.account);
       if (method === 'POST' && a === 'logout') {
         await env.DB.prepare('DELETE FROM sessions WHERE token_hash = ?').bind(me.s_hash).run();
         return json({ ok: true });
@@ -1197,7 +1349,10 @@ export default {
       if (method === 'POST' && a === 'battles' && b && c) return await battleAction(b, c, request, env, me);
       fail(404, 'Not found');
     } catch (err) {
-      if (err instanceof HttpError) return json(Object.assign({ error: err.message }, err.extra || {}), err.status);
+      if (err instanceof HttpError) {
+        const retry = err.extra && err.extra.retry;
+        return json(Object.assign({ error: err.message }, err.extra || {}), err.status, retry ? { 'Retry-After': String(retry) } : null);
+      }
       console.error(err && err.stack || err);
       return json({ error: 'Server error' }, 500);
     }
