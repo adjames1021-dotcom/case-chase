@@ -1,6 +1,6 @@
 # Case Sim
 
-A case-opening game with an inventory, an upgrader, trading, case battles and a global leaderboard.
+A case-opening game with an inventory, an upgrader, trading, a player market, case battles, a global leaderboard and a suggestions board.
 
 ## ▶ Play: **https://case-sim.pages.dev**
 

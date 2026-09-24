@@ -724,6 +724,56 @@
   .acct-actions { display: flex; gap: 8px; margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--line); }
   .acct-actions .btn { flex: 1; }
 
+  /* ---------- Market ---------- */
+  .mk-filters .control { width: auto; max-width: 220px; }
+  .mk-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(168px, 1fr)); gap: 11px; }
+  .mk-card { display: flex; flex-direction: column; gap: 7px; min-width: 0; }
+  .mk-foot { display: flex; align-items: center; gap: 7px; min-width: 0; }
+  .mk-price { font-family: var(--cond); font-size: 16px; letter-spacing: .5px; color: var(--gold); }
+  .mk-foot i { flex: 1; min-width: 0; font-size: 11.5px; color: var(--ink-3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .mk-deal { font-family: var(--cond); font-size: 9.5px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase;
+             padding: 1px 5px; background: rgba(95,194,116,.18); color: var(--good); }
+  .mk-sell { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 18px; align-items: start; }
+  .mk-form { display: grid; grid-template-columns: 150px minmax(0, 1fr); gap: 16px; align-items: start; }
+  .mk-form h4 { margin-top: 0; }
+  .mk-form .control { width: 100%; }
+  .mk-form .btn { width: 100%; margin-top: 12px; }
+  .mk-row { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--line); font-size: 13px; }
+  .mk-row .grow { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .mk-row i { color: var(--ink-3); font-style: normal; font-size: 12px; }
+  .mk-row .mini { flex: none; }
+  @media (max-width: 900px) { .mk-sell { grid-template-columns: 1fr; } }
+  @media (max-width: 760px) {
+    .mk-grid { grid-template-columns: repeat(auto-fill, minmax(146px, 1fr)); gap: 8px; }
+    .mk-filters .control { max-width: none; flex: 1 1 140px; }
+    .mk-filters .seg { display: flex; width: 100%; margin-right: 0; }
+    .mk-filters .seg .chip { flex: 1; padding-left: 4px; padding-right: 4px; }
+    .mk-form { grid-template-columns: 110px minmax(0, 1fr); }
+  }
+
+  /* ---------- Suggestions ---------- */
+  #sg-text { width: 100%; resize: vertical; min-height: 72px; font: inherit; line-height: 1.45; }
+  .sg { display: flex; gap: 14px; padding: 14px 0; border-bottom: 1px solid var(--line); }
+  .sg:last-child { border-bottom: 0; }
+  .sg-vote { flex: none; display: flex; flex-direction: column; align-items: center; gap: 2px; width: 52px; padding: 8px 4px;
+             border: 1px solid var(--line-strong); background: rgba(9,13,18,.55); color: var(--ink-2); cursor: pointer; }
+  .sg-vote:hover { color: var(--ink); border-color: rgba(255,255,255,.3); }
+  .sg-vote.on { border-color: var(--orange); color: var(--orange); background: var(--orange-soft); }
+  .sg-vote svg { width: 16px; height: 16px; }
+  .sg-vote b { font-size: 15px; }
+  .sg-body { flex: 1; min-width: 0; }
+  .sg-body p { margin: 0 0 7px; line-height: 1.5; overflow-wrap: anywhere; }
+  .sg-meta { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; font-size: 12px; color: var(--ink-3); }
+  .sg-meta i { font-style: normal; }
+  .sg-status { font-family: var(--cond); font-size: 10px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase;
+               padding: 2px 7px; background: var(--line-strong); color: var(--ink); }
+  .sg-status.planned { background: rgba(75,105,255,.3); }
+  .sg-status.done { background: rgba(95,194,116,.3); }
+  .sg-status.declined { background: rgba(235,75,75,.25); }
+  .sg-reply { margin-top: 9px; padding: 8px 11px; border-left: 3px solid var(--orange); background: var(--orange-soft); font-size: 13px; line-height: 1.45; overflow-wrap: anywhere; }
+  .sg-admin .control { width: auto; flex: 1 1 160px; }
+  .sg-admin select.control { flex: 0 0 auto; }
+
   /* ---------- Admin panel ---------- */
   .adm-tabs .chip { padding: 6px 10px; }
   .adm-tabs { flex-wrap: wrap; }
@@ -1023,7 +1073,10 @@
     .rail { top: auto; right: 0; bottom: 0; width: auto; height: 64px; flex-direction: row; border-right: 0; border-top: 1px solid var(--line); }
     .rail-mark, .rail-foot { display: none; }
     .rail-nav { flex-direction: row; flex: 1; }
-    .rail .tab { flex: 1; padding: 9px 2px; }
+    .rail .tab { flex: 1; min-width: 0; padding: 9px 1px; font-size: 8px; letter-spacing: .1px; }
+    .rail .tab span { max-width: 100%; overflow: hidden; text-overflow: clip; white-space: nowrap; }
+    .rail .tab span[data-short] { font-size: 0; }
+    .rail .tab span[data-short]::after { content: attr(data-short); font-size: 8px; }
     .rail .tab.active::after { top: 0; bottom: auto; left: 18%; right: 18%; width: auto; height: 3px; }
     header.topbar { padding: 10px 16px; }
     .topbar .brand { min-width: 0; }
@@ -1086,11 +1139,13 @@
   </div>
   <nav class="rail-nav">
       <button class="tab active" data-tab="cases" title="Cases"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8l9-4 9 4v8l-9 4-9-4z"/><path d="M3 8l9 4 9-4"/><path d="M12 12v8"/></svg><span>Cases</span></button>
-      <button class="tab" data-tab="inventory" title="Inventory"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="3.5" width="7" height="7" rx="1"/><rect x="13.5" y="3.5" width="7" height="7" rx="1"/><rect x="3.5" y="13.5" width="7" height="7" rx="1"/><rect x="13.5" y="13.5" width="7" height="7" rx="1"/></svg><span>Inventory</span><i class="pill" id="inv-count">0</i></button>
-      <button class="tab" data-tab="upgrader" title="Upgrader"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="M12 16V8"/><path d="M8.5 11.5L12 8l3.5 3.5"/></svg><span>Upgrader</span></button>
+      <button class="tab" data-tab="inventory" title="Inventory"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="3.5" width="7" height="7" rx="1"/><rect x="13.5" y="3.5" width="7" height="7" rx="1"/><rect x="3.5" y="13.5" width="7" height="7" rx="1"/><rect x="13.5" y="13.5" width="7" height="7" rx="1"/></svg><span data-short="Items">Inventory</span><i class="pill" id="inv-count">0</i></button>
+      <button class="tab" data-tab="upgrader" title="Upgrader"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="M12 16V8"/><path d="M8.5 11.5L12 8l3.5 3.5"/></svg><span data-short="Upgrade">Upgrader</span></button>
       <button class="tab" data-tab="trade" title="Trade"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h14"/><path d="M15 4.5L18.5 8 15 11.5"/><path d="M20 16H6"/><path d="M9 12.5L5.5 16 9 19.5"/></svg><span>Trade</span><i class="pill" id="trade-count" style="display:none">0</i></button>
+      <button class="tab" data-tab="market" title="Market"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 12.2V4.5a1 1 0 0 1 1-1h7.7l8.3 8.3a1.5 1.5 0 0 1 0 2.1l-6.2 6.2a1.5 1.5 0 0 1-2.1 0z"/><circle cx="8" cy="8" r="1.6"/></svg><span>Market</span></button>
       <button class="tab" data-tab="battles" title="Battles"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4l8.5 8.5"/><path d="M4 5.5L5.5 4"/><path d="M11 15l-2 2 -2.5-.5 -1.5 2L3.5 17l2-1.5L5 13l2-2"/><path d="M19 4l-8.5 8.5"/><path d="M20 5.5L18.5 4"/><path d="M13 15l2 2 2.5-.5 1.5 2 1.5-1.5-2-1.5.5-2.5-2-2"/></svg><span>Battles</span></button>
       <button class="tab" data-tab="leaderboard" title="Leaderboard"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 4h8v5a4 4 0 0 1-8 0z"/><path d="M8 6H5v1a3.5 3.5 0 0 0 3.2 3.5"/><path d="M16 6h3v1a3.5 3.5 0 0 1-3.2 3.5"/><path d="M12 13v3.5"/><path d="M8.5 20.5h7"/><path d="M9.5 16.5h5v4h-5z"/></svg><span>Ranks</span></button>
+      <button class="tab" data-tab="ideas" title="Suggestions"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6"/><path d="M10 21h4"/><path d="M12 3a6 6 0 0 0-3.6 10.8c.7.5 1.1 1.3 1.1 2.2h5c0-.9.4-1.7 1.1-2.2A6 6 0 0 0 12 3z"/></svg><span>Ideas</span></button>
   </nav>
   <div class="rail-foot">
     <button class="icon-btn" id="admin-btn" title="Admin" aria-label="Admin">
@@ -1276,6 +1331,50 @@
     </div>
   </section>
 
+  <section class="panel" id="panel-market">
+    <div class="section-head">
+      <div><h2>Market</h2></div>
+      <div class="toolbar" id="mk-views" style="margin:0">
+        <button class="chip active" data-mkview="buy">Buy</button>
+        <button class="chip" data-mkview="sell">Sell</button>
+        <button class="chip" data-mkview="mine">Your listings</button>
+      </div>
+    </div>
+
+    <div class="mk-view" data-mkview="buy">
+      <div class="toolbar mk-filters">
+        <input class="control" id="mk-q" placeholder="Search items" autocomplete="off" spellcheck="false">
+        <select class="control" id="mk-rarity"><option value="">All rarities</option></select>
+        <span class="seg" id="mk-sort">
+          <button class="chip active" data-mksort="new">Newest</button>
+          <button class="chip" data-mksort="cheap">Cheapest</button>
+          <button class="chip" data-mksort="dear">Priciest</button>
+          <button class="chip" data-mksort="deal">Best deals</button>
+        </span>
+      </div>
+      <div class="mk-grid" id="mk-list"></div>
+      <div style="text-align:center;margin-top:16px"><button class="btn btn-ghost" id="mk-more" style="display:none">Show more</button></div>
+    </div>
+
+    <div class="card admin-gate" id="mk-gate" style="display:none">
+      <h4>Selling needs an account</h4>
+      <p class="hint">Log in to list your items for other players to buy.</p>
+      <button class="btn btn-primary" id="mk-login">Log in or sign up</button>
+    </div>
+
+    <div class="mk-view" data-mkview="sell" style="display:none">
+      <div class="mk-sell">
+        <div class="card"><h4>Pick an item</h4><div class="pick-grid" id="mk-pick"></div></div>
+        <div class="card" id="mk-form"></div>
+      </div>
+    </div>
+
+    <div class="mk-view" data-mkview="mine" style="display:none">
+      <div class="card"><h4>Listed now</h4><div id="mk-open"></div></div>
+      <div class="card" style="margin-top:18px"><h4>History</h4><div id="mk-history"></div></div>
+    </div>
+  </section>
+
   <section class="panel" id="panel-battles">
     <div class="section-head">
       <div>
@@ -1339,7 +1438,7 @@
           <button class="chip active" data-view="overview">Overview</button>
           <button class="chip" data-view="players">Players</button>
           <button class="chip" data-view="gifts">Gifts</button>
-          <button class="chip" data-view="live">Trades &amp; battles</button>
+          <button class="chip" data-view="live">Trades, market &amp; battles</button>
           <button class="chip" data-view="settings">Game</button>
           <button class="chip" data-view="log">Log</button>
         </span>
@@ -1382,6 +1481,7 @@
       <div class="adm-view" data-view="live" style="display:none">
         <div class="card"><h4>Open trade offers</h4><div id="adm-offers"></div></div>
         <div class="card" style="margin-top:18px"><h4>Open battles</h4><div id="adm-lobbies"></div></div>
+        <div class="card" style="margin-top:18px"><h4>Market listings</h4><div id="adm-listings"></div></div>
       </div>
 
       <div class="adm-view" data-view="settings" style="display:none">
@@ -1469,6 +1569,29 @@
       <div id="lb-body"></div>
     </div>
     <p class="lb-note" id="lb-note"></p>
+  </section>
+
+  <section class="panel" id="panel-ideas">
+    <div class="section-head">
+      <div><h2>Suggestions</h2></div>
+      <div class="toolbar" id="sg-sort" style="margin:0">
+        <button class="chip active" data-sgsort="top">Top</button>
+        <button class="chip" data-sgsort="new">New</button>
+      </div>
+    </div>
+    <div class="card" id="sg-new">
+      <h4>Suggest something</h4>
+      <textarea class="control" id="sg-text" maxlength="300" rows="3" placeholder="A new case, an item, a feature, a fix…"></textarea>
+      <div class="adm-line"><span class="hint" id="sg-count" style="margin:0;flex:1">0/300</span>
+        <button class="btn btn-primary btn-sm" id="sg-post">Post</button></div>
+      <div class="name-err" id="sg-err" style="margin-bottom:0"></div>
+    </div>
+    <div class="card admin-gate" id="sg-guest" style="display:none">
+      <h4>Got an idea?</h4>
+      <p class="hint">Log in to post suggestions and vote for the ones you like.</p>
+      <button class="btn btn-primary" id="sg-login">Log in or sign up</button>
+    </div>
+    <div class="card" style="margin-top:18px"><div id="sg-list"></div></div>
   </section>
 </main>
 
@@ -3503,21 +3626,26 @@
       .toLowerCase().split(/[\s_-]+/).filter(Boolean);
   }
 
+  // Whether a name (or one word of a message) contains a blocked word.
+  function isRude(name) {
+    const squash = (s) => s.replace(/(.)\1+/g, '$1');           // fuuuck -> fuck
+    for (const one of ['i', 'l']) {
+      const words = nameWords(name, one), all = words.join('');
+      if (NAME_WORDS.any.some((w) => all.indexOf(w) >= 0 || squash(all).indexOf(w) >= 0)) return true;
+      for (const p of words.concat(words.length > 1 ? [all] : [])) {
+        if (NAME_WORDS.word.some((w) => p === w || p === w + 's' || p === w + 'es' || (p.length > w.length && squash(p) === squash(w)))) return true;
+        if (NAME_WORDS.edge.some((w) => p.indexOf(w) === 0 || p.slice(-w.length) === w)) return true;
+        if (NAME_WORDS.start.some((w) => p.indexOf(w) === 0)) return true;
+      }
+    }
+    return false;
+  }
+
   // Why a username can't be used, or '' if it's fine.
   function nameProblem(name, allowReserved) {
     name = String(name || '');
     if (!NAME_RULE.test(name)) return 'Usernames are 3-16 letters, numbers, _ or -';
-    const squash = (s) => s.replace(/(.)\1+/g, '$1');           // fuuuck -> fuck
-    const bad = 'That username isn\'t allowed. Pick another one.';
-    for (const one of ['i', 'l']) {
-      const words = nameWords(name, one), all = words.join('');
-      if (NAME_WORDS.any.some((w) => all.indexOf(w) >= 0 || squash(all).indexOf(w) >= 0)) return bad;
-      for (const p of words.concat(words.length > 1 ? [all] : [])) {
-        if (NAME_WORDS.word.some((w) => p === w || p === w + 's' || p === w + 'es' || (p.length > w.length && squash(p) === squash(w)))) return bad;
-        if (NAME_WORDS.edge.some((w) => p.indexOf(w) === 0 || p.slice(-w.length) === w)) return bad;
-        if (NAME_WORDS.start.some((w) => p.indexOf(w) === 0)) return bad;
-      }
-    }
+    if (isRude(name)) return 'That username isn\'t allowed. Pick another one.';
     if (!allowReserved) {
       // Look-alikes count: 1 and I for l, rn for m, 0 for o.
       const plain = (s) => s.toLowerCase().replace(/[0-9]/g, (d) => (d === '1' ? 'l' : LEET[d] || ''))
@@ -3525,6 +3653,13 @@
       if (RESERVED_NAMES.some((w) => plain(name).indexOf(plain(w)) >= 0)) return 'That name is reserved. Pick another one.';
     }
     return '';
+  }
+
+  // Why a message (like a suggestion) can't be posted, or '' if it's fine.
+  // Checked word by word, so words next to each other can't make a false match.
+  function textProblem(text) {
+    const words = String(text || '').split(/[^A-Za-z0-9_-]+/).filter(Boolean);
+    return words.some((w) => isRude(w.slice(0, 40))) ? 'Please keep it clean.' : '';
   }
 
   /* ===== CORE:END ===================================================== */
@@ -3673,7 +3808,8 @@
   function setTab(name) {
     $$('.tab').forEach((t) => t.classList.toggle('active', t.dataset.tab === name));
     const sub = $('#topbar-sub');
-    if (sub) sub.textContent = name.charAt(0).toUpperCase() + name.slice(1);
+    const railTab = $('.rail .tab[data-tab="' + name + '"]');
+    if (sub) sub.textContent = railTab ? railTab.title : name.charAt(0).toUpperCase() + name.slice(1);
     $$('.panel').forEach((p) => p.classList.toggle('active', p.id === 'panel-' + name));
     if (name === 'inventory') renderInventory();
     if (name === 'upgrader') renderUpgrader();
@@ -3681,6 +3817,8 @@
     if (name === 'battles') renderBattleSetup();
     if (name === 'admin') renderAdmin();
     if (name === 'leaderboard') renderLeaderboard();
+    if (name === 'market') cloud.renderMarketView();
+    if (name === 'ideas') cloud.renderIdeasView();
   }
 
   /* =========================================================
@@ -4867,7 +5005,7 @@
       if (!it) return '';
       it.uid = row[0];
       return itemMarkup(it, row[5] ? 'locked' : '', true)
-        .replace('class="item ', 'data-admi="' + row[0] + '"' + (row[5] ? ' title="In an open trade offer"' : '') + ' class="item ');
+        .replace('class="item ', 'data-admi="' + row[0] + '"' + (row[5] ? ' title="' + (row[5] === 2 ? 'Listed on the market' : 'In an open trade offer') + '"' : '') + ' class="item ');
     }).join('');
     const wear = '<option value="-1">Random wear</option>' + WEARS.map((w, i) => '<option value="' + (i + 1) + '">' + w.name + '</option>').join('');
     host.innerHTML =
@@ -4899,7 +5037,7 @@
       '<div class="adm-sec"><h5>Inventory · click items to select</h5>' +
         (items ? '<div class="adm-inv" id="admp-inv">' + items + '</div>' : '<p class="hint">No items</p>') +
         '<div class="adm-line"><button class="btn btn-ghost btn-sm" id="admp-take-items" disabled>Remove selected</button>' +
-        '<span class="hint" style="margin:0">Faded items are in an open trade offer.</span></div></div>' +
+        '<span class="hint" style="margin:0">Faded items are in an open trade offer or listed on the market.</span></div></div>' +
 
       '<div class="adm-sec"><h5>Account</h5>' +
         '<div class="adm-line"><input class="control" id="admp-name" placeholder="New username" value="' + escAttr(p.name) + '">' +
@@ -5001,7 +5139,17 @@
   }
 
   async function loadAdminLive() {
-    const [o, l] = await Promise.all([adminDo('offers'), adminDo('lobbies')]);
+    const [o, l, m] = await Promise.all([adminDo('offers'), adminDo('lobbies'), adminDo('listings')]);
+    $('#adm-listings').innerHTML = !m ? '<div class="online-note">Can\'t reach the server.</div>' : !m.listings.length
+      ? '<p class="hint">Nothing listed</p>' : m.listings.map((x) => {
+        const it = tupleToItem(x.item.slice(1));
+        return '<div class="adm-row"><span class="grow"><b>' + escHtml(x.seller_name) + '</b> <i>' + escHtml(it ? it.name : '?') +
+          ' · value ' + fmt(x.value) + '</i></span><b class="num">' + fmt(x.price) + '</b><i>' + ago(x.created_at) + '</i>' +
+          '<button class="btn btn-ghost btn-sm" data-admcm="' + escAttr(x.id) + '">Take down</button></div>';
+      }).join('');
+    $$('#adm-listings [data-admcm]').forEach((b) => b.addEventListener('click', async () => {
+      if (await adminDo('cancel_listing', { listing: b.dataset.admcm }, 'Listing taken down; the item went back to its owner')) loadAdminLive();
+    }));
     const itemsLine = (rows, coins) => {
       const names = (rows || []).map((r) => { const it = tupleToItem(r.slice(1)); return it ? it.name : '?'; });
       return (names.length ? names.slice(0, 3).join(', ') + (names.length > 3 ? ' +' + (names.length - 3) : '') : 'nothing') +
@@ -6613,11 +6761,358 @@
       }));
     }
 
+    /* ---------- market ---------- */
+
+    const market = { view: 'buy', sort: 'new', q: '', rarity: '', list: [], offset: 0, more: false, seq: 0, at: 0,
+                     mine: null, pick: null, cheapest: undefined, price: null, qTimer: null };
+    const marketVisible = () => $('#panel-market').classList.contains('active');
+    const itemLabel = (it) => it.name + (it.wear ? ' (' + WEAR_BY_KEY[it.wear].name + ')' : '');
+
+    function renderMarketView() {
+      const on = signedIn();
+      $$('#mk-views [data-mkview]').forEach((c) => c.classList.toggle('active', c.dataset.mkview === market.view));
+      const gated = !on && market.view !== 'buy';
+      $$('#panel-market .mk-view').forEach((v) => { v.style.display = v.dataset.mkview === market.view && !gated ? '' : 'none'; });
+      $('#mk-gate').style.display = gated ? '' : 'none';
+      if (gated) return;
+      if (market.view === 'buy') loadMarket(true);
+      if (market.view === 'sell') renderSell();
+      if (market.view === 'mine') loadMine();
+    }
+
+    async function loadMarket(reset) {
+      if (reset) market.offset = 0;
+      const host = $('#mk-list');
+      if (reset && !market.list.length) host.innerHTML = '<div class="online-note">Loading…</div>';
+      const qs = new URLSearchParams({ sort: market.sort, offset: String(market.offset) });
+      if (market.q) qs.set('q', market.q);
+      if (market.rarity) qs.set('rarity', market.rarity);
+      const seq = ++market.seq;
+      market.at = Date.now();
+      try {
+        const r = await api('GET', '/api/market?' + qs.toString());
+        if (seq !== market.seq) return;
+        market.list = reset ? r.listings : market.list.concat(r.listings);
+        market.more = r.more;
+        renderMarketList();
+      } catch (e) {
+        if (seq === market.seq) host.innerHTML = '<div class="online-note" style="grid-column:1/-1">' + escHtml(e.message) + '</div>';
+      }
+    }
+
+    function renderMarketList() {
+      const host = $('#mk-list');
+      $('#mk-more').style.display = market.more ? '' : 'none';
+      if (!market.list.length) {
+        host.innerHTML = '<div class="empty" style="padding:30px;grid-column:1/-1"><h3>' +
+          (market.q || market.rarity ? 'Nothing listed that matches' : 'Nothing for sale yet') + '</h3>' +
+          '<p>Players list items here for coins. Try Sell to list one of yours.</p></div>';
+        return;
+      }
+      host.innerHTML = market.list.map((l) => {
+        const it = rowToItem(l.item);
+        if (!it) return '';
+        const mine = signedIn() && l.seller === acct.id;
+        return '<div class="mk-card">' + itemMarkup(it, '', true) +
+          '<div class="mk-foot"><b class="mk-price">' + fmt(l.price) + '</b>' +
+            (l.price < it.value ? '<span class="mk-deal" title="Cheaper than the game pays for it">Deal</span>' : '') +
+            '<i title="Sold by ' + escAttr(l.seller_name) + '">' + escHtml(l.seller_name) + '</i>' +
+            (mine ? '<span class="hint" style="margin:0">Yours</span>'
+                  : '<button class="btn btn-primary btn-sm" data-mkbuy="' + escAttr(l.id) + '">Buy</button>') +
+          '</div></div>';
+      }).join('');
+      $$('#mk-list [data-mkbuy]').forEach((b) => b.addEventListener('click', () => buyListing(b.dataset.mkbuy)));
+    }
+
+    async function buyListing(id) {
+      if (!signedIn()) { showLogin('Log in to buy from the market.'); return; }
+      const l = market.list.find((x) => x.id === id);
+      const it = l && rowToItem(l.item);
+      if (!it || ui.busy) return;
+      if (l.price > state.coins) { toast('Not enough coins', 'bad'); SFX.lose(); return; }
+      if (!confirm('Buy ' + itemLabel(it) + ' from ' + l.seller_name + ' for ' + fmt(l.price) + ' coins?')) return;
+      ui.busy = true;
+      try {
+        const r = await api('POST', '/api/market/' + encodeURIComponent(id) + '/buy');
+        took(r);
+        refreshAll();
+        SFX.coin();
+        toast('Bought ' + it.name + ' for ' + fmt(l.price), 'good');
+      } catch (e) {
+        toast(e.message, 'bad');
+        SFX.lose();
+      }
+      ui.busy = false;
+      loadMarket(true);
+    }
+
+    function renderSell() {
+      const host = $('#mk-pick');
+      const items = state.inventory.slice().sort((a, b) => b.value - a.value);
+      if (market.pick != null && !items.some((it) => it.uid === market.pick)) market.pick = null;
+      host.innerHTML = items.length ? items.slice(0, 400).map((it) =>
+        itemMarkup(it, market.pick === it.uid ? 'sel' : '', true).replace('class="item ', 'data-mkpick="' + it.uid + '" class="item ')).join('')
+        : '<div class="empty" style="padding:28px;grid-column:1/-1"><h3>Nothing to sell</h3><p>Open some cases first.</p></div>';
+      $$('#mk-pick [data-mkpick]').forEach((el) => el.addEventListener('click', () => {
+        SFX.blip();
+        market.pick = +el.dataset.mkpick;
+        market.price = null;
+        market.cheapest = undefined;
+        $$('#mk-pick .item.sel').forEach((x) => x.classList.remove('sel'));
+        el.classList.add('sel');
+        renderSellForm();
+        const it = state.inventory.find((x) => x.uid === market.pick);
+        if (it) cheapestFor(it);
+      }));
+      renderSellForm();
+    }
+
+    async function cheapestFor(it) {
+      try {
+        const r = await api('GET', '/api/market?sort=cheap&idx=' + ALL_ITEMS.findIndex((x) => x.name === it.name));
+        if (market.pick !== it.uid) return;
+        market.cheapest = r.listings[0] || null;
+      } catch (e) { market.cheapest = null; }
+      const line = $('#mk-cheapest');
+      if (line) line.textContent = cheapestLine();
+    }
+
+    function cheapestLine() {
+      if (market.cheapest === undefined) return 'Checking the market…';
+      if (!market.cheapest) return 'Nobody else is selling this right now.';
+      const c = rowToItem(market.cheapest.item);
+      return 'Cheapest listed now: ' + fmt(market.cheapest.price) + ' coins' + (c && c.wear ? ' (' + WEAR_BY_KEY[c.wear].name + ')' : '') + '.';
+    }
+
+    function renderSellForm() {
+      const host = $('#mk-form');
+      const it = state.inventory.find((x) => x.uid === market.pick);
+      if (!it) {
+        host.innerHTML = '<h4>Set a price</h4><p class="hint">Pick an item to sell. You set the price, and when another player buys it you get every coin.</p>';
+        return;
+      }
+      const price = market.price || it.value;
+      host.innerHTML = '<div class="mk-form">' + itemMarkup(it, '', true) + '<div>' +
+        '<h4>' + escHtml(itemLabel(it)) + '</h4>' +
+        '<p class="hint">The game pays ' + fmt(it.value) + ' coins for it. On the market you pick the price and get it all when someone buys.</p>' +
+        '<p class="hint" id="mk-cheapest">' + cheapestLine() + '</p>' +
+        '<input class="control" id="mk-price" type="number" min="1" max="1000000000" step="1" value="' + price + '" aria-label="Price in coins">' +
+        '<button class="btn btn-primary" id="mk-list-btn">List for ' + fmt(price) + ' coins</button>' +
+        '<p class="hint">It leaves your inventory until it sells or you take it down.</p></div></div>';
+      $('#mk-price').addEventListener('input', (e) => {
+        market.price = Math.floor(Number(e.target.value)) || null;
+        $('#mk-list-btn').textContent = market.price ? 'List for ' + fmt(market.price) + ' coins' : 'Enter a price';
+      });
+      $('#mk-price').addEventListener('keydown', (e) => { if (e.key === 'Enter') listItem(); });
+      $('#mk-list-btn').addEventListener('click', listItem);
+    }
+
+    async function listItem() {
+      const it = state.inventory.find((x) => x.uid === market.pick);
+      const price = Math.floor(Number($('#mk-price').value));
+      if (!it || ui.busy) return;
+      if (!(price >= 1 && price <= 1e9)) { toast('Enter a price from 1 to 1,000,000,000', 'bad'); return; }
+      if (price < it.value / 2 && !confirm('That\'s less than half what the game pays (' + fmt(it.value) + '). List it anyway?')) return;
+      ui.busy = true;
+      try {
+        const r = await api('POST', '/api/market', { item: it.uid, price: price });
+        took(r);
+        market.pick = null;
+        refreshAll();
+        SFX.whoosh();
+        toast('Listed ' + it.name + ' for ' + fmt(price), 'good');
+        market.view = 'mine';
+      } catch (e) {
+        toast(e.message, 'bad');
+        SFX.lose();
+      }
+      ui.busy = false;
+      renderMarketView();
+    }
+
+    async function loadMine() {
+      if (!market.mine) $('#mk-open').innerHTML = '<div class="online-note">Loading…</div>';
+      try {
+        market.mine = (await api('GET', '/api/market/mine')).listings;
+      } catch (e) {
+        $('#mk-open').innerHTML = '<div class="online-note">' + escHtml(e.message) + '</div>';
+        return;
+      }
+      renderMine();
+    }
+
+    function renderMine() {
+      const row = (l, extra) => {
+        const it = rowToItem(l.item);
+        return !it ? '' : '<div class="mk-row">' + minis([l.item]).html +
+          '<span class="grow"><b>' + escHtml(it.name) + '</b> <i>' + (it.wear ? WEAR_BY_KEY[it.wear].name : '') + '</i></span>' + extra + '</div>';
+      };
+      const open = market.mine.filter((l) => l.status === 'open'), past = market.mine.filter((l) => l.status !== 'open');
+      $('#mk-open').innerHTML = open.length ? open.map((l) => row(l, '<b class="mk-price">' + fmt(l.price) + '</b><i>' + ago(l.created_at) + '</i>' +
+        '<button class="btn btn-ghost btn-sm" data-mkcancel="' + escAttr(l.id) + '">Take down</button>')).join('')
+        : '<p class="hint">Nothing listed. Use Sell to put an item up.</p>';
+      $('#mk-history').innerHTML = past.length ? past.map((l) => row(l, l.status === 'sold'
+        ? '<i>sold to ' + escHtml(l.buyer_name || 'a deleted player') + '</i><b class="mk-price">+' + fmt(l.price) + '</b><i>' + ago(l.updated_at) + '</i>'
+        : '<i>taken down</i><i>' + ago(l.updated_at) + '</i>')).join('') : '<p class="hint">Nothing yet.</p>';
+      $$('#mk-open [data-mkcancel]').forEach((b) => b.addEventListener('click', async () => {
+        if (ui.busy) return;
+        ui.busy = true;
+        try {
+          const r = await api('POST', '/api/market/' + encodeURIComponent(b.dataset.mkcancel) + '/cancel');
+          took(r);
+          refreshAll();
+          toast('Taken down. The item is back in your inventory.', 'good');
+        } catch (e) { toast(e.message, 'bad'); }
+        ui.busy = false;
+        loadMine();
+      }));
+    }
+
+    function setMarketView(view) { SFX.blip(); market.view = view; renderMarketView(); }
+    function setMarketSort(sort) {
+      SFX.blip();
+      market.sort = sort;
+      $$('#mk-sort [data-mksort]').forEach((c) => c.classList.toggle('active', c.dataset.mksort === sort));
+      loadMarket(true);
+    }
+    function searchMarket() {
+      clearTimeout(market.qTimer);
+      market.qTimer = setTimeout(() => {
+        market.q = $('#mk-q').value.trim();
+        market.rarity = $('#mk-rarity').value;
+        loadMarket(true);
+      }, 250);
+    }
+    function moreMarket() { market.offset += 60; loadMarket(false); }
+
+    // The heartbeat reports your sales since last time.
+    function tellSales(sold) {
+      if (!sold || !sold.length) return;
+      sold.forEach((s) => {
+        const it = rowToItem(s.item);
+        if (it) toast('Your ' + it.name + ' sold for ' + fmt(s.price) + ' coins' + (s.buyer_name ? ' to ' + s.buyer_name : ''), 'good');
+      });
+      SFX.coin();
+      if (marketVisible() && market.view === 'mine') loadMine();
+    }
+
+    /* ---------- suggestions ---------- */
+
+    const ideas = { sort: 'top', list: null, seq: 0, at: 0 };
+    const IDEA_STATUS = { open: 'Open', planned: 'Planned', done: 'Done', declined: 'Not planned' };
+    const UP_ARROW = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 15l6-6 6 6"/></svg>';
+
+    function renderIdeasView() {
+      const on = signedIn();
+      $('#sg-new').style.display = on ? '' : 'none';
+      $('#sg-guest').style.display = on ? 'none' : '';
+      $$('#sg-sort [data-sgsort]').forEach((c) => c.classList.toggle('active', c.dataset.sgsort === ideas.sort));
+      loadIdeas();
+    }
+
+    async function loadIdeas() {
+      const host = $('#sg-list');
+      if (!ideas.list) host.innerHTML = '<div class="online-note">Loading…</div>';
+      const seq = ++ideas.seq;
+      ideas.at = Date.now();
+      try {
+        const r = await api('GET', '/api/suggestions?sort=' + ideas.sort);
+        if (seq !== ideas.seq) return;
+        ideas.list = r.suggestions;
+        renderIdeas();
+      } catch (e) {
+        if (seq === ideas.seq) host.innerHTML = '<div class="online-note">' + escHtml(e.message) + '</div>';
+      }
+    }
+
+    function renderIdeas() {
+      const host = $('#sg-list');
+      const admin = hasAdmin();
+      if (!ideas.list.length) {
+        host.innerHTML = '<div class="empty" style="padding:28px"><h3>No suggestions yet</h3><p>Got an idea for the game? Be the first.</p></div>';
+        return;
+      }
+      host.innerHTML = ideas.list.map((s) => '<div class="sg">' +
+        '<button class="sg-vote' + (s.voted ? ' on' : '') + '" data-sgvote="' + escAttr(s.id) + '" title="' + (s.voted ? 'Take back your vote' : 'Vote for this') +
+          '" aria-label="' + s.votes + ' votes">' + UP_ARROW + '<b>' + fmt(s.votes) + '</b></button>' +
+        '<div class="sg-body"><p>' + escHtml(s.text) + '</p><div class="sg-meta">' +
+          (s.status !== 'open' ? '<span class="sg-status ' + s.status + '">' + IDEA_STATUS[s.status] + '</span>' : '') +
+          '<i>' + escHtml(s.author_name) + ' · ' + ago(s.created_at) + '</i>' +
+          (signedIn() && s.author === acct.id ? '<button class="link-btn" data-sgdel="' + escAttr(s.id) + '">Delete</button>' : '') +
+        '</div>' +
+        (s.reply ? '<div class="sg-reply"><b>Admin:</b> ' + escHtml(s.reply) + '</div>' : '') +
+        (admin ? '<div class="adm-line sg-admin"><select class="control" data-sgstatus="' + escAttr(s.id) + '">' +
+            Object.keys(IDEA_STATUS).map((k) => '<option value="' + k + '"' + (k === s.status ? ' selected' : '') + '>' + IDEA_STATUS[k] + '</option>').join('') +
+          '</select><input class="control" data-sgreply="' + escAttr(s.id) + '" maxlength="300" placeholder="Reply (everyone sees it)" value="' + escAttr(s.reply) + '">' +
+          '<button class="btn btn-ghost btn-sm" data-sgsave="' + escAttr(s.id) + '">Save</button>' +
+          '<button class="btn btn-danger btn-sm" data-sgadel="' + escAttr(s.id) + '">Delete</button></div>' : '') +
+        '</div></div>').join('');
+      $$('#sg-list [data-sgvote]').forEach((b) => b.addEventListener('click', () => voteIdea(b.dataset.sgvote)));
+      $$('#sg-list [data-sgdel]').forEach((b) => b.addEventListener('click', async () => {
+        if (!confirm('Delete your suggestion?')) return;
+        try { await api('POST', '/api/suggestions/' + encodeURIComponent(b.dataset.sgdel) + '/delete'); toast('Deleted'); }
+        catch (e) { toast(e.message, 'bad'); }
+        loadIdeas();
+      }));
+      $$('#sg-list [data-sgsave]').forEach((b) => b.addEventListener('click', async () => {
+        const id = b.dataset.sgsave;
+        const status = $('#sg-list [data-sgstatus="' + id + '"]').value, reply = $('#sg-list [data-sgreply="' + id + '"]').value.trim();
+        if (await adminDo('suggestion', { id: id, status: status, reply: reply }, 'Saved')) loadIdeas();
+      }));
+      $$('#sg-list [data-sgadel]').forEach((b) => b.addEventListener('click', async () => {
+        if (!confirm('Delete this suggestion for everyone?')) return;
+        if (await adminDo('delete_suggestion', { id: b.dataset.sgadel }, 'Deleted')) loadIdeas();
+      }));
+    }
+
+    async function voteIdea(id) {
+      if (!signedIn()) { showLogin('Log in to vote for suggestions.'); return; }
+      const s = (ideas.list || []).find((x) => x.id === id);
+      if (!s) return;
+      SFX.blip();
+      try {
+        const r = await api('POST', '/api/suggestions/' + encodeURIComponent(id) + '/vote');
+        s.voted = r.voted;
+        s.votes = r.votes;
+        renderIdeas();
+      } catch (e) { toast(e.message, 'bad'); }
+    }
+
+    async function postIdea() {
+      if (ui.busy) return;
+      const box = $('#sg-text'), err = $('#sg-err');
+      const text = box.value.replace(/\s+/g, ' ').trim();
+      if (text.length < 10) { err.textContent = 'Say a bit more (at least 10 characters).'; return; }
+      const problem = textProblem(text);
+      if (problem) { err.textContent = problem; SFX.lose(); return; }
+      ui.busy = true;
+      err.textContent = '';
+      try {
+        await api('POST', '/api/suggestions', { text: text });
+        box.value = '';
+        $('#sg-count').textContent = '0/300';
+        SFX.win('rare');
+        toast('Thanks! Your suggestion is up.', 'good');
+        ideas.sort = 'new';
+        renderIdeasView();
+      } catch (e) {
+        err.textContent = e.message;
+        SFX.lose();
+      }
+      ui.busy = false;
+    }
+
+    function setIdeasSort(sort) { SFX.blip(); ideas.sort = sort; renderIdeasView(); }
+
     /* ---------- heartbeat ---------- */
 
     let ticks = 0;
     async function tick() {
       config();
+      if (document.visibilityState === 'visible') {
+        if (marketVisible() && market.view === 'buy' && Date.now() - market.at > 30000) loadMarket(true);
+        if ($('#panel-ideas').classList.contains('active') && Date.now() - ideas.at > 60000) loadIdeas();
+      }
       if (!signedIn()) return;
       ticks++;
       const now = Date.now();
@@ -6630,6 +7125,7 @@
           if (!animating()) { applyMe(r.me); renderBalance(); }
           if (changed || now - lastFull > 5 * 60000) refresh();
           if (r.pending !== ui.offers.filter((o) => o.status === 'pending' && o.to === acct.id).length) syncOffers();
+          tellSales(r.sold);
         } catch (e) { /* offline for now */ }
       }
       if (now - lastOffers > (tradeVisible() ? 5000 : 20000)) syncOffers();
@@ -6650,7 +7146,9 @@
       admin: adminCall, config: config, dismissBanner: dismissBanner, isAdminAccount: isAdminAccount, peekGift: peekGift,
       showAccount: showAccount, hideAccount: hideAccount, changePassword: changePassword, logoutEverywhere: logoutEverywhere,
       renderTradeView: renderTradeView, search: search, pickPartner: pickPartner,
-      battleBusy: battleBusy, createBattle: createBattle, renderBattles: renderBattles, finishBattle: finishBattle
+      battleBusy: battleBusy, createBattle: createBattle, renderBattles: renderBattles, finishBattle: finishBattle,
+      renderMarketView: renderMarketView, setMarketView: setMarketView, setMarketSort: setMarketSort, searchMarket: searchMarket,
+      moreMarket: moreMarket, renderIdeasView: renderIdeasView, setIdeasSort: setIdeasSort, postIdea: postIdea
     };
   })();
 
@@ -6846,6 +7344,17 @@
     $('#login-pass').addEventListener('keydown', (e) => { if (e.key === 'Enter') cloud.submitLogin(); });
     $('#login-guest').addEventListener('click', cloud.playAsGuest);
     $('#trade-login').addEventListener('click', () => cloud.showLogin());
+    $('#mk-rarity').innerHTML += RARITIES.map((r) => '<option value="' + r + '">' + r.charAt(0).toUpperCase() + r.slice(1) + '</option>').join('');
+    $$('#mk-views [data-mkview]').forEach((c) => c.addEventListener('click', () => cloud.setMarketView(c.dataset.mkview)));
+    $$('#mk-sort [data-mksort]').forEach((c) => c.addEventListener('click', () => cloud.setMarketSort(c.dataset.mksort)));
+    $('#mk-q').addEventListener('input', cloud.searchMarket);
+    $('#mk-rarity').addEventListener('change', cloud.searchMarket);
+    $('#mk-more').addEventListener('click', cloud.moreMarket);
+    $('#mk-login').addEventListener('click', () => cloud.showLogin());
+    $$('#sg-sort [data-sgsort]').forEach((c) => c.addEventListener('click', () => cloud.setIdeasSort(c.dataset.sgsort)));
+    $('#sg-post').addEventListener('click', cloud.postIdea);
+    $('#sg-text').addEventListener('input', (e) => { $('#sg-count').textContent = e.target.value.length + '/300'; $('#sg-err').textContent = ''; });
+    $('#sg-login').addEventListener('click', () => cloud.showLogin());
     $('#acct-btn').addEventListener('click', () => {
       SFX.blip();
       if (cloud.signedIn()) cloud.showAccount();

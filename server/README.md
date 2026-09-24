@@ -31,6 +31,8 @@ It deploys with the site whenever `site/`, `server/` or `functions/` changes on 
 - **All or nothing.** Each change to coins or items runs as a single database transaction. If any part fails, for example the coins ran out or an item was sold a moment earlier, none of it happens. Coins can never go below zero, and every item belongs to exactly one account.
 - **Trades.** Offered items are set aside and the offered coins are taken when the offer is made. Accepting swaps everything at once. Declining or cancelling gives it all back.
 - **Battles.** Entry is paid on joining. When the last seat fills, or the creator starts early and bots take the empty seats, the server picks a seed, rolls the whole battle and pays the winner. Every player's game replays the same rolls from that seed, starting at the same moment.
+- **Market.** Players list items for a price in coins (1 to 1,000,000,000). A listed item is set aside, so it can't be sold, upgraded or traded, and it comes back if the listing is taken down. Buying moves the coins and the item in one transaction, so two people can't buy the same thing. The seller gets every coin (there's no fee) and is told about the sale on their next heartbeat. Each account can have 20 items listed at once and list 60 every 10 minutes. Listings by banned players are hidden and can't be bought; deleting an account takes its listings down. Guests can browse but not buy or sell.
+- **Suggestions.** Players post ideas (10–300 characters, the same word filter as usernames, 5 an hour) and vote for the ones they like; posting one counts as your vote. Admins see a status (Open, Planned, Done, Not planned), a reply box and Delete on each suggestion. Suggestions by banned players are hidden.
 - **Gifts.** Gift codes are signed with the admin key. The server checks the signature, and each account can claim a given gift once.
 - **Time played** is counted by the server from the game's heartbeat, which it sends every 30 seconds.
 
@@ -61,7 +63,7 @@ Tabs:
   - ban them with a reason (they're shown it) or unban them
   - delete the account. You have to type the name to confirm. Their open trades and battles are cancelled and refunded.
 - **Gifts:** build gift codes. With the key they're signed codes (`GIFT.`) that also work for guests. From an admin account they're stored on the server (`GIFT2.`) and work for accounts only. Each code now shows how many accounts claimed it. You can cancel a code so nobody else can claim it (existing claims are kept), or reinstate it.
-- **Trades & battles:** every open trade offer and battle lobby, each with a Cancel button that refunds everyone.
+- **Trades, market & battles:** every open trade offer and battle lobby, each with a Cancel button that refunds everyone. It also lists every open market listing, each with a Take down button that returns the item to its owner.
 - **Game:** publish an announcement banner that every player sees, and turn maintenance mode on or off. Maintenance pauses opening cases, selling, upgrades, trades, battles and gifts for every account, while still letting players log in and look around.
 - **Log:** every change made from the panel, newest first.
 
@@ -120,7 +122,7 @@ JSON in and out. Logged-in routes take `Authorization: Bearer <token>`. The game
 | POST | `/api/login` | | `{ name, password }` → `{ token, me, inventory }` |
 | POST | `/api/logout` | ✓ | |
 | GET | `/api/me` | ✓ | → `{ me, inventory }` |
-| POST | `/api/ping` | ✓ | heartbeat → `{ me, pending }` |
+| POST | `/api/ping` | ✓ | heartbeat → `{ me, pending, sold }` |
 | POST | `/api/open` | ✓ | `{ case_id, count 1-5 }` |
 | POST | `/api/sell` | ✓ | `{ ids }` |
 | POST | `/api/upgrade` | ✓ | `{ ids, mult }` |
@@ -135,11 +137,18 @@ JSON in and out. Logged-in routes take `Authorization: Bearer <token>`. The game
 | GET | `/api/battles` | | open lobbies |
 | GET | `/api/battles/:id` | | one battle (`seed` and `start_at` once running) |
 | POST | `/api/battles/:id/join\|leave\|start` | ✓ | |
+| GET | `/api/market` | | `?q=name&rarity=&idx=&sort=new\|cheap\|dear\|deal&offset=` open listings |
+| GET | `/api/market/mine` | ✓ | your listings, open and past |
+| POST | `/api/market` | ✓ | `{ item, price }` |
+| POST | `/api/market/:id/buy\|cancel` | ✓ | |
+| GET | `/api/suggestions` | | `?sort=top\|new` (with a login, says which you voted for) |
+| POST | `/api/suggestions` | ✓ | `{ text }` |
+| POST | `/api/suggestions/:id/vote\|delete` | ✓ | vote toggles |
 | GET | `/api/config` | | `{ announcement, maintenance, version }` |
 | POST | `/api/account/password` | ✓ | `{ old, password }` (logs out other devices) |
 | POST | `/api/account/logout-all` | ✓ | |
 | POST | `/api/admin` | signed or admin account | `{ p: '{"a": action, "n": one-time id, "ts", ...}', g: signature }`, or `{ p }` with an admin account's login |
 
-Admin actions: `stats`, `find {q}`, `player {id}`, `coins {id, delta \| set}`, `give {id, idx, wear, tracker, count}`, `take {id, ids}`, `rename {id, name}`, `ban {id, reason}`, `unban {id}`, `reset {id, password}`, `logout {id}`, `delete {id, confirm}`, `offers`, `cancel_offer {offer}`, `lobbies`, `cancel_lobby {lobby}`, `settings {announcement, maintenance}`, `gifts {gifts}`, `revoke_gift {gift, undo}`, `make_gift {coins, items, message, ttl}`, `devices`, `device {kind, value}`, `ban_device {kind, value, reason, block}`, `block_device {kind, value, reason}`, `unblock_device {kind, value}`, `delete_device {kind, value, confirm}`, `bad_names {mode, confirm}`, `delete_banned {confirm}`, `log`. Key only: `grant_admin {id}`, `revoke_admin {id}`. `id` can be a player id or a username.
+Admin actions: `stats`, `find {q}`, `player {id}`, `coins {id, delta \| set}`, `give {id, idx, wear, tracker, count}`, `take {id, ids}`, `rename {id, name}`, `ban {id, reason}`, `unban {id}`, `reset {id, password}`, `logout {id}`, `delete {id, confirm}`, `offers`, `cancel_offer {offer}`, `lobbies`, `cancel_lobby {lobby}`, `settings {announcement, maintenance}`, `gifts {gifts}`, `revoke_gift {gift, undo}`, `make_gift {coins, items, message, ttl}`, `devices`, `device {kind, value}`, `ban_device {kind, value, reason, block}`, `block_device {kind, value, reason}`, `unblock_device {kind, value}`, `delete_device {kind, value, confirm}`, `bad_names {mode, confirm}`, `delete_banned {confirm}`, `listings`, `cancel_listing {listing}`, `suggestion {id, status, reply}`, `delete_suggestion {id}`, `log`. Key only: `grant_admin {id}`, `revoke_admin {id}`. `id` can be a player id or a username.
 
 Limits: usernames are 3–16 letters, numbers, `_` or `-` and must pass the name rules, and passwords are 6–72 characters. The free case opens at most once every 3 seconds. See **Rate limits** above for the rest. Each account holds up to 3,000 items and can have 20 open offers. Unfilled lobbies close after 15 minutes and refund everyone.

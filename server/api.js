@@ -38,6 +38,13 @@
     GET  /api/battles/:id
     POST /api/battles/:id/:action auth join | leave | start
     GET  /api/config                 announcement and maintenance flag
+    GET  /api/market                 ?q=&rarity=&idx=&sort=new|cheap|dear|deal&offset= open listings
+    GET  /api/market/mine      auth  your listings, open and past
+    POST /api/market           auth  { item, price }      list an item
+    POST /api/market/:id/buy|cancel  auth
+    GET  /api/suggestions            ?sort=top|new         (with a login, says which you voted for)
+    POST /api/suggestions      auth  { text }
+    POST /api/suggestions/:id/vote|delete  auth
     POST /api/account/password auth  { old, password }
     POST /api/account/logout-all auth ends every session for the account
     POST /api/admin                  signed with the admin key; see the moderation section
@@ -46,7 +53,7 @@
 import {
   CASES, ALL_ITEMS, ITEM_INDEX, GAME_VERSION, VAULT_KEY, VAULT_CRATE, WEARS, NO_WEAR, NO_TRACKER,
   rollItem, rollWear, instantiate, bonusChance, itemTuple, tupleToItem,
-  pickTarget, upgradeChance, computeBattle, seededRng, hashString, nameProblem
+  pickTarget, upgradeChance, computeBattle, seededRng, hashString, nameProblem, textProblem, RARITIES
 } from './core.js';
 
 const NAME_RE = /^[A-Za-z0-9_-]{3,16}$/;
@@ -61,6 +68,9 @@ const POW_MIN_AGE = 2, POW_MAX_AGE = 15 * 60;   // s from getting a sign-up chal
 const FREE_COOLDOWN = 3000;             // ms between free-case openings
 const MAX_ITEMS = 3000;
 const MAX_OFFER_ITEMS = 20, MAX_PENDING = 20;
+const MAX_LISTINGS = 20;                // open market listings per account
+const MAX_PRICE = 1e9;
+const SUGGESTION_MIN = 10, SUGGESTION_MAX = 300;
 const LOBBY_TTL = 15 * 60, START_DELAY = 4000;
 const SORT = { value: 'inv_value', best: 'best_value', opened: 'opened', played: 'played' };
 const MAX_BODY = 64 * 1024;
@@ -254,7 +264,9 @@ const LIMITS = {                          // [how many, in how many seconds]
   password:   [10, 3600],                 // password changes per account, right or wrong
   offer:      [40, 600],                  // trade offers made per account
   battle:     [40, 600],                  // battles made per account
-  gift:       [30, 600]                   // gift codes tried per account
+  gift:       [30, 600],                  // gift codes tried per account
+  listing:    [60, 600],                  // market listings made per account
+  suggest:    [5, 3600]                   // suggestions posted per account
 };
 const ipOf = (request) => request.headers.get('CF-Connecting-IP') || 'local';
 const hitRow = (db, name, who) => db.prepare('INSERT INTO hits (k, at) VALUES (?, ?)').bind(name + ':' + who, nowS());
@@ -495,7 +507,7 @@ async function ping(request, env, me) {
     `UPDATE accounts SET played = played + CASE WHEN ? - last_ping BETWEEN 1 AND 120 THEN ? - last_ping ELSE 0 END,
             last_ping = ?, last_seen = ? WHERE id = ?`).bind(t, t, t, t, me.id).run();
   const pending = await env.DB.prepare(`SELECT COUNT(*) AS n FROM offers WHERE to_id = ? AND status = 'pending'`).bind(me.id).first();
-  return json({ me: await meFull(env.DB, await account(env.DB, me.id)), pending: pending.n });
+  return json({ me: await meFull(env.DB, await account(env.DB, me.id)), pending: pending.n, sold: await newSales(env.DB, me) });
 }
 
 /* ---------- cases, selling, upgrades ---------- */
@@ -974,6 +986,183 @@ async function settings(db) {
   return settingsCache.v;
 }
 
+/* ---------- market ----------
+   Players list items for a price in coins. A listed item is set aside
+   (locked 'm:<listing id>') so it can't be sold, upgraded or traded, and
+   comes back if the listing is cancelled. Buying moves the coins and the
+   item in one transaction. Listings by banned players are hidden and can't
+   be bought. */
+
+const listingOut = (l) => ({
+  id: l.id, seller: l.seller, seller_name: l.seller_name, item: [l.item, l.idx, l.wear, l.float, l.tracker],
+  value: l.value, price: l.price, status: l.status, buyer_name: l.buyer_name || null,
+  created_at: l.created_at, updated_at: l.updated_at
+});
+
+async function browseMarket(url, env) {
+  const q = (url.searchParams.get('q') || '').trim().toLowerCase().slice(0, 40);
+  const rarity = url.searchParams.get('rarity') || '';
+  const idx = url.searchParams.get('idx');
+  const sort = { new: 'l.created_at DESC', cheap: 'l.price ASC', dear: 'l.price DESC', deal: 'CAST(l.price AS REAL) / MAX(l.value, 1) ASC' }[url.searchParams.get('sort')] || 'l.created_at DESC';
+  const offset = Math.max(0, Math.min(5000, Math.floor(Number(url.searchParams.get('offset')) || 0)));
+  let where = `l.status = 'open' AND a.banned = 0`;
+  const args = [];
+  if (q || RARITIES.indexOf(rarity) >= 0 || idx != null) {
+    // Search by item name and rarity: turn them into the matching item indexes.
+    const want = ALL_ITEMS.map((it, i) => i).filter((i) => (!q || ALL_ITEMS[i].name.toLowerCase().indexOf(q) >= 0) &&
+      (!rarity || ALL_ITEMS[i].rarity === rarity) && (idx == null || String(i) === idx));
+    where += ' AND l.idx IN (SELECT value FROM json_each(?))';
+    args.push(JSON.stringify(want));
+  }
+  const { results } = await env.DB.prepare(
+    `SELECT l.*, a.name AS seller_name FROM listings l JOIN accounts a ON a.id = l.seller
+      WHERE ${where} ORDER BY ${sort}, l.id LIMIT 61 OFFSET ?`).bind(...args, offset).all();
+  return json({ listings: results.slice(0, 60).map(listingOut), more: results.length > 60 });
+}
+
+async function myListings(env, me) {
+  const { results } = await env.DB.prepare(
+    `SELECT l.*, b.name AS buyer_name FROM listings l LEFT JOIN accounts b ON b.id = l.buyer
+      WHERE l.seller = ? ORDER BY (l.status = 'open') DESC, l.updated_at DESC LIMIT 60`).bind(me.id).all();
+  return json({ listings: results.map((l) => listingOut(Object.assign(l, { seller_name: me.name }))) });
+}
+
+async function createListing(request, env, me) {
+  const db = env.DB;
+  const b = await body(request);
+  if (!isInt(b.item, 1, 1e15)) fail(400, 'Pick an item');
+  if (!isInt(b.price, 1, MAX_PRICE)) fail(400, 'Prices are 1 to ' + MAX_PRICE.toLocaleString('en-US') + ' coins');
+  await limit(db, 'listing', me.id, 'You\'ve listed a lot of items. Wait a few minutes.');
+  const it = await db.prepare('SELECT * FROM items WHERE id = ? AND owner = ? AND locked IS NULL').bind(b.item, me.id).first();
+  if (!it) fail(409, 'You don\'t have that item any more');
+  const open = await db.prepare(`SELECT COUNT(*) AS n FROM listings WHERE seller = ? AND status = 'open'`).bind(me.id).first();
+  if (open.n >= MAX_LISTINGS) fail(429, 'You can have ' + MAX_LISTINGS + ' items listed at once');
+  const id = randomId(9), t = nowS(), tag = 'm:' + id;
+  await transact(db, [
+    db.prepare('UPDATE items SET locked = ? WHERE id = ? AND owner = ? AND locked IS NULL').bind(tag, it.id, me.id),
+    check(db, '(SELECT locked FROM items WHERE id = ?) = ?', it.id, tag),
+    db.prepare(`INSERT INTO listings (id, seller, item, idx, wear, float, tracker, value, price, status, created_at, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'open', ?, ?)`)
+      .bind(id, me.id, it.id, it.idx, it.wear, it.float, it.tracker, it.value, b.price, t, t)
+  ]);
+  return json({ me: meOut(await account(db, me.id)), inventory: await inventory(db, me.id), id: id });
+}
+
+async function listingAction(id, action, env, me) {
+  const db = env.DB;
+  const l = await db.prepare('SELECT * FROM listings WHERE id = ?').bind(id).first();
+  if (!l) fail(404, 'No such listing');
+  if (l.status !== 'open') fail(409, l.status === 'sold' ? 'Someone already bought that' : 'That listing was taken down');
+  const tag = 'm:' + id, t = nowS();
+  const isOpen = check(db, `(SELECT status FROM listings WHERE id = ?) = 'open'`, id);
+  if (action === 'buy') {
+    if (l.seller === me.id) fail(400, 'That\'s your own listing');
+    if (me.coins < l.price) fail(409, 'Not enough coins');
+    if (me.inv_count >= MAX_ITEMS) fail(409, 'Your inventory is full');
+    await transact(db, [
+      isOpen,
+      check(db, '(SELECT banned FROM accounts WHERE id = ?) = 0', l.seller),
+      check(db, '(SELECT COUNT(*) FROM items WHERE id = ? AND owner = ? AND locked = ?) = 1', l.item, l.seller, tag),
+      db.prepare('UPDATE accounts SET coins = coins - ? WHERE id = ?').bind(l.price, me.id),
+      db.prepare('UPDATE accounts SET coins = coins + ? WHERE id = ?').bind(l.price, l.seller),
+      db.prepare('UPDATE items SET owner = ?, locked = NULL WHERE id = ? AND locked = ?').bind(me.id, l.item, tag),
+      db.prepare(`UPDATE listings SET status = 'sold', buyer = ?, updated_at = ? WHERE id = ?`).bind(me.id, t, id)
+    ]).catch((e) => { if (e.status === 409) fail(409, 'Someone else just bought that'); throw e; });
+  } else if (action === 'cancel') {
+    if (l.seller !== me.id) fail(403, 'Only the seller can take it down');
+    await transact(db, [
+      isOpen,
+      db.prepare('UPDATE items SET locked = NULL WHERE locked = ?').bind(tag),
+      db.prepare(`UPDATE listings SET status = 'cancelled', updated_at = ? WHERE id = ?`).bind(t, id)
+    ]);
+  } else {
+    fail(404, 'Unknown action');
+  }
+  return json({ me: meOut(await account(db, me.id)), inventory: await inventory(db, me.id) });
+}
+
+// Listings of yours that sold since you were last told, for the heartbeat.
+async function newSales(db, me) {
+  const { results } = await db.prepare(
+    `SELECT l.id, l.idx, l.wear, l.float, l.tracker, l.price, b.name AS buyer_name FROM listings l LEFT JOIN accounts b ON b.id = l.buyer
+      WHERE l.seller = ? AND l.status = 'sold' AND l.seen = 0 LIMIT 10`).bind(me.id).all();
+  if (results.length) {
+    await db.prepare('UPDATE listings SET seen = 1 WHERE id IN (SELECT value FROM json_each(?))').bind(JSON.stringify(results.map((r) => r.id))).run();
+  }
+  return results.map((r) => ({ item: [0, r.idx, r.wear, r.float, r.tracker], price: r.price, buyer_name: r.buyer_name }));
+}
+
+// Takes down listings (admin, bans, deleted accounts): the items go back to their owners.
+const listingCancel = (db, l, t) => [
+  check(db, `(SELECT status FROM listings WHERE id = ?) = 'open'`, l.id),
+  db.prepare('UPDATE items SET locked = NULL WHERE locked = ?').bind('m:' + l.id),
+  db.prepare(`UPDATE listings SET status = 'cancelled', updated_at = ? WHERE id = ?`).bind(t, l.id)
+];
+
+/* ---------- suggestions ---------- */
+
+const SUGGESTION_STATUS = ['open', 'planned', 'done', 'declined'];
+
+async function listSuggestions(request, url, env) {
+  const db = env.DB;
+  const me = await authed(request, env).catch(() => null);
+  const sort = url.searchParams.get('sort') === 'new' ? 's.created_at DESC, s.rowid DESC' : 's.votes DESC, s.created_at DESC, s.rowid DESC';
+  const { results } = await db.prepare(
+    `SELECT s.*, a.name AS author_name, ${me ? 'EXISTS (SELECT 1 FROM suggestion_votes v WHERE v.suggestion = s.id AND v.account = ?)' : '0'} AS mine
+       FROM suggestions s JOIN accounts a ON a.id = s.author WHERE a.banned = 0 ORDER BY ${sort} LIMIT 100`)
+    .bind(...(me ? [me.id] : [])).all();
+  return json({
+    suggestions: results.map((s) => ({
+      id: s.id, author: s.author, author_name: s.author_name, text: s.text, status: s.status, reply: s.reply,
+      votes: s.votes, voted: !!s.mine, created_at: s.created_at, updated_at: s.updated_at
+    }))
+  });
+}
+
+async function createSuggestion(request, env, me) {
+  const db = env.DB;
+  const b = await body(request);
+  const text = String(b.text || '').replace(/\s+/g, ' ').trim();
+  if (text.length < SUGGESTION_MIN || text.length > SUGGESTION_MAX) fail(400, 'Suggestions are ' + SUGGESTION_MIN + '-' + SUGGESTION_MAX + ' characters');
+  const problem = textProblem(text);
+  if (problem) fail(400, problem);
+  await limit(db, 'suggest', me.id, 'You\'ve posted a lot of suggestions. Try again later.');
+  const id = randomId(9), t = nowS();
+  await db.batch([
+    db.prepare(`INSERT INTO suggestions (id, author, text, status, reply, votes, created_at, updated_at) VALUES (?, ?, ?, 'open', '', 1, ?, ?)`)
+      .bind(id, me.id, text, t, t),
+    db.prepare('INSERT INTO suggestion_votes (suggestion, account) VALUES (?, ?)').bind(id, me.id)    // you vote for your own
+  ]);
+  return json({ id: id });
+}
+
+async function suggestionAction(id, action, env, me) {
+  const db = env.DB;
+  const s = await db.prepare('SELECT * FROM suggestions WHERE id = ?').bind(id).first();
+  if (!s) fail(404, 'No such suggestion');
+  if (action === 'vote') {
+    const had = await db.prepare('SELECT 1 FROM suggestion_votes WHERE suggestion = ? AND account = ?').bind(id, me.id).first();
+    await db.batch([
+      had ? db.prepare('DELETE FROM suggestion_votes WHERE suggestion = ? AND account = ?').bind(id, me.id)
+          : db.prepare('INSERT OR IGNORE INTO suggestion_votes (suggestion, account) VALUES (?, ?)').bind(id, me.id),
+      db.prepare('UPDATE suggestions SET votes = (SELECT COUNT(*) FROM suggestion_votes WHERE suggestion = ?) WHERE id = ?').bind(id, id)
+    ]);
+    const now = await db.prepare('SELECT votes FROM suggestions WHERE id = ?').bind(id).first();
+    return json({ voted: !had, votes: now.votes });
+  }
+  if (action === 'delete') {
+    if (s.author !== me.id) fail(403, 'Only the person who posted it can delete it');
+    await deleteSuggestion(db, id);
+    return json({ ok: true });
+  }
+  fail(404, 'Unknown action');
+}
+
+const deleteSuggestion = (db, id) => db.batch([
+  db.prepare('DELETE FROM suggestion_votes WHERE suggestion = ?').bind(id),
+  db.prepare('DELETE FROM suggestions WHERE id = ?').bind(id)
+]);
+
 async function config(env) {
   const s = await settings(env.DB);
   return json({ announcement: s.announcement || '', maintenance: s.maintenance === '1', version: GAME_VERSION });
@@ -1037,10 +1226,16 @@ async function deleteAccounts(db, ids) {
   const lobbies = (await db.prepare(`SELECT * FROM lobbies WHERE status = 'open'`).all()).results
     .filter((l) => ids.some((id) => l.players.indexOf('"' + id + '"') >= 0));
   const refundsDue = offers.map((o) => offerRefund(db, o, 'cancelled', t)).concat(lobbies.map((l) => lobbyCancel(db, l, t)));
+  // Their open listings come down (their items are deleted below); others' votes on their suggestions go too.
   for (const stmts of refundsDue.slice(0, 20)) await db.batch(stmts).catch(() => {});
-  await db.batch(['DELETE FROM items WHERE owner IN', 'DELETE FROM sessions WHERE account IN', 'DELETE FROM ban_reasons WHERE account IN',
+  await db.batch([`UPDATE listings SET status = 'cancelled', updated_at = ${t} WHERE status = 'open' AND seller IN`,
+    'DELETE FROM suggestion_votes WHERE suggestion IN (SELECT id FROM suggestions WHERE author IN (SELECT value FROM json_each(?))) OR account IN',
+    'DELETE FROM suggestions WHERE author IN',
+    'DELETE FROM items WHERE owner IN', 'DELETE FROM sessions WHERE account IN', 'DELETE FROM ban_reasons WHERE account IN',
     'DELETE FROM account_devices WHERE account IN', 'DELETE FROM admin_accounts WHERE account IN', 'DELETE FROM accounts WHERE id IN']
-    .map((sql) => db.prepare(sql + ' (SELECT value FROM json_each(?))').bind(list)));
+    .map((sql) => db.prepare(sql + ' (SELECT value FROM json_each(?))').bind(...(sql.indexOf('json_each') >= 0 ? [list, list] : [list]))));
+  await db.batch([db.prepare(`UPDATE suggestions SET votes = (SELECT COUNT(*) FROM suggestion_votes v WHERE v.suggestion = suggestions.id)
+    WHERE id IN (SELECT DISTINCT suggestion FROM suggestion_votes) OR votes > 0`)]);
 }
 const deleteAccount = (db, a) => deleteAccounts(db, [a.id]);
 
@@ -1145,7 +1340,7 @@ const ADMIN = {
   async player(db, p) {
     const a = await findAccount(db, p.id);
     const items = (await db.prepare('SELECT id, idx, wear, float, tracker, locked FROM items WHERE owner = ? ORDER BY value DESC')
-      .bind(a.id).all()).results.map((r) => [r.id, r.idx, r.wear, r.float, r.tracker, r.locked ? 1 : 0]);
+      .bind(a.id).all()).results.map((r) => [r.id, r.idx, r.wear, r.float, r.tracker, r.locked ? (r.locked[0] === 'm' ? 2 : 1) : 0]);   // 1 in a trade, 2 on the market
     const offers = (await db.prepare(
       `SELECT o.id, o.status, o.give_coins, o.want_coins, o.updated_at, f.name AS from_name, r.name AS to_name,
               json_array_length(o.give) AS give_n, json_array_length(o.want) AS want_n
@@ -1297,6 +1492,36 @@ const ADMIN = {
     if (!o || o.status !== 'pending') fail(409, 'That offer isn\'t open');
     await transact(db, offerRefund(db, o, 'cancelled', nowS()));
     return { log: ['offer ' + o.id, 'cancelled and refunded'] };
+  },
+
+  async listings(db) {
+    const { results } = await db.prepare(
+      `SELECT l.*, a.name AS seller_name FROM listings l JOIN accounts a ON a.id = l.seller
+        WHERE l.status = 'open' ORDER BY l.created_at DESC LIMIT 80`).all();
+    return { listings: results.map(listingOut) };
+  },
+
+  async cancel_listing(db, p) {
+    const l = await db.prepare('SELECT * FROM listings WHERE id = ?').bind(String(p.listing || '')).first();
+    if (!l || l.status !== 'open') fail(409, 'That listing isn\'t open');
+    await transact(db, listingCancel(db, l, nowS()));
+    return { log: ['listing ' + l.id, 'taken down (' + ALL_ITEMS[l.idx].name + ' for ' + l.price + ')'] };
+  },
+
+  async suggestion(db, p) {
+    const s = await db.prepare('SELECT * FROM suggestions WHERE id = ?').bind(String(p.id || '')).first();
+    if (!s) fail(404, 'No such suggestion');
+    const status = SUGGESTION_STATUS.indexOf(p.status) >= 0 ? p.status : s.status;
+    const reply = p.reply != null ? String(p.reply).replace(/\s+/g, ' ').trim().slice(0, 300) : s.reply;
+    await db.prepare('UPDATE suggestions SET status = ?, reply = ?, updated_at = ? WHERE id = ?').bind(status, reply, nowS(), s.id).run();
+    return { log: ['suggestion ' + s.id, status + (reply ? ': ' + reply : '')] };
+  },
+
+  async delete_suggestion(db, p) {
+    const s = await db.prepare('SELECT * FROM suggestions WHERE id = ?').bind(String(p.id || '')).first();
+    if (!s) fail(404, 'No such suggestion');
+    await deleteSuggestion(db, s.id);
+    return { log: ['suggestion ' + s.id, 'deleted: ' + s.text.slice(0, 80)] };
   },
 
   async lobbies(db) {
@@ -1515,6 +1740,8 @@ export default {
       if (method === 'GET' && a === 'players' && b) return await playerProfile(b, env);
       if (method === 'GET' && a === 'battles' && !b) return await listBattles(env);
       if (method === 'GET' && a === 'battles' && b) return await getBattle(b, env);
+      if (method === 'GET' && a === 'market' && !b) return await browseMarket(url, env);
+      if (method === 'GET' && a === 'suggestions') return await listSuggestions(request, url, env);
       if (method === 'POST' && a === 'admin') return await admin(request, env);
 
       const me = await authed(request, env);
@@ -1531,6 +1758,9 @@ export default {
         await env.DB.prepare('DELETE FROM sessions WHERE account = ?').bind(me.id).run();
         return json({ ok: true });
       }
+      if (method === 'GET' && a === 'market' && b === 'mine') return await myListings(env, me);
+      if (method === 'POST' && a === 'suggestions' && !b) return await createSuggestion(request, env, me);
+      if (method === 'POST' && a === 'suggestions' && b && c) return await suggestionAction(b, c, env, me);
       // Everything below changes coins or items, which maintenance mode pauses.
       if (method === 'POST') await openForBusiness(env);
       if (method === 'POST' && a === 'open') return await openCase(request, env, me);
@@ -1542,6 +1772,8 @@ export default {
       if (method === 'POST' && a === 'offers' && b && c) return await offerAction(b, c, env, me);
       if (method === 'POST' && a === 'battles' && !b) return await createBattle(request, env, me);
       if (method === 'POST' && a === 'battles' && b && c) return await battleAction(b, c, request, env, me);
+      if (method === 'POST' && a === 'market' && !b) return await createListing(request, env, me);
+      if (method === 'POST' && a === 'market' && b && c) return await listingAction(b, c, env, me);
       fail(404, 'Not found');
     } catch (err) {
       if (err instanceof HttpError) {

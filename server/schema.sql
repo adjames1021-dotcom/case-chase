@@ -83,7 +83,7 @@ CREATE TABLE IF NOT EXISTS items (
   float       INTEGER NOT NULL,                   -- x10000
   tracker     INTEGER NOT NULL,
   value       INTEGER NOT NULL,
-  locked      TEXT,                               -- 'o:<offer id>' while offered in a trade
+  locked      TEXT,                               -- 'o:<offer id>' while offered in a trade, 'm:<listing id>' while on the market
   created_at  INTEGER NOT NULL
 );
 CREATE INDEX IF NOT EXISTS items_owner  ON items (owner, locked);
@@ -173,3 +173,41 @@ CREATE TABLE IF NOT EXISTS server_gifts (
   created_at  INTEGER NOT NULL,
   created_by  TEXT NOT NULL
 );
+
+-- Market: items listed for coins. The item is locked 'm:<listing id>' while listed.
+CREATE TABLE IF NOT EXISTS listings (
+  id          TEXT PRIMARY KEY,
+  seller      TEXT NOT NULL,
+  item        INTEGER NOT NULL,                   -- items.id
+  idx         INTEGER NOT NULL,
+  wear        INTEGER NOT NULL,
+  float       INTEGER NOT NULL,
+  tracker     INTEGER NOT NULL,
+  value       INTEGER NOT NULL,                   -- the game's value, for "best deal" sorting
+  price       INTEGER NOT NULL CHECK (price > 0),
+  status      TEXT NOT NULL,                      -- open | sold | cancelled
+  buyer       TEXT,
+  seen        INTEGER NOT NULL DEFAULT 0,         -- the seller has been told it sold
+  created_at  INTEGER NOT NULL,
+  updated_at  INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS listings_new    ON listings (status, created_at DESC);
+CREATE INDEX IF NOT EXISTS listings_price  ON listings (status, price);
+CREATE INDEX IF NOT EXISTS listings_idx    ON listings (status, idx);
+CREATE INDEX IF NOT EXISTS listings_seller ON listings (seller, status);
+
+-- Suggestions board
+CREATE TABLE IF NOT EXISTS suggestions (
+  id          TEXT PRIMARY KEY,
+  author      TEXT NOT NULL,
+  text        TEXT NOT NULL,
+  status      TEXT NOT NULL DEFAULT 'open',       -- open | planned | done | declined
+  reply       TEXT NOT NULL DEFAULT '',           -- from an admin
+  votes       INTEGER NOT NULL DEFAULT 0,
+  created_at  INTEGER NOT NULL,
+  updated_at  INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS suggestions_votes ON suggestions (votes DESC, created_at DESC);
+CREATE INDEX IF NOT EXISTS suggestions_new   ON suggestions (created_at DESC);
+CREATE TABLE IF NOT EXISTS suggestion_votes (suggestion TEXT NOT NULL, account TEXT NOT NULL, PRIMARY KEY (suggestion, account));
+CREATE INDEX IF NOT EXISTS suggestion_votes_account ON suggestion_votes (account);

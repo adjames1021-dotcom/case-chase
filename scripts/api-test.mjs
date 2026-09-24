@@ -242,6 +242,78 @@ ok('accept after selling the item is refused', (await call('POST', '/offers/' + 
 ok('cannot ask for items they don\'t have', (await call('POST', '/offers', { to: B.data.me.id, want: [inv[0][0]] }, a)).status === 409);
 ok('cannot offer more coins than you have', (await call('POST', '/offers', { to: B.data.me.id, give_coins: 1e9 }, a)).status === 409);
 
+/* ---- market ---- */
+const sellerT = (await call('POST', '/signup', { name: 'seller1', password: 'sellpass' })).data.token;
+const buyerT = (await call('POST', '/signup', { name: 'buyer1', password: 'buypass1' })).data.token;
+const buyer2T = (await call('POST', '/signup', { name: 'buyer2', password: 'buypass2' })).data.token;
+r = await call('POST', '/open', { case_id: 'starter', count: 5 }, sellerT);
+const wares = r.data.items;                                   // [id, idx, wear, float, tracker]
+const ware = wares[0], wareName = core.ALL_ITEMS[ware[1]].name;
+ok('bad price refused', (await call('POST', '/market', { item: ware[0], price: 0 }, sellerT)).status === 400);
+ok('can\'t list someone else\'s item', (await call('POST', '/market', { item: ware[0], price: 50 }, buyerT)).status === 409);
+r = await call('POST', '/market', { item: ware[0], price: 60 }, sellerT);
+ok('list an item', r.status === 200 && r.data.id && !r.data.inventory.some((x) => x[0] === ware[0]), r.data);
+const listing1 = r.data.id;
+r = await call('GET', '/market?q=' + encodeURIComponent(wareName.slice(0, 5)));
+ok('anyone can browse and search', r.status === 200 && r.data.listings.some((l) => l.id === listing1 && l.seller_name === 'seller1' && l.price === 60), r.data);
+ok('rarity filter', (await call('GET', '/market?rarity=' + (core.ALL_ITEMS[ware[1]].rarity === 'mythic' ? 'common' : 'mythic'))).data.listings.every((l) => l.id !== listing1));
+r = await call('POST', '/sell', { ids: [ware[0]] }, sellerT);
+ok('listed item can\'t be sold to the game', r.status !== 200 || r.data.removed.length === 0, r.data);
+ok('...or traded', (await call('POST', '/offers', { to: (await me(buyerT)).me.id, give: [ware[0]] }, sellerT)).status !== 200);
+ok('can\'t buy your own', (await call('POST', '/market/' + listing1 + '/buy', null, sellerT)).status === 400);
+const sellerCoins = (await me(sellerT)).me.coins, buyerCoins = (await me(buyerT)).me.coins;
+r = await call('POST', '/market/' + listing1 + '/buy', null, buyerT);
+ok('buy', r.status === 200 && r.data.me.coins === buyerCoins - 60 && r.data.inventory.some((x) => x[0] === ware[0]), r.data);
+ok('seller gets paid', (await me(sellerT)).me.coins === sellerCoins + 60);
+ok('can\'t buy it twice', (await call('POST', '/market/' + listing1 + '/buy', null, buyer2T)).status === 409);
+r = await call('POST', '/ping', null, sellerT);
+ok('seller is told it sold', r.data.sold.length === 1 && r.data.sold[0].price === 60 && r.data.sold[0].buyer_name === 'buyer1', r.data.sold);
+ok('...once', (await call('POST', '/ping', null, sellerT)).data.sold.length === 0);
+r = await call('POST', '/market', { item: wares[1][0], price: 40 }, sellerT);
+const listing2 = r.data.id;
+const buyRace = await Promise.all([call('POST', '/market/' + listing2 + '/buy', null, buyerT), call('POST', '/market/' + listing2 + '/buy', null, buyer2T)]);
+ok('two buyers at once: exactly one gets it', buyRace.filter((x) => x.status === 200).length === 1, buyRace.map((x) => x.status));
+r = await call('POST', '/market', { item: wares[2][0], price: 1000000 }, sellerT);
+const listing3 = r.data.id;
+ok('not enough coins', (await call('POST', '/market/' + listing3 + '/buy', null, buyerT)).status === 409);
+ok('only the seller can take it down', (await call('POST', '/market/' + listing3 + '/cancel', null, buyerT)).status === 403);
+r = await call('POST', '/market/' + listing3 + '/cancel', null, sellerT);
+ok('take down: item comes back', r.status === 200 && r.data.inventory.some((x) => x[0] === wares[2][0]));
+ok('taken down can\'t be bought', (await call('POST', '/market/' + listing3 + '/buy', null, buyerT)).status === 409);
+r = await call('GET', '/market/mine', null, sellerT);
+ok('your listings and history', r.data.listings.length === 3 && r.data.listings.filter((l) => l.status === 'sold').length === 2 &&
+  r.data.listings.some((l) => l.status === 'cancelled'), r.data.listings.map((l) => l.status));
+r = await call('GET', '/market?sort=cheap');
+ok('sorts by price', r.data.listings.every((l, i, all) => !i || all[i - 1].price <= l.price));
+const sumOf = async (t) => { const d = await me(t); return d.me.inv_value === sum(d.inventory); };
+ok('item values add up after trading', (await sumOf(sellerT)) && (await sumOf(buyerT)) && (await sumOf(buyer2T)));
+
+/* ---- suggestions ---- */
+ok('guests can read suggestions', (await call('GET', '/suggestions')).status === 200);
+ok('posting needs a login', (await call('POST', '/suggestions', { text: 'Add a knife case please' })).status === 401);
+ok('too short refused', (await call('POST', '/suggestions', { text: 'hi' }, buyerT)).status === 400);
+r = await call('POST', '/suggestions', { text: 'this game is shit, fix it' }, buyerT);
+ok('rude suggestion refused', r.status === 400 && /clean/.test(r.data.error), r.data);
+r = await call('POST', '/suggestions', { text: 'Add a knife case please' }, buyerT);
+ok('post a suggestion', r.status === 200 && r.data.id);
+const idea = r.data.id;
+r = await call('GET', '/suggestions', null, buyerT);
+let mine = r.data.suggestions.find((s) => s.id === idea);
+ok('your own counts as a vote', mine && mine.votes === 1 && mine.voted === true && mine.author_name === 'buyer1', mine);
+r = await call('POST', '/suggestions/' + idea + '/vote', null, sellerT);
+ok('someone else votes', r.data.voted === true && r.data.votes === 2, r.data);
+r = await call('POST', '/suggestions/' + idea + '/vote', null, sellerT);
+ok('voting again takes it back', r.data.voted === false && r.data.votes === 1, r.data);
+ok('guests see no votes as theirs', (await call('GET', '/suggestions')).data.suggestions.every((s) => s.voted === false));
+ok('only the author can delete', (await call('POST', '/suggestions/' + idea + '/delete', null, sellerT)).status === 403);
+const spam = [];
+for (let i = 0; i < 5; i++) spam.push((await call('POST', '/suggestions', { text: 'Idea number ' + i + ' for the game' }, sellerT)).status);
+ok('5 suggestions an hour', spam.slice(0, 5).every((s) => s === 200) &&
+  (await call('POST', '/suggestions', { text: 'One idea too many for now' }, sellerT)).status === 429, spam);
+r = await call('GET', '/suggestions?sort=new');
+ok('newest first', r.data.suggestions[0].text === 'Idea number 4 for the game');
+ok('author can delete', (await call('POST', '/suggestions/' + r.data.suggestions[0].id + '/delete', null, sellerT)).status === 200);
+
 /* ---- battles ---- */
 const coinsA = (await me(a)).me.coins, coinsB = (await me(b)).me.coins;
 const invA = (await me(a)).inventory.length, invB = (await me(b)).inventory.length;
@@ -476,6 +548,31 @@ await admin({ a: 'revoke_admin', id: 'modguy' });
 ok('removing admin takes the tools away', (await acctAdmin(mt, { a: 'stats' })).status === 403 && (await me(mt)).me.admin === false);
 ok('the heartbeat notices it', (await call('POST', '/ping', null, mt)).data.me.admin === false);
 
+
+  /* ---- market and suggestions (admin) ---- */
+  r = await call('POST', '/open', { case_id: 'starter', count: 2 }, sellerT);
+  const shelf = (await call('POST', '/market', { item: r.data.items[0][0], price: 30 }, sellerT)).data.id;
+  r = await admin({ a: 'listings' });
+  ok('admin sees open listings', r.data.listings.some((l) => l.id === shelf));
+  await admin({ a: 'ban', id: 'seller1', reason: 'test' });
+  ok('banned seller\'s listings are hidden', !(await call('GET', '/market')).data.listings.some((l) => l.id === shelf));
+  ok('...and can\'t be bought', (await call('POST', '/market/' + shelf + '/buy', null, buyerT)).status === 409);
+  ok('banned author\'s suggestions are hidden', !(await call('GET', '/suggestions')).data.suggestions.some((s) => s.author_name === 'seller1'));
+  await admin({ a: 'unban', id: 'seller1' });
+  r = await admin({ a: 'cancel_listing', listing: shelf });
+  ok('admin takes a listing down', r.status === 200 && (await call('GET', '/market/mine', null, sellerT)).data.listings.find((l) => l.id === shelf).status === 'cancelled');
+  r = await admin({ a: 'suggestion', id: idea, status: 'planned', reply: 'Coming soon!' });
+  const edited = (await call('GET', '/suggestions')).data.suggestions.find((s) => s.id === idea);
+  ok('admin sets status and replies', r.status === 200 && edited.status === 'planned' && edited.reply === 'Coming soon!', edited);
+  await admin({ a: 'delete_suggestion', id: idea });
+  ok('admin deletes a suggestion', !(await call('GET', '/suggestions')).data.suggestions.some((s) => s.id === idea));
+  const shelf2 = (await call('POST', '/market', { item: (await me(sellerT)).inventory[0][0], price: 30 }, sellerT)).data.id;
+  const vote2 = (await call('POST', '/suggestions', { text: 'Seller idea to be removed' }, (await call('POST', '/login', { name: 'buyer2', password: 'buypass2' })).data.token)).data.id;
+  await call('POST', '/suggestions/' + vote2 + '/vote', null, sellerT);
+  const s1 = (await me(sellerT)).me.id;
+  await admin({ a: 'delete', id: 'seller1', confirm: 'seller1' });
+  ok('deleting an account takes its listings down', !(await call('GET', '/market')).data.listings.some((l) => l.id === shelf2));
+  ok('...and its votes', (await call('GET', '/suggestions')).data.suggestions.find((s) => s.id === vote2).votes === 1);
 
   /* ---- devices ---- */
   const onDevice = (dev, name, pass) => call('POST', '/signup', { name, password: pass || 'devpass1' }, null, null, dev);
