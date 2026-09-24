@@ -35,12 +35,15 @@
     GET  /api/battles                open lobbies
     GET  /api/battles/:id
     POST /api/battles/:id/:action auth join | leave | start
-    POST /api/admin                  signed with the admin key: ban | unban | reset
+    GET  /api/config                 announcement and maintenance flag
+    POST /api/account/password auth  { old, password }
+    POST /api/account/logout-all auth ends every session for the account
+    POST /api/admin                  signed with the admin key; see the moderation section
 */
 
 import {
-  CASES, ITEM_INDEX, GAME_VERSION, VAULT_KEY, VAULT_CRATE,
-  rollItem, instantiate, bonusChance, itemTuple, tupleToItem,
+  CASES, ALL_ITEMS, ITEM_INDEX, GAME_VERSION, VAULT_KEY, VAULT_CRATE, WEARS, NO_WEAR, NO_TRACKER,
+  rollItem, rollWear, instantiate, bonusChance, itemTuple, tupleToItem,
   pickTarget, upgradeChance, computeBattle, seededRng, hashString
 } from './core.js';
 
@@ -100,9 +103,9 @@ function json(data, status) {
 }
 
 class HttpError extends Error {
-  constructor(status, message) { super(message); this.status = status; }
+  constructor(status, message, extra) { super(message); this.status = status; this.extra = extra; }
 }
-const fail = (status, message) => { throw new HttpError(status, message); };
+const fail = (status, message, extra) => { throw new HttpError(status, message, extra); };
 
 async function body(request) {
   const text = await request.text();
@@ -177,9 +180,14 @@ async function passwordMatches(password, stored) {
   return diff === 0;
 }
 
+const banReason = async (db, id) => {
+  const r = await db.prepare('SELECT reason FROM ban_reasons WHERE account = ?').bind(id).first();
+  return r ? r.reason : '';
+};
+
 const meOut = (a) => ({
   id: a.id, name: a.name, coins: a.coins, opened: a.opened, best_value: a.best_value, best_item: a.best_item,
-  played: a.played, inv_value: a.inv_value, inv_count: a.inv_count, rev: a.rev
+  played: a.played, inv_value: a.inv_value, inv_count: a.inv_count, rev: a.rev, created_at: a.created_at
 });
 
 async function inventory(db, id) {
@@ -239,7 +247,7 @@ async function login(request, env) {
       .bind(t, LOGIN_LOCK * 10, t, a.id).run();
     fail(401, 'Wrong username or password');
   }
-  if (a.banned) fail(403, 'banned');
+  if (a.banned) fail(403, 'banned', { reason: await banReason(db, a.id) });
   const session = await newSession(db, a.id);
   await db.batch([session.stmt,
     db.prepare('UPDATE accounts SET fail_count = 0, last_seen = ?, last_ping = ? WHERE id = ?').bind(t, t, a.id)]);
@@ -259,7 +267,7 @@ async function authed(request, env) {
     await env.DB.prepare('DELETE FROM sessions WHERE token_hash = ?').bind(hash).run();
     return null;
   }
-  if (row.banned) fail(403, 'banned');
+  if (row.banned) fail(403, 'banned', { reason: await banReason(env.DB, row.id) });
   if (t - row.s_used > 600 || t - row.last_seen > 60) {
     await env.DB.batch([
       env.DB.prepare('UPDATE sessions SET last_used = ? WHERE token_hash = ?').bind(t, hash),
@@ -404,6 +412,7 @@ async function gift(request, env, me) {
     fail(400, 'Invalid gift code');
   }
   if (p.x && nowS() > p.x) fail(410, 'This gift has expired');
+  if (await db.prepare('SELECT 1 FROM revoked_gifts WHERE gift_id = ?').bind(p.id).first()) fail(410, 'This gift was cancelled');
   const items = p.i.map(tupleToItem);
   if (items.some((it) => !it)) fail(400, Number(p.mv) > GAME_VERSION ? 'This gift is for a newer version' : 'Invalid gift code');
   const rows = items.map(itemRow);
@@ -411,16 +420,17 @@ async function gift(request, env, me) {
   const ts = nowS();
   const stmts = [
     db.prepare('INSERT INTO gift_claims (gift_id, account, at) VALUES (?, ?, ?)').bind(p.id, me.id, ts),
+    check(db, 'NOT EXISTS (SELECT 1 FROM revoked_gifts WHERE gift_id = ?)', p.id),
     db.prepare('UPDATE accounts SET coins = coins + ? WHERE id = ?').bind(p.c, me.id)
   ];
-  if (rows.length) stmts.push(insertItems(db, me.id, rows, ts));
+  const itemsAt = rows.length ? stmts.push(insertItems(db, me.id, rows, ts)) - 1 : -1;
   let res;
   try { res = await db.batch(stmts); }
   catch (e) {
     if (/UNIQUE|constraint/i.test(String(e && e.message))) fail(409, 'You already claimed this gift');
     throw e;
   }
-  return json({ me: meOut(await account(db, me.id)), coins: p.c, items: rows.length ? sorted(res[2]) : [],
+  return json({ me: meOut(await account(db, me.id)), coins: p.c, items: itemsAt >= 0 ? sorted(res[itemsAt]) : [],
                 message: String(p.m || '').slice(0, 120) });
 }
 
@@ -705,23 +715,206 @@ async function battleAction(id, action, request, env, me) {
   return fail(409, 'Busy, try again');
 }
 
-/* ---------- moderation ----------
-   { p: '{"a":"ban"|"unban"|"reset","id":"<id or username>","password":"...","ts":123}', g: admin signature } */
+/* ---------- settings: announcement and maintenance ---------- */
 
-async function admin(request, env) {
+let settingsCache = { at: 0, v: {} };
+async function settings(db) {
+  if (Date.now() - settingsCache.at > 10000) {
+    const { results } = await db.prepare('SELECT k, v FROM settings').all();
+    const v = {};
+    results.forEach((r) => { v[r.k] = r.v; });
+    settingsCache = { at: Date.now(), v: v };
+  }
+  return settingsCache.v;
+}
+
+async function config(env) {
+  const s = await settings(env.DB);
+  return json({ announcement: s.announcement || '', maintenance: s.maintenance === '1', version: GAME_VERSION });
+}
+
+// Blocks changes to coins and items while the admin has maintenance on.
+async function openForBusiness(env) {
+  if ((await settings(env.DB)).maintenance === '1') fail(503, 'The game is down for maintenance. Try again soon.');
+}
+
+/* ---------- account management (for players) ---------- */
+
+async function changePassword(request, env, me) {
   const db = env.DB;
   const b = await body(request);
-  if (typeof b.p !== 'string' || typeof b.g !== 'string' || !(await signedByAdmin(env, b.p, b.g))) fail(403, 'Not admin');
-  let p = null;
-  try { p = JSON.parse(b.p); } catch (e) { p = null; }
-  if (!p || !isInt(p.ts, 0, 1e12) || Math.abs(nowS() - p.ts) > 300) fail(400, 'Request expired');
-  const who = String(p.id || '').trim();
-  const a = await db.prepare('SELECT id, name FROM accounts WHERE id = ? OR name_lower = ?').bind(who, who.toLowerCase()).first();
+  const password = String(b.password || '');
+  if (password.length < PASS_MIN || password.length > PASS_MAX) fail(400, 'Passwords are ' + PASS_MIN + '-' + PASS_MAX + ' characters');
+  if (!(await passwordMatches(String(b.old || ''), me.pass))) fail(400, 'Your current password is wrong');   // not 401: that means "log in again"
+  await db.batch([
+    db.prepare('UPDATE accounts SET pass = ? WHERE id = ?').bind(await hashPassword(password, randomId(16), PBKDF2_ROUNDS), me.id),
+    db.prepare('DELETE FROM sessions WHERE account = ? AND token_hash != ?').bind(me.id, me.s_hash)   // other devices log out
+  ]);
+  return json({ ok: true });
+}
+
+/* ---------- moderation ----------
+   Admin requests are { p, g }: p is a JSON string { a: action, n: nonce, ts, ...fields }
+   and g is its signature from the admin key. The server checks the signature
+   against ADMIN_X / ADMIN_Y, refuses anything older than five minutes and
+   never accepts the same nonce twice, then runs the action. Every change is
+   written to the admin log. */
+
+const offerRefund = (db, o, status, t) => [
+  check(db, `(SELECT status FROM offers WHERE id = ?) = 'pending'`, o.id),
+  db.prepare('UPDATE items SET locked = NULL WHERE locked = ?').bind('o:' + o.id),
+  db.prepare('UPDATE accounts SET coins = coins + ? WHERE id = ?').bind(o.give_coins, o.from_id),
+  db.prepare('UPDATE offers SET status = ?, updated_at = ? WHERE id = ?').bind(status, t, o.id)
+];
+
+const lobbyCancel = (db, l, t) => [
+  lobbyIs(db, l),
+  db.prepare(`UPDATE lobbies SET status = 'cancelled', rev = rev + 1, updated_at = ? WHERE id = ?`).bind(t, l.id)
+].concat(refunds(db, l, JSON.parse(l.players)));
+
+async function findAccount(db, who) {
+  who = String(who || '').trim();
+  const a = who && await db.prepare('SELECT * FROM accounts WHERE id = ? OR name_lower = ?').bind(who, who.toLowerCase()).first();
   if (!a) fail(404, 'No such player');
-  if (p.a === 'ban' || p.a === 'unban') {
-    // Sessions stay, so a banned player is told why on their next request.
-    await db.prepare('UPDATE accounts SET banned = ? WHERE id = ?').bind(p.a === 'ban' ? 1 : 0, a.id).run();
-  } else if (p.a === 'reset') {
+  return a;
+}
+
+const adminRow = (a) => ({
+  id: a.id, name: a.name, coins: a.coins, inv_value: a.inv_value, inv_count: a.inv_count, opened: a.opened,
+  best_value: a.best_value, best_item: a.best_item, played: a.played, banned: !!a.banned,
+  created_at: a.created_at, last_seen: a.last_seen
+});
+
+// Makes `count` copies of an item. wear: 1-5 for a grade, -1 to roll it.
+function makeItems(idx, wear, tracker, count) {
+  const base = ALL_ITEMS[idx];
+  if (!base) fail(400, 'Unknown item');
+  if (!isInt(count, 1, 100)) fail(400, 'Give 1-100 at a time');
+  const rows = [];
+  for (let i = 0; i < count; i++) {
+    let w = 0, f = 0;
+    if (!NO_WEAR[base.kind]) {
+      const grade = isInt(wear, 1, 5) ? WEARS[wear - 1] : rollWear(rand);
+      w = WEARS.indexOf(grade) + 1;
+      f = Math.round((grade.lo + rand() * (grade.hi - grade.lo)) * 10000);
+      f = Math.min(Math.round(grade.hi * 10000), Math.max(Math.round(grade.lo * 10000), f));
+    }
+    const t = tracker && !NO_TRACKER[base.kind] ? 1 : 0;
+    const it = tupleToItem([idx, w, f, t]);
+    if (!it) fail(400, 'That item can\'t have that wear');
+    rows.push([idx, w, f, t, it.value]);
+  }
+  return rows;
+}
+
+const ADMIN = {
+  async stats(db) {
+    const t = nowS();
+    const totals = await db.prepare(
+      `SELECT COUNT(*) AS accounts, COALESCE(SUM(banned), 0) AS banned, COALESCE(SUM(last_seen > ?), 0) AS online,
+              COALESCE(SUM(last_seen > ?), 0) AS active_day, COALESCE(SUM(created_at > ?), 0) AS new_day,
+              COALESCE(SUM(coins), 0) AS coins, COALESCE(SUM(inv_value), 0) AS item_value, COALESCE(SUM(inv_count), 0) AS items,
+              COALESCE(SUM(opened), 0) AS opened, COALESCE(SUM(played), 0) AS played FROM accounts`)
+      .bind(t - 300, t - 86400, t - 86400).first();
+    const counts = await db.prepare(
+      `SELECT (SELECT COUNT(*) FROM offers WHERE status = 'pending') AS offers,
+              (SELECT COUNT(*) FROM offers WHERE status = 'accepted' AND updated_at > ?) AS trades_day,
+              (SELECT COUNT(*) FROM lobbies WHERE status = 'open') AS lobbies,
+              (SELECT COUNT(*) FROM lobbies WHERE status = 'running' AND updated_at > ?) AS battles_day,
+              (SELECT COUNT(*) FROM gift_claims) AS gift_claims`).bind(t - 86400, t - 86400).first();
+    const list = async (sql) => (await db.prepare(sql).all()).results.map(adminRow);
+    return {
+      totals: Object.assign(totals, counts),
+      richest: await list('SELECT * FROM accounts ORDER BY coins DESC LIMIT 5'),
+      top_items: await list('SELECT * FROM accounts ORDER BY inv_value DESC LIMIT 5'),
+      newest: await list('SELECT * FROM accounts ORDER BY created_at DESC LIMIT 5'),
+      recent: await list('SELECT * FROM accounts ORDER BY last_seen DESC LIMIT 8')
+    };
+  },
+
+  async find(db, p) {
+    const q = String(p.q || '').toLowerCase().replace(/[^a-z0-9_-]/g, '').slice(0, 16);
+    const { results } = await db.prepare(
+      `SELECT * FROM accounts WHERE name_lower LIKE ? OR id = ? ORDER BY last_seen DESC LIMIT 40`).bind(q + '%', String(p.q || '')).all();
+    return { players: results.map(adminRow) };
+  },
+
+  async player(db, p) {
+    const a = await findAccount(db, p.id);
+    const items = (await db.prepare('SELECT id, idx, wear, float, tracker, locked FROM items WHERE owner = ? ORDER BY value DESC')
+      .bind(a.id).all()).results.map((r) => [r.id, r.idx, r.wear, r.float, r.tracker, r.locked ? 1 : 0]);
+    const offers = (await db.prepare(
+      `SELECT o.id, o.status, o.give_coins, o.want_coins, o.updated_at, f.name AS from_name, r.name AS to_name,
+              json_array_length(o.give) AS give_n, json_array_length(o.want) AS want_n
+         FROM offers o JOIN accounts f ON f.id = o.from_id JOIN accounts r ON r.id = o.to_id
+        WHERE o.from_id = ? OR o.to_id = ? ORDER BY o.updated_at DESC LIMIT 20`).bind(a.id, a.id).all()).results;
+    const sessions = await db.prepare('SELECT COUNT(*) AS n, MAX(last_used) AS last FROM sessions WHERE account = ?').bind(a.id).first();
+    return Object.assign(adminRow(a), {
+      ban_reason: await banReason(db, a.id), fail_count: a.fail_count, sessions: sessions.n, items: items, offers: offers
+    });
+  },
+
+  async coins(db, p) {
+    const a = await findAccount(db, p.id);
+    if (p.set != null) {
+      if (!isInt(p.set, 0, 1e12)) fail(400, 'Bad amount');
+      await db.prepare('UPDATE accounts SET coins = ? WHERE id = ?').bind(p.set, a.id).run();
+      return { log: [a.name, 'set coins to ' + p.set + ' (was ' + a.coins + ')'] };
+    }
+    if (!isInt(p.delta, -1e12, 1e12) || !p.delta) fail(400, 'Bad amount');
+    await db.prepare('UPDATE accounts SET coins = MAX(0, coins + ?) WHERE id = ?').bind(p.delta, a.id).run();
+    return { log: [a.name, (p.delta > 0 ? 'gave ' : 'took ') + Math.abs(p.delta) + ' coins'] };
+  },
+
+  async give(db, p) {
+    const a = await findAccount(db, p.id);
+    const rows = makeItems(p.idx, p.wear, p.tracker ? 1 : 0, p.count || 1);
+    if (a.inv_count + rows.length > MAX_ITEMS) fail(409, 'Their inventory is full');
+    await db.batch([insertItems(db, a.id, rows, nowS())]);
+    return { log: [a.name, 'gave ' + rows.length + ' x ' + ALL_ITEMS[p.idx].name] };
+  },
+
+  async take(db, p) {
+    const a = await findAccount(db, p.id);
+    const ids = JSON.stringify(idList(p.ids, MAX_ITEMS));
+    const res = await db.prepare(
+      'DELETE FROM items WHERE owner = ? AND locked IS NULL AND id IN (SELECT value FROM json_each(?)) RETURNING idx').bind(a.id, ids).all();
+    if (!res.results.length) fail(409, 'Nothing removed (items in an open trade offer can\'t be removed; cancel the offer first)');
+    return { removed: res.results.length, log: [a.name, 'removed ' + res.results.length + ' item(s): ' +
+      res.results.slice(0, 5).map((r) => ALL_ITEMS[r.idx].name).join(', ') + (res.results.length > 5 ? '…' : '')] };
+  },
+
+  async rename(db, p) {
+    const a = await findAccount(db, p.id);
+    const name = String(p.name || '').trim();
+    if (!NAME_RE.test(name)) fail(400, 'Usernames are 3-16 letters, numbers, _ or -');
+    const taken = await db.prepare('SELECT id FROM accounts WHERE name_lower = ?').bind(name.toLowerCase()).first();
+    if (taken && taken.id !== a.id) fail(409, 'That username is taken');
+    await db.prepare('UPDATE accounts SET name = ?, name_lower = ? WHERE id = ?').bind(name, name.toLowerCase(), a.id).run();
+    return { log: [a.name, 'renamed to ' + name] };
+  },
+
+  async ban(db, p) {
+    const a = await findAccount(db, p.id);
+    const reason = String(p.reason || '').trim().slice(0, 200);
+    await db.batch([
+      db.prepare('UPDATE accounts SET banned = 1 WHERE id = ?').bind(a.id),
+      db.prepare('INSERT OR REPLACE INTO ban_reasons (account, reason, at) VALUES (?, ?, ?)').bind(a.id, reason, nowS())
+    ]);
+    return { log: [a.name, 'banned' + (reason ? ': ' + reason : '')] };
+  },
+
+  async unban(db, p) {
+    const a = await findAccount(db, p.id);
+    await db.batch([
+      db.prepare('UPDATE accounts SET banned = 0 WHERE id = ?').bind(a.id),
+      db.prepare('DELETE FROM ban_reasons WHERE account = ?').bind(a.id)
+    ]);
+    return { log: [a.name, 'unbanned'] };
+  },
+
+  async reset(db, p) {
+    const a = await findAccount(db, p.id);
     const password = String(p.password || '');
     if (password.length < PASS_MIN || password.length > PASS_MAX) fail(400, 'Passwords are ' + PASS_MIN + '-' + PASS_MAX + ' characters');
     await db.batch([
@@ -729,10 +922,130 @@ async function admin(request, env) {
         .bind(await hashPassword(password, randomId(16), PBKDF2_ROUNDS), a.id),
       db.prepare('DELETE FROM sessions WHERE account = ?').bind(a.id)
     ]);
-  } else {
-    fail(400, 'Unknown action');
+    return { log: [a.name, 'password reset'] };
+  },
+
+  async logout(db, p) {
+    const a = await findAccount(db, p.id);
+    const r = await db.prepare('DELETE FROM sessions WHERE account = ?').bind(a.id).run();
+    return { log: [a.name, 'logged out of ' + (r.meta ? r.meta.changes : 0) + ' device(s)'] };
+  },
+
+  // Removes an account for good. Open trades involving it are cancelled and
+  // refunded, and open battles it sits in are cancelled and refunded.
+  async delete(db, p) {
+    const a = await findAccount(db, p.id);
+    if (p.confirm !== a.name) fail(400, 'Type the username exactly to confirm');
+    const t = nowS();
+    const offers = (await db.prepare(`SELECT * FROM offers WHERE status = 'pending' AND (from_id = ? OR to_id = ?)`)
+      .bind(a.id, a.id).all()).results;
+    for (const o of offers) await db.batch(offerRefund(db, o, 'cancelled', t)).catch(() => {});
+    const lobbies = (await db.prepare(`SELECT * FROM lobbies WHERE status = 'open' AND instr(players, ?) > 0`)
+      .bind('"' + a.id + '"').all()).results;
+    for (const l of lobbies) await db.batch(lobbyCancel(db, l, t)).catch(() => {});
+    await db.batch([
+      db.prepare('DELETE FROM items WHERE owner = ?').bind(a.id),
+      db.prepare('DELETE FROM sessions WHERE account = ?').bind(a.id),
+      db.prepare('DELETE FROM ban_reasons WHERE account = ?').bind(a.id),
+      db.prepare('DELETE FROM accounts WHERE id = ?').bind(a.id)
+    ]);
+    return { log: [a.name, 'account deleted (' + a.coins + ' coins, ' + a.inv_count + ' items)'] };
+  },
+
+  async offers(db) {
+    const { results } = await db.prepare(
+      `SELECT o.id, o.give, o.give_coins, o.want, o.want_coins, o.message, o.created_at, f.name AS from_name, r.name AS to_name
+         FROM offers o JOIN accounts f ON f.id = o.from_id JOIN accounts r ON r.id = o.to_id
+        WHERE o.status = 'pending' ORDER BY o.created_at DESC LIMIT 60`).all();
+    return { offers: results.map((o) => Object.assign(o, { give: JSON.parse(o.give), want: JSON.parse(o.want) })) };
+  },
+
+  async cancel_offer(db, p) {
+    const o = await db.prepare('SELECT * FROM offers WHERE id = ?').bind(String(p.offer || '')).first();
+    if (!o || o.status !== 'pending') fail(409, 'That offer isn\'t open');
+    await transact(db, offerRefund(db, o, 'cancelled', nowS()));
+    return { log: ['offer ' + o.id, 'cancelled and refunded'] };
+  },
+
+  async lobbies(db) {
+    const { results } = await db.prepare(`SELECT * FROM lobbies WHERE status = 'open' ORDER BY created_at DESC LIMIT 60`).all();
+    return { lobbies: results.map(battleOut) };
+  },
+
+  async cancel_lobby(db, p) {
+    const l = await db.prepare('SELECT * FROM lobbies WHERE id = ?').bind(String(p.lobby || '')).first();
+    if (!l || l.status !== 'open') fail(409, 'That battle isn\'t open');
+    await transact(db, lobbyCancel(db, l, nowS()));
+    return { log: ['battle ' + l.id, 'cancelled and refunded'] };
+  },
+
+  async settings(db, p) {
+    const stmts = [], changes = [];
+    if (p.announcement != null) {
+      const text = String(p.announcement).trim().slice(0, 300);
+      stmts.push(db.prepare('INSERT OR REPLACE INTO settings (k, v) VALUES (?, ?)').bind('announcement', text));
+      changes.push(text ? 'announcement: ' + text : 'announcement cleared');
+    }
+    if (p.maintenance != null) {
+      stmts.push(db.prepare('INSERT OR REPLACE INTO settings (k, v) VALUES (?, ?)').bind('maintenance', p.maintenance ? '1' : '0'));
+      changes.push('maintenance ' + (p.maintenance ? 'on' : 'off'));
+    }
+    if (!stmts.length) fail(400, 'Nothing to change');
+    await db.batch(stmts);
+    settingsCache.at = 0;
+    return { log: ['game', changes.join('; ')] };
+  },
+
+  async gifts(db, p) {
+    const ids = Array.isArray(p.gifts) ? p.gifts.map(String).slice(0, 100) : [];
+    const out = {};
+    for (const id of ids) {
+      const c = await db.prepare(
+        'SELECT (SELECT COUNT(*) FROM gift_claims WHERE gift_id = ?) AS claims, (SELECT COUNT(*) FROM revoked_gifts WHERE gift_id = ?) AS revoked')
+        .bind(id, id).first();
+      out[id] = { claims: c.claims, revoked: !!c.revoked };
+    }
+    return { gifts: out };
+  },
+
+  async revoke_gift(db, p) {
+    const id = String(p.gift || '');
+    if (!id) fail(400, 'Which gift?');
+    if (p.undo) await db.prepare('DELETE FROM revoked_gifts WHERE gift_id = ?').bind(id).run();
+    else await db.prepare('INSERT OR IGNORE INTO revoked_gifts (gift_id, at) VALUES (?, ?)').bind(id, nowS()).run();
+    return { log: ['gift ' + id, p.undo ? 'reinstated' : 'cancelled'] };
+  },
+
+  async log(db) {
+    const { results } = await db.prepare('SELECT * FROM admin_log ORDER BY id DESC LIMIT 150').all();
+    return { entries: results };
   }
-  return json({ ok: true, id: a.id, name: a.name });
+};
+
+async function admin(request, env) {
+  const db = env.DB;
+  const b = await body(request);
+  if (typeof b.p !== 'string' || typeof b.g !== 'string' || !(await signedByAdmin(env, b.p, b.g))) fail(403, 'Not admin');
+  let p = null;
+  try { p = JSON.parse(b.p); } catch (e) { p = null; }
+  if (!p || !isInt(p.ts, 0, 1e12) || Math.abs(nowS() - p.ts) > 300) fail(400, 'Request expired. Check your device clock.');
+  if (typeof p.n !== 'string' || !/^[A-Za-z0-9_-]{8,40}$/.test(p.n)) fail(400, 'Missing request id');
+  const run = Object.prototype.hasOwnProperty.call(ADMIN, p.a) && ADMIN[p.a];
+  if (!run) fail(400, 'Unknown action');
+  // A signed request works once: a copied request can't be replayed.
+  try {
+    await db.batch([
+      db.prepare('DELETE FROM admin_nonces WHERE at < ?').bind(nowS() - 86400),
+      db.prepare('INSERT INTO admin_nonces (n, at) VALUES (?, ?)').bind(p.n, nowS())
+    ]);
+  } catch (e) { fail(409, 'That request was already used'); }
+  const out = (await run(db, p)) || {};
+  if (Array.isArray(out.log)) {
+    await db.prepare('INSERT INTO admin_log (at, action, target, detail) VALUES (?, ?, ?, ?)')
+      .bind(nowS(), p.a, String(out.log[0]).slice(0, 80), String(out.log[1]).slice(0, 300)).run();
+    delete out.log;
+  }
+  return json(Object.assign({ ok: true }, out));
 }
 
 /* ---------- router ---------- */
@@ -749,6 +1062,7 @@ export default {
       if (method === 'POST' && a === 'signup') return await signup(request, env);
       if (method === 'POST' && a === 'login') return await login(request, env);
       if (method === 'GET' && a === 'leaderboard') return await leaderboard(url, env);
+      if (method === 'GET' && a === 'config') return await config(env);
       if (method === 'GET' && a === 'players' && !b) return await searchPlayers(url, env);
       if (method === 'GET' && a === 'players' && b) return await playerProfile(b, env);
       if (method === 'GET' && a === 'battles' && !b) return await listBattles(env);
@@ -763,6 +1077,13 @@ export default {
       }
       if (method === 'GET' && a === 'me') return json({ me: meOut(me), inventory: await inventory(env.DB, me.id) });
       if (method === 'POST' && a === 'ping') return await ping(env, me);
+      if (method === 'POST' && a === 'account' && b === 'password') return await changePassword(request, env, me);
+      if (method === 'POST' && a === 'account' && b === 'logout-all') {
+        await env.DB.prepare('DELETE FROM sessions WHERE account = ?').bind(me.id).run();
+        return json({ ok: true });
+      }
+      // Everything below changes coins or items, which maintenance mode pauses.
+      if (method === 'POST') await openForBusiness(env);
       if (method === 'POST' && a === 'open') return await openCase(request, env, me);
       if (method === 'POST' && a === 'sell') return await sell(request, env, me);
       if (method === 'POST' && a === 'upgrade') return await upgrade(request, env, me);
@@ -774,7 +1095,7 @@ export default {
       if (method === 'POST' && a === 'battles' && b && c) return await battleAction(b, c, request, env, me);
       fail(404, 'Not found');
     } catch (err) {
-      if (err instanceof HttpError) return json({ error: err.message }, err.status);
+      if (err instanceof HttpError) return json(Object.assign({ error: err.message }, err.extra || {}), err.status);
       console.error(err && err.stack || err);
       return json({ error: 'Server error' }, 500);
     }

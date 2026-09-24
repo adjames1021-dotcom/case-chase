@@ -45,7 +45,9 @@ async function giftCode(spec) {
   const body = b64u(Buffer.from(JSON.stringify(Object.assign({ t: 'gift', v: 1, mv: 1, c: 0, i: [], m: '', id: 'g' + Math.random(), ts: Math.floor(Date.now() / 1000), x: 0 }, spec))));
   return 'GIFT.' + body + '.' + await adminSign(body);
 }
-const admin = async (p) => { const s = JSON.stringify(Object.assign({ ts: Math.floor(Date.now() / 1000) }, p)); return call('POST', '/admin', { p: s, g: await adminSign(s) }); };
+let nonce = 0;
+const signed = async (p) => { const s = JSON.stringify(p); return { p: s, g: await adminSign(s) }; };
+const admin = async (p) => call('POST', '/admin', await signed(Object.assign({ ts: Math.floor(Date.now() / 1000), n: 'test-' + Date.now() + '-' + (nonce++) }, p)));
 
 /* ---- accounts ---- */
 const A = await call('POST', '/signup', { name: 'alice', password: 'alicepass' });
@@ -226,7 +228,7 @@ if (ADMIN.d) {
 /* ---- admin ---- */
 ok('forged admin refused', (await call('POST', '/admin', { p: JSON.stringify({ a: 'ban', id: 'bob', ts: Math.floor(Date.now() / 1000) }), g: 'AAAA' })).status === 403);
 r = await admin({ a: 'ban', id: 'bob' });
-ok('admin ban by name', r.status === 200 && r.data.name === 'bob');
+ok('admin ban by name', r.status === 200, r.data);
 ok('banned session refused', (await call('GET', '/me', null, b)).status === 403);
 ok('banned login refused', (await call('POST', '/login', { name: 'bob', password: 'bobpass1' })).status === 403);
 lb = (await call('GET', '/leaderboard')).data.players;
@@ -238,6 +240,110 @@ ok('password reset', r.status === 200 && (await call('GET', '/me', null, a)).sta
   (await call('POST', '/login', { name: 'alice', password: 'newpass99' })).status === 200);
 r = await call('POST', '/logout', null, (a = (await call('POST', '/login', { name: 'alice', password: 'newpass99' })).data.token));
 ok('logout ends the session', (await call('GET', '/me', null, a)).status === 401);
+
+/* ---- admin toolkit ---- */
+const login = async (n, pw) => (await call('POST', '/login', { name: n, password: pw })).data.token;
+const now = () => Math.floor(Date.now() / 1000);
+const once = await signed({ a: 'stats', n: 'replay-check-1', ts: now() });
+ok('a signed request works once', (await call('POST', '/admin', once)).status === 200 && (await call('POST', '/admin', once)).status === 409);
+ok('request without an id refused', (await call('POST', '/admin', await signed({ a: 'stats', ts: now() }))).status === 400);
+ok('old request refused', (await call('POST', '/admin', await signed({ a: 'stats', n: 'old-one-123', ts: now() - 600 }))).status === 400);
+ok('unknown action refused', (await admin({ a: 'toString' })).status === 400);
+r = await admin({ a: 'stats' });
+ok('stats', r.status === 200 && r.data.totals.accounts >= 4 && r.data.richest.length > 0, r.data.totals);
+r = await admin({ a: 'find', q: 'bo' });
+ok('find players', r.data.players.some((p) => p.name === 'bob'));
+let bt = await login('bob', 'bobpass1');
+r = await admin({ a: 'player', id: 'bob' });
+ok('inspect a player', r.data.name === 'bob' && Array.isArray(r.data.items) && r.data.sessions >= 1 && Array.isArray(r.data.offers));
+const coinsOf = async (n) => (await admin({ a: 'player', id: n })).data.coins;
+const c0b = await coinsOf('bob');
+await admin({ a: 'coins', id: 'bob', delta: 250 });
+ok('give coins', await coinsOf('bob') === c0b + 250);
+await admin({ a: 'coins', id: 'bob', delta: -1e9 });
+ok('taking coins stops at zero', await coinsOf('bob') === 0);
+await admin({ a: 'coins', id: 'bob', set: 1234 });
+ok('set coins', await coinsOf('bob') === 1234);
+const akIdx = core.ITEM_INDEX['KR-74 | Bramble'], stickerIdx = core.ITEM_INDEX['Sticker | Paper Crane'];
+const n0 = (await me(bt)).inventory.length;
+r = await admin({ a: 'give', id: 'bob', idx: akIdx, wear: 1, tracker: 1, count: 3 });
+let bobInvNow = (await me(bt)).inventory;
+const given = bobInvNow.filter((x) => x[1] === akIdx && x[2] === 1 && x[4] === 1);
+ok('give items with wear and tracker', r.status === 200 && bobInvNow.length === n0 + 3 && given.length >= 3);
+ok('stickers get no wear', (await admin({ a: 'give', id: 'bob', idx: stickerIdx, wear: 3 })).status === 200 &&
+  (await me(bt)).inventory.some((x) => x[1] === stickerIdx && x[2] === 0));
+ok('bad item refused', (await admin({ a: 'give', id: 'bob', idx: 99999 })).status === 400);
+r = await admin({ a: 'take', id: 'bob', ids: given.map((x) => x[0]) });
+ok('remove items', r.data.removed === given.length && !(await me(bt)).inventory.some((x) => given.some((g) => g[0] === x[0])));
+await admin({ a: 'rename', id: 'bob', name: 'bobby' });
+ok('rename', !!(await login('bobby', 'bobpass1')));
+ok('rename to a taken name refused', (await admin({ a: 'rename', id: 'bobby', name: 'alice' })).status === 409);
+await admin({ a: 'rename', id: 'bobby', name: 'bob' });
+await admin({ a: 'ban', id: 'bob', reason: 'spamming trades' });
+r = await call('POST', '/login', { name: 'bob', password: 'bobpass1' });
+ok('ban shows the reason', r.status === 403 && r.data.reason === 'spamming trades', r.data);
+await admin({ a: 'unban', id: 'bob' });
+bt = await login('bob', 'bobpass1');
+await admin({ a: 'logout', id: 'bob' });
+ok('force log out', (await call('GET', '/me', null, bt)).status === 401);
+bt = await login('bob', 'bobpass1');
+let at = await login('alice', 'newpass99');
+
+await admin({ a: 'settings', maintenance: true, announcement: 'Double drops this weekend!' });
+let cfg = (await call('GET', '/config')).data;
+ok('announcement and maintenance published', cfg.maintenance === true && cfg.announcement === 'Double drops this weekend!', cfg);
+r = await call('POST', '/open', { case_id: 'starter' }, at);
+ok('maintenance pauses actions', r.status === 503, r.status);
+ok('players can still log in during maintenance', !!(await login('alice', 'newpass99')));
+await admin({ a: 'settings', maintenance: false, announcement: '' });
+cfg = (await call('GET', '/config')).data;
+ok('maintenance off, announcement cleared', cfg.maintenance === false && cfg.announcement === '');
+ok('actions work again', (await call('POST', '/open', { case_id: 'starter' }, at)).status === 200);
+
+let ainv = (await me(at)).inventory, ac0 = (await me(at)).me.coins;
+r = await call('POST', '/offers', { to: (await me(bt)).me.id, give: [ainv[0][0]], give_coins: 20 }, at);
+const offerId2 = r.data.id;
+r = await admin({ a: 'offers' });
+ok('list open offers', r.data.offers.some((o) => o.id === offerId2 && o.from_name === 'alice'));
+await admin({ a: 'cancel_offer', offer: offerId2 });
+let am = await me(at);
+ok('admin cancels an offer and refunds it', am.me.coins === ac0 && am.inventory.some((x) => x[0] === ainv[0][0]));
+r = await call('POST', '/battles', { case_id: 'starter', rounds: 1, max_players: 3, mode: 'high', version: core.GAME_VERSION }, at);
+const lob3 = r.data.id;
+ok('list open battles', (await admin({ a: 'lobbies' })).data.lobbies.some((l) => l.id === lob3));
+await admin({ a: 'cancel_lobby', lobby: lob3 });
+ok('admin cancels a battle and refunds it', (await me(at)).me.coins === ac0 && (await call('GET', '/battles/' + lob3)).data.status === 'cancelled');
+
+const g2 = await giftCode({ c: 50, id: 'revoke-test' });
+await admin({ a: 'revoke_gift', gift: 'revoke-test' });
+ok('cancelled gift refused', (await call('POST', '/gift', { code: g2 }, at)).status === 410);
+await admin({ a: 'revoke_gift', gift: 'revoke-test', undo: true });
+ok('reinstated gift works', (await call('POST', '/gift', { code: g2 }, at)).status === 200);
+r = await admin({ a: 'gifts', gifts: ['revoke-test', 'nothing'] });
+ok('gift claim counts', r.data.gifts['revoke-test'].claims === 1 && r.data.gifts.nothing.claims === 0);
+
+const tt = (await call('POST', '/signup', { name: 'tempuser', password: 'temppass' })).data.token;
+await call('POST', '/open', { case_id: 'starter', count: 2 }, tt);
+const bc1 = (await me(bt)).me.coins;
+await call('POST', '/offers', { to: (await me(tt)).me.id, give_coins: 100 }, bt);
+ok('bob\'s offer holds 100 coins', (await me(bt)).me.coins === bc1 - 100);
+ok('delete needs the name typed', (await admin({ a: 'delete', id: 'tempuser', confirm: 'nope' })).status === 400);
+r = await admin({ a: 'delete', id: 'tempuser', confirm: 'tempuser' });
+ok('delete an account', r.status === 200 && (await call('POST', '/login', { name: 'tempuser', password: 'temppass' })).status === 401);
+ok('open trades with it are refunded', (await me(bt)).me.coins === bc1);
+
+r = await admin({ a: 'log' });
+ok('admin log records changes', r.data.entries.length >= 15 && r.data.entries.some((l) => l.action === 'coins' && l.target === 'bob'), r.data.entries.length);
+
+// players managing their own account
+const at2 = await login('alice', 'newpass99');
+ok('change password needs the current one', (await call('POST', '/account/password', { old: 'wrong-one', password: 'brandnew1' }, at)).status === 400);
+ok('change password', (await call('POST', '/account/password', { old: 'newpass99', password: 'brandnew1' }, at)).status === 200);
+ok('other devices logged out, this one kept', (await call('GET', '/me', null, at2)).status === 401 && (await call('GET', '/me', null, at)).status === 200);
+ok('new password works', !!(await login('alice', 'brandnew1')));
+await call('POST', '/account/logout-all', null, at);
+ok('log out everywhere', (await call('GET', '/me', null, at)).status === 401);
+await admin({ a: 'reset', id: 'alice', password: 'newpass99' });
 
 } else console.log('SKIP moderation (no ADMIN_KEY)');
 

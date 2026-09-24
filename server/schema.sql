@@ -122,3 +122,16 @@ CREATE TABLE IF NOT EXISTS gift_claims (
 -- One-row table used as an assertion inside transactions: writing ok = 0
 -- breaks the CHECK and rolls the whole transaction back.
 CREATE TABLE IF NOT EXISTS guards (k INTEGER PRIMARY KEY, ok INTEGER NOT NULL CHECK (ok = 1));
+
+-- Admin tools
+CREATE TABLE IF NOT EXISTS settings (k TEXT PRIMARY KEY, v TEXT NOT NULL);        -- announcement, maintenance
+CREATE TABLE IF NOT EXISTS admin_log (
+  id      INTEGER PRIMARY KEY AUTOINCREMENT,
+  at      INTEGER NOT NULL,
+  action  TEXT NOT NULL,
+  target  TEXT,
+  detail  TEXT
+);
+CREATE TABLE IF NOT EXISTS admin_nonces (n TEXT PRIMARY KEY, at INTEGER NOT NULL);   -- each signed request works once
+CREATE TABLE IF NOT EXISTS revoked_gifts (gift_id TEXT PRIMARY KEY, at INTEGER NOT NULL);
+CREATE TABLE IF NOT EXISTS ban_reasons (account TEXT PRIMARY KEY, reason TEXT NOT NULL, at INTEGER NOT NULL);

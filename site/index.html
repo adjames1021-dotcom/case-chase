@@ -693,6 +693,8 @@
 
   .whoami { font-family: var(--cond); font-size: 14px; font-weight: 700; letter-spacing: 1px; color: var(--ink); }
   .acct-btn { margin-left: 10px; font-size: 11px; }
+  .admin-m { display: none; width: 34px; height: 34px; place-items: center; margin-right: 8px; }
+  .admin-m svg { width: 16px; height: 16px; }
   .login-box input { display: block; margin: 0 auto 10px; }
   .login-tabs { display: flex; gap: 6px; justify-content: center; margin: -6px 0 18px; }
   .login-tabs .chip { min-width: 110px; }
@@ -700,6 +702,56 @@
   .login-guest { display: block; margin: 16px auto 0; }
   .login-note { margin: 12px auto 0; max-width: 300px; font-size: 12px; color: var(--ink-3); }
   .gift-redeem { display: flex; gap: 8px; margin-top: 8px; }
+
+  /* ---------- Announcement banner ---------- */
+  .announce { display: flex; align-items: center; gap: 12px; margin: 14px 28px 0; padding: 10px 14px;
+    border: 1px solid color-mix(in srgb, var(--orange) 55%, transparent);
+    background: linear-gradient(90deg, rgba(242,106,27,.22), rgba(242,106,27,.06)); font-size: 13.5px; }
+  .announce.maint { border-color: color-mix(in srgb, var(--mythic) 60%, transparent);
+    background: linear-gradient(90deg, rgba(235,75,75,.24), rgba(235,75,75,.06)); }
+  .announce-tag { font-family: var(--cond); font-size: 10.5px; font-weight: 700; letter-spacing: 1.4px; text-transform: uppercase;
+    padding: 2px 8px; background: var(--orange); color: #fff; flex: 0 0 auto; }
+  .announce.maint .announce-tag { background: var(--mythic); }
+  #announce-text { flex: 1; min-width: 0; }
+  .announce-x { background: none; border: 0; color: var(--ink-2); cursor: pointer; font-size: 14px; }
+
+  /* ---------- Account screen ---------- */
+  .acct-sheet { max-width: 520px; }
+  .acct-sheet .control { display: block; width: 100%; margin-bottom: 8px; }
+  .acct-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 6px 0 18px; }
+  .acct-h { margin: 0 0 10px; font-family: var(--cond); font-size: 14px; letter-spacing: 1.5px; text-transform: uppercase; }
+  .acct-actions { display: flex; gap: 8px; margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--line); }
+  .acct-actions .btn { flex: 1; }
+
+  /* ---------- Admin panel ---------- */
+  .adm-tabs .chip { padding: 6px 10px; }
+  .adm-tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 10px; }
+  .tile { border: 1px solid var(--line); background: rgba(0,0,0,.18); padding: 12px 14px; }
+  .tile b { display: block; font-size: 22px; font-weight: 800; font-variant-numeric: tabular-nums; }
+  .tile span { font-family: var(--cond); font-size: 10.5px; font-weight: 700; letter-spacing: 1.3px; text-transform: uppercase; color: var(--ink-3); }
+  .adm-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; margin-top: 18px; }
+  .adm-row { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--line); font-size: 13px; }
+  .adm-row:last-child { border-bottom: 0; }
+  .adm-row .grow { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .adm-row i { font-style: normal; color: var(--ink-3); font-size: 11.5px; }
+  .adm-row b.num { font-variant-numeric: tabular-nums; }
+  .adm-row.link { cursor: pointer; }
+  .adm-row.link:hover b { color: var(--orange); }
+  .adm-badge { font-family: var(--cond); font-size: 10px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase;
+    padding: 1px 6px; background: var(--mythic); color: #fff; }
+  .adm-players { display: grid; grid-template-columns: 300px minmax(0, 1fr); gap: 18px; align-items: start; }
+  .adm-sec { margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--line); }
+  .adm-sec h5 { margin: 0 0 8px; font-family: var(--cond); font-size: 12.5px; letter-spacing: 1.4px; text-transform: uppercase; color: var(--ink-2); }
+  .adm-line { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 8px; }
+  .adm-line .control { flex: 1; min-width: 120px; }
+  .adm-line .control.narrow { flex: 0 0 90px; min-width: 0; }
+  .adm-inv { display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: 8px; max-height: 420px; overflow-y: auto; padding: 2px; }
+  .adm-inv .item { cursor: pointer; }
+  .adm-inv .item.sel { outline: 2px solid var(--mythic); }
+  .adm-inv .item.locked { opacity: .45; cursor: not-allowed; }
+  .btn-danger { background: var(--mythic); border-color: var(--mythic); color: #fff; }
+  @media (max-width: 1000px) { .adm-players { grid-template-columns: 1fr; } }
+  @media (max-width: 760px) { .announce { margin: 10px 12px 0; } .acct-stats { grid-template-columns: repeat(2, 1fr); } }
   .gift-redeem .control { flex: 1; min-width: 0; }
   .whoami i { font-style: normal; font-weight: 400; color: var(--ink-3); margin-left: 1px; }
 
@@ -717,7 +769,9 @@
   .lb-row.top3 .lb-rank { color: #cd8a52; }
   .lb-row.me { background: linear-gradient(90deg, rgba(242,106,27,.15), transparent 72%); box-shadow: inset 3px 0 0 var(--orange); }
   .lb-player { display: flex; align-items: center; gap: 10px; min-width: 0; }
-  .lb-player > span:last-child { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .lb-player .lb-name { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .lb-acts { display: flex; gap: 4px; flex: 0 0 auto; margin-left: auto; }
+  .lb-acts .lb-act { margin-left: 0; }
   .lb-av { width: 32px; height: 32px; flex: 0 0 32px; display: grid; place-items: center;
     font-family: var(--cond); font-size: 15px; font-weight: 700; color: #fff; background: hsl(var(--h), 42%, 36%);
     clip-path: polygon(6px 0, 100% 0, 100% calc(100% - 6px), calc(100% - 6px) 100%, 0 100%, 0 6px); }
@@ -801,7 +855,12 @@
     .lb-row > :nth-child(n+5) { display: none; }
   }
   @media (max-width: 760px) {
-    .whoami { display: none; }
+    .whoami #whoami, .whoami .net { display: none; }
+    .topbar .brand { min-width: 0; overflow: hidden; }
+    .topbar .brand small { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 17px; }
+    .acct-btn { white-space: nowrap; }
+    .whoami .acct-btn { margin-left: 0; }
+    .admin-m { display: grid; }
     .lb-row { grid-template-columns: 28px minmax(0, 1fr) 86px; padding: 9px 12px; }
     .lb-row > :nth-child(4) { display: none; }
   }
@@ -1052,10 +1111,20 @@
     <h1>Case Opening Sim</h1>
     <small id="topbar-sub">Cases</small>
   </div>
+  <button class="icon-btn admin-m" id="admin-btn-m" title="Admin" aria-label="Admin">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="4.5" y="10.5" width="15" height="10" rx="2"/><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3"/><circle cx="12" cy="15.5" r="1.2"/>
+    </svg>
+  </button>
   <div class="whoami"><span class="net" id="net" style="display:none"></span><span id="whoami"></span>
     <button class="link-btn acct-btn" id="acct-btn">Log in</button></div>
   <div class="balance" id="balance"><b id="balance-value">0</b><i>coins</i></div>
 </header>
+
+<div class="announce" id="announce" style="display:none">
+  <span class="announce-tag" id="announce-tag">News</span><span id="announce-text"></span>
+  <button class="announce-x" id="announce-x" aria-label="Dismiss">✕</button>
+</div>
 
 <main>
   <section class="panel active" id="panel-cases">
@@ -1260,7 +1329,17 @@
       <div>
         <h2>Admin</h2>
       </div>
-      <button class="btn btn-ghost btn-sm" id="admin-lock" style="display:none">Lock admin</button>
+      <div class="toolbar" style="margin:0">
+        <span class="seg adm-tabs" id="adm-tabs" style="display:none">
+          <button class="chip active" data-view="overview">Overview</button>
+          <button class="chip" data-view="players">Players</button>
+          <button class="chip" data-view="gifts">Gifts</button>
+          <button class="chip" data-view="live">Trades &amp; battles</button>
+          <button class="chip" data-view="settings">Game</button>
+          <button class="chip" data-view="log">Log</button>
+        </span>
+        <button class="btn btn-ghost btn-sm" id="admin-lock" style="display:none">Lock admin</button>
+      </div>
     </div>
 
     <div class="card admin-gate" id="admin-locked">
@@ -1279,6 +1358,52 @@
     </div>
 
     <div id="admin-open" style="display:none">
+      <div class="adm-view" data-view="overview">
+        <div class="adm-tiles" id="adm-tiles"></div>
+        <div class="adm-grid" id="adm-lists"></div>
+      </div>
+
+      <div class="adm-view" data-view="players" style="display:none">
+        <div class="adm-players">
+          <div class="card">
+            <h4>Find a player</h4>
+            <input class="control to-search" id="adm-search" placeholder="Username" autocomplete="off" spellcheck="false">
+            <div id="adm-results"></div>
+          </div>
+          <div class="card" id="adm-player"><div class="empty" style="padding:28px"><h3>Pick a player</h3></div></div>
+        </div>
+      </div>
+
+      <div class="adm-view" data-view="live" style="display:none">
+        <div class="card"><h4>Open trade offers</h4><div id="adm-offers"></div></div>
+        <div class="card" style="margin-top:18px"><h4>Open battles</h4><div id="adm-lobbies"></div></div>
+      </div>
+
+      <div class="adm-view" data-view="settings" style="display:none">
+        <div class="up-layout trade-layout">
+          <div class="card">
+            <h4>Announcement</h4>
+            <p class="hint">Shown in a banner at the top of everyone's game. Leave it empty for none.</p>
+            <textarea class="control code-box" id="adm-announce" rows="3" maxlength="300" placeholder="Double drops this weekend!"></textarea>
+            <div style="display:flex;gap:8px;margin-top:10px">
+              <button class="btn btn-primary btn-sm" id="adm-announce-save" style="flex:1">Publish</button>
+              <button class="btn btn-ghost btn-sm" id="adm-announce-clear">Clear</button>
+            </div>
+          </div>
+          <div class="card">
+            <h4>Maintenance mode</h4>
+            <p class="hint">Pauses opening cases, selling, upgrades, trades, battles and gifts for every account while you fix something. Players can still log in and look around. Guests aren't affected.</p>
+            <div class="kv"><span>Status</span><b id="adm-maint-state">…</b></div>
+            <button class="btn btn-ghost" id="adm-maint" style="width:100%;margin-top:12px">Turn on</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="adm-view" data-view="log" style="display:none">
+        <div class="card"><h4>Admin log</h4><p class="hint">Every change made from this panel, newest first.</p><div id="adm-log"></div></div>
+      </div>
+
+      <div class="adm-view" data-view="gifts" style="display:none">
       <div class="up-layout trade-layout">
         <div class="card">
           <h4>Build a gift</h4>
@@ -1316,18 +1441,6 @@
         <div id="gift-log"></div>
       </div>
 
-      <div class="card" id="mod-card" style="margin-top:18px">
-        <h4>Moderation</h4>
-        <p class="hint">Ban or unban an account, or give it a new password if someone forgot theirs. The Ban button on the leaderboard works too.</p>
-        <div class="admin-unlock">
-          <input class="control" id="mod-id" placeholder="Username" autocomplete="off" spellcheck="false">
-          <button class="btn btn-ghost" id="mod-ban">Ban</button>
-          <button class="btn btn-ghost" id="mod-unban">Unban</button>
-        </div>
-        <div class="admin-unlock" style="margin-top:10px">
-          <input class="control" id="mod-pass" placeholder="New password (6+ characters)" autocomplete="off" spellcheck="false">
-          <button class="btn btn-ghost" id="mod-reset">Set password</button>
-        </div>
       </div>
     </div>
   </section>
@@ -1387,6 +1500,29 @@
   </div>
 </div>
 
+
+<div class="overlay" id="account-overlay">
+  <div class="sheet acct-sheet">
+    <div class="sheet-head">
+      <div>
+        <h3 id="acct-name">Account</h3>
+        <p id="acct-since"></p>
+      </div>
+      <button class="link-btn" id="acct-close">Close</button>
+    </div>
+    <div class="acct-stats" id="acct-stats"></div>
+    <h4 class="acct-h">Change password</h4>
+    <input class="control" id="acct-old" type="password" placeholder="Current password" autocomplete="current-password">
+    <input class="control" id="acct-new" type="password" placeholder="New password (6+ characters)" autocomplete="new-password">
+    <input class="control" id="acct-new2" type="password" placeholder="New password again" autocomplete="new-password">
+    <div class="name-err" id="acct-err"></div>
+    <button class="btn btn-primary" id="acct-pass-go">Change password</button>
+    <div class="acct-actions">
+      <button class="btn btn-ghost" id="acct-logout-all">Log out on all devices</button>
+      <button class="btn btn-ghost" id="acct-logout">Log out</button>
+    </div>
+  </div>
+</div>
 
 <div class="overlay gift-overlay" id="gift-overlay">
   <canvas id="confetti" class="confetti"></canvas>
@@ -4275,19 +4411,13 @@
     $('#admin-locked').style.display = open ? 'none' : '';
     $('#admin-open').style.display = open ? '' : 'none';
     $('#admin-lock').style.display = open ? '' : 'none';
+    $('#adm-tabs').style.display = open ? '' : 'none';
     $('#admin-btn').classList.toggle('on', open);
     if (!open) return;
 
     const sel = $('#gift-item-sel');
-    if (!sel.options.length) {
-      sel.innerHTML = CASES.map((c) => '<optgroup label="' + escHtml(c.name) + '">' +
-        c.items.map((it) => '<option value="' + ITEM_INDEX[it.name] + '">' + escHtml(it.name) +
-          ' · ' + it.rarity + '</option>').join('') + '</optgroup>').join('') +
-        '<optgroup label="Keys and cases">' + SPECIAL_ITEMS.map((it) =>
-          '<option value="' + ITEM_INDEX[it.name] + '">' + it.name + '</option>').join('') + '</optgroup>';
-    }
-    renderStaged();
-    renderGiftLog();
+    if (!sel.options.length) sel.innerHTML = itemOptions();
+    setAdminView(adminUi.view);
   }
 
   async function unlockAdmin(raw, quiet) {
@@ -4411,16 +4541,319 @@
       host.innerHTML = '<div class="empty" style="padding:24px"><h3>No gifts yet</h3></div>';
       return;
     }
-    host.innerHTML = log.map((row) =>
-      '<div class="outbox-row">' +
-        '<div class="ob-names"><b>' + escHtml(row.summary) + '</b>' +
+    host.innerHTML = log.map((row) => {
+      const id = giftIdOf(row.code), info = id && adminUi.gifts[id];
+      return '<div class="outbox-row">' +
+        '<div class="ob-names"><b>' + escHtml(row.summary) + (info && info.revoked ? ' <span class="adm-badge">Cancelled</span>' : '') + '</b>' +
           '<span>' + (row.message ? '“' + escHtml(row.message) + '” · ' : '') +
           new Date(row.at).toLocaleString() +
-          (row.expires ? ' · expires ' + new Date(row.expires * 1000).toLocaleString() : '') + '</span></div>' +
+          (row.expires ? ' · expires ' + new Date(row.expires * 1000).toLocaleString() : '') +
+          (info ? ' · claimed by ' + info.claims + ' account' + (info.claims === 1 ? '' : 's') : '') + '</span></div>' +
         '<code>' + row.code.slice(0, 34) + '…</code>' +
         '<button class="btn btn-ghost btn-sm" data-giftcopy="' + escHtml(row.code) + '">Copy</button>' +
-      '</div>').join('');
+        (id ? '<button class="btn btn-ghost btn-sm" data-giftrevoke="' + escAttr(id) + '"' + (info && info.revoked ? ' data-undo="1">Reinstate' : '>Cancel') + '</button>' : '') +
+      '</div>';
+    }).join('');
     $$('#gift-log [data-giftcopy]').forEach((b) => b.addEventListener('click', () => copyText(b.dataset.giftcopy, b)));
+    $$('#gift-log [data-giftrevoke]').forEach((b) => b.addEventListener('click', async () => {
+      const undo = !!b.dataset.undo;
+      if (!undo && !confirm('Cancel this gift? Nobody else will be able to claim it (existing claims are kept).')) return;
+      if (await adminDo('revoke_gift', { gift: b.dataset.giftrevoke, undo: undo }, undo ? 'Gift reinstated' : 'Gift cancelled')) loadGiftClaims();
+    }));
+  }
+
+
+  /* ---------- the admin panel's server tools ----------
+     Everything below talks to the server with requests signed by the admin
+     key (see cloud.admin). They work whether or not you're logged in. */
+
+  const adminUi = { view: 'overview', player: null, picked: new Set(), searchTimer: null, gifts: {} };
+
+  function itemOptions() {
+    return CASES.map((c) => '<optgroup label="' + escHtml(c.name) + '">' +
+      c.items.map((it) => '<option value="' + ITEM_INDEX[it.name] + '">' + escHtml(it.name) +
+        ' · ' + it.rarity + '</option>').join('') + '</optgroup>').join('') +
+      '<optgroup label="Keys and cases">' + SPECIAL_ITEMS.map((it) =>
+        '<option value="' + ITEM_INDEX[it.name] + '">' + it.name + '</option>').join('') + '</optgroup>';
+  }
+
+  const when = (ts) => ts ? new Date(ts * 1000).toLocaleString() : '—';
+
+  async function adminDo(action, fields, okMessage) {
+    try {
+      const r = await cloud.admin(action, fields || {});
+      if (okMessage) { toast(okMessage, 'good'); SFX.blip(); }
+      return r;
+    } catch (e) {
+      toast(e.message, 'bad');
+      SFX.lose();
+      return null;
+    }
+  }
+
+  function setAdminView(view) {
+    adminUi.view = view;
+    $$('#adm-tabs .chip').forEach((c) => c.classList.toggle('active', c.dataset.view === view));
+    $$('#admin-open .adm-view').forEach((v) => { v.style.display = v.dataset.view === view ? '' : 'none'; });
+    if (view === 'overview') loadAdminOverview();
+    if (view === 'players' && adminUi.player) openAdminPlayer(adminUi.player.id);
+    if (view === 'live') loadAdminLive();
+    if (view === 'settings') loadAdminSettings();
+    if (view === 'log') loadAdminLog();
+    if (view === 'gifts') { renderStaged(); renderGiftLog(); loadGiftClaims(); }
+  }
+
+  const playerLink = (p, extra) => '<div class="adm-row link" data-admp="' + escAttr(p.id) + '">' +
+    '<span class="grow"><b>' + escHtml(p.name) + '</b> <i>#' + escHtml(tagOf(p.id)) + '</i>' +
+    (p.banned ? ' <span class="adm-badge">Banned</span>' : '') + '</span>' + (extra || '') + '</div>';
+
+  function wirePlayerLinks(host) {
+    $$(host + ' [data-admp]').forEach((row) => row.addEventListener('click', () => {
+      SFX.blip();
+      setAdminView('players');
+      openAdminPlayer(row.dataset.admp);
+    }));
+  }
+
+  async function loadAdminOverview() {
+    $('#adm-tiles').innerHTML = '<div class="online-note">Loading…</div>';
+    const r = await adminDo('stats');
+    if (!r) { $('#adm-tiles').innerHTML = '<div class="online-note">Can\'t reach the server.</div>'; return; }
+    const t = r.totals;
+    const tiles = [
+      ['Accounts', fmt(t.accounts)], ['Online now', fmt(t.online)], ['Active today', fmt(t.active_day)],
+      ['New today', fmt(t.new_day)], ['Coins held', fmt(t.coins)], ['Item value held', fmt(t.item_value)],
+      ['Items', fmt(t.items)], ['Cases opened', fmt(t.opened)], ['Time played', fmtTime(t.played)],
+      ['Open offers', fmt(t.offers)], ['Trades today', fmt(t.trades_day)], ['Open battles', fmt(t.lobbies)],
+      ['Battles today', fmt(t.battles_day)], ['Gifts claimed', fmt(t.gift_claims)], ['Banned', fmt(t.banned)]
+    ];
+    $('#adm-tiles').innerHTML = tiles.map((x) => '<div class="tile"><b>' + x[1] + '</b><span>' + x[0] + '</span></div>').join('');
+    const list = (title, rows, value) => '<div class="card"><h4>' + title + '</h4>' +
+      (rows.length ? rows.map((p) => playerLink(p, '<b class="num">' + value(p) + '</b>')).join('') : '<p class="hint">Nobody yet</p>') + '</div>';
+    $('#adm-lists').innerHTML =
+      list('Most coins', r.richest, (p) => fmt(p.coins)) +
+      list('Most item value', r.top_items, (p) => fmt(p.inv_value)) +
+      list('Newest accounts', r.newest, (p) => ago(p.created_at)) +
+      list('Recently online', r.recent, (p) => ago(p.last_seen));
+    wirePlayerLinks('#adm-lists');
+  }
+
+  function searchAdminPlayers(q) {
+    clearTimeout(adminUi.searchTimer);
+    adminUi.searchTimer = setTimeout(async () => {
+      const r = await adminDo('find', { q: q });
+      const host = $('#adm-results');
+      if (!r) { host.innerHTML = ''; return; }
+      host.innerHTML = r.players.length ? r.players.map((p) => playerLink(p, '<i>' + fmt(p.coins) + ' coins</i>')).join('')
+        : '<p class="hint" style="margin-top:10px">No players found</p>';
+      wirePlayerLinks('#adm-results');
+    }, q ? 250 : 0);
+  }
+
+  async function openAdminPlayer(id) {
+    const host = $('#adm-player');
+    if (!adminUi.player || adminUi.player.id !== id) host.innerHTML = '<div class="online-note">Loading…</div>';
+    const p = await adminDo('player', { id: id });
+    if (!p) { host.innerHTML = '<div class="empty" style="padding:28px"><h3>Couldn\'t load that player</h3></div>'; return; }
+    adminUi.player = p;
+    adminUi.picked.clear();
+    const best = p.best_item >= 0 ? ALL_ITEMS[p.best_item] : null;
+    const items = p.items.map((row) => {
+      const it = tupleToItem(row.slice(1, 5));
+      if (!it) return '';
+      it.uid = row[0];
+      return itemMarkup(it, row[5] ? 'locked' : '', true)
+        .replace('class="item ', 'data-admi="' + row[0] + '"' + (row[5] ? ' title="In an open trade offer"' : '') + ' class="item ');
+    }).join('');
+    const wear = '<option value="-1">Random wear</option>' + WEARS.map((w, i) => '<option value="' + (i + 1) + '">' + w.name + '</option>').join('');
+    host.innerHTML =
+      '<div class="to-partner" style="margin-top:0"><span><b style="font-size:18px">' + escHtml(p.name) + '</b> <i>#' + escHtml(tagOf(p.id)) +
+        ' · ' + escHtml(p.id) + '</i></span>' + (p.banned ? '<span class="adm-badge">Banned</span>' : '') + '</div>' +
+      (p.banned && p.ban_reason ? '<p class="hint">Ban reason: ' + escHtml(p.ban_reason) + '</p>' : '') +
+      '<div class="acct-stats">' +
+        [['Coins', fmt(p.coins)], ['Items', fmt(p.inv_count) + ' · ' + fmt(p.inv_value)], ['Cases opened', fmt(p.opened)],
+         ['Best drop', best ? fmt(p.best_value) : '—'], ['Time played', fmtTime(p.played)], ['Logged in on', p.sessions + ' device' + (p.sessions === 1 ? '' : 's')]]
+          .map((x) => '<div class="tile"><b style="font-size:17px">' + x[1] + '</b><span>' + x[0] + '</span></div>').join('') +
+      '</div>' +
+      '<p class="hint" style="margin:0">Joined ' + when(p.created_at) + ' · last seen ' + ago(p.last_seen) +
+        (p.fail_count ? ' · ' + p.fail_count + ' wrong password' + (p.fail_count > 1 ? 's' : '') + ' in a row' : '') + '</p>' +
+
+      '<div class="adm-sec"><h5>Coins</h5><div class="adm-line">' +
+        '<input class="control" id="admp-coins" type="number" min="0" step="1" placeholder="Amount">' +
+        '<button class="btn btn-ghost btn-sm" id="admp-give-coins">Give</button>' +
+        '<button class="btn btn-ghost btn-sm" id="admp-take-coins">Take</button>' +
+        '<button class="btn btn-ghost btn-sm" id="admp-set-coins">Set to</button></div></div>' +
+
+      '<div class="adm-sec"><h5>Give an item</h5>' +
+        '<select class="control" id="admp-item" style="width:100%">' + itemOptions() + '</select>' +
+        '<div class="adm-line"><select class="control" id="admp-wear">' + wear + '</select>' +
+        '<label class="check"><input type="checkbox" id="admp-trk"> Tracker</label>' +
+        '<input class="control narrow" id="admp-count" type="number" min="1" max="100" value="1" title="How many">' +
+        '<button class="btn btn-ghost btn-sm" id="admp-give-item">Give</button></div></div>' +
+
+      '<div class="adm-sec"><h5>Inventory · click items to select</h5>' +
+        (items ? '<div class="adm-inv" id="admp-inv">' + items + '</div>' : '<p class="hint">No items</p>') +
+        '<div class="adm-line"><button class="btn btn-ghost btn-sm" id="admp-take-items" disabled>Remove selected</button>' +
+        '<span class="hint" style="margin:0">Faded items are in an open trade offer.</span></div></div>' +
+
+      '<div class="adm-sec"><h5>Account</h5>' +
+        '<div class="adm-line"><input class="control" id="admp-name" placeholder="New username" value="' + escAttr(p.name) + '">' +
+          '<button class="btn btn-ghost btn-sm" id="admp-rename">Rename</button></div>' +
+        '<div class="adm-line"><input class="control" id="admp-pass" placeholder="New password (6+ characters)" autocomplete="off">' +
+          '<button class="btn btn-ghost btn-sm" id="admp-reset">Set password</button></div>' +
+        '<div class="adm-line"><input class="control" id="admp-reason" placeholder="Ban reason (shown to them)" value="' + escAttr(p.ban_reason || '') + '">' +
+          (p.banned ? '<button class="btn btn-ghost btn-sm" id="admp-unban">Unban</button>'
+                    : '<button class="btn btn-ghost btn-sm" id="admp-ban">Ban</button>') + '</div>' +
+        '<div class="adm-line"><button class="btn btn-ghost btn-sm" id="admp-logout">Log out on all devices</button></div></div>' +
+
+      (p.offers.length ? '<div class="adm-sec"><h5>Recent trades</h5>' + p.offers.map((o) =>
+        '<div class="adm-row"><span class="grow">' + escHtml(o.from_name) + ' → ' + escHtml(o.to_name) +
+        ' <i>' + o.give_n + ' item(s)' + (o.give_coins ? ' + ' + fmt(o.give_coins) : '') + ' for ' + o.want_n + ' item(s)' +
+        (o.want_coins ? ' + ' + fmt(o.want_coins) : '') + '</i></span><span class="st ' + o.status + '">' + o.status + '</span>' +
+        '<i>' + ago(o.updated_at) + '</i></div>').join('') + '</div>' : '') +
+
+      '<div class="adm-sec"><h5>Delete account</h5><p class="hint">Deletes the account and everything in it. Open trades and battles it\'s in are cancelled and refunded. This can\'t be undone.</p>' +
+        '<div class="adm-line"><input class="control" id="admp-confirm" placeholder="Type ' + escAttr(p.name) + ' to confirm" autocomplete="off">' +
+        '<button class="btn btn-danger btn-sm" id="admp-delete">Delete</button></div></div>';
+
+    const again = () => openAdminPlayer(p.id);
+    const amount = () => Math.floor(Number($('#admp-coins').value));
+    $('#admp-give-coins').addEventListener('click', async () => {
+      if (!(amount() > 0)) return toast('Enter an amount', 'bad');
+      if (await adminDo('coins', { id: p.id, delta: amount() }, 'Gave ' + fmt(amount()) + ' coins')) again();
+    });
+    $('#admp-take-coins').addEventListener('click', async () => {
+      if (!(amount() > 0)) return toast('Enter an amount', 'bad');
+      if (await adminDo('coins', { id: p.id, delta: -amount() }, 'Took ' + fmt(amount()) + ' coins')) again();
+    });
+    $('#admp-set-coins').addEventListener('click', async () => {
+      if (!(amount() >= 0) || $('#admp-coins').value === '') return toast('Enter an amount', 'bad');
+      if (await adminDo('coins', { id: p.id, set: amount() }, 'Coins set to ' + fmt(amount()))) again();
+    });
+    $('#admp-give-item').addEventListener('click', async () => {
+      const idx = +$('#admp-item').value, count = Math.max(1, Math.min(100, Math.floor(+$('#admp-count').value || 1)));
+      if (await adminDo('give', { id: p.id, idx: idx, wear: +$('#admp-wear').value, tracker: $('#admp-trk').checked ? 1 : 0, count: count },
+        'Gave ' + count + ' x ' + ALL_ITEMS[idx].name)) again();
+    });
+    $$('#admp-inv [data-admi]').forEach((el) => el.addEventListener('click', () => {
+      if (el.classList.contains('locked')) return;
+      const id = +el.dataset.admi;
+      if (adminUi.picked.has(id)) adminUi.picked.delete(id); else adminUi.picked.add(id);
+      el.classList.toggle('sel', adminUi.picked.has(id));
+      const btn = $('#admp-take-items');
+      btn.disabled = !adminUi.picked.size;
+      btn.textContent = adminUi.picked.size ? 'Remove ' + adminUi.picked.size + ' selected' : 'Remove selected';
+    }));
+    if ($('#admp-take-items')) $('#admp-take-items').addEventListener('click', async () => {
+      if (!adminUi.picked.size || !confirm('Remove ' + adminUi.picked.size + ' item(s) from ' + p.name + '?')) return;
+      if (await adminDo('take', { id: p.id, ids: Array.from(adminUi.picked) }, 'Items removed')) again();
+    });
+    $('#admp-rename').addEventListener('click', async () => {
+      const name = $('#admp-name').value.trim();
+      if (name === p.name) return;
+      if (await adminDo('rename', { id: p.id, name: name }, 'Renamed to ' + name)) again();
+    });
+    $('#admp-reset').addEventListener('click', async () => {
+      const pass = $('#admp-pass').value;
+      if (pass.length < 6) return toast('Passwords are at least 6 characters', 'bad');
+      if (await adminDo('reset', { id: p.id, password: pass }, 'Password set. Tell ' + p.name + ' the new one.')) again();
+    });
+    if ($('#admp-ban')) $('#admp-ban').addEventListener('click', async () => {
+      if (!confirm('Ban ' + p.name + '?')) return;
+      if (await adminDo('ban', { id: p.id, reason: $('#admp-reason').value }, p.name + ' banned')) again();
+    });
+    if ($('#admp-unban')) $('#admp-unban').addEventListener('click', async () => {
+      if (await adminDo('unban', { id: p.id }, p.name + ' unbanned')) again();
+    });
+    $('#admp-logout').addEventListener('click', async () => {
+      if (await adminDo('logout', { id: p.id }, p.name + ' logged out everywhere')) again();
+    });
+    $('#admp-delete').addEventListener('click', async () => {
+      const typed = $('#admp-confirm').value.trim();
+      if (typed !== p.name) return toast('Type the username exactly to confirm', 'bad');
+      if (await adminDo('delete', { id: p.id, confirm: typed }, p.name + ' deleted')) {
+        adminUi.player = null;
+        $('#adm-player').innerHTML = '<div class="empty" style="padding:28px"><h3>Account deleted</h3></div>';
+        searchAdminPlayers($('#adm-search').value.trim());
+      }
+    });
+  }
+
+  async function loadAdminLive() {
+    const [o, l] = await Promise.all([adminDo('offers'), adminDo('lobbies')]);
+    const itemsLine = (rows, coins) => {
+      const names = (rows || []).map((r) => { const it = tupleToItem(r.slice(1)); return it ? it.name : '?'; });
+      return (names.length ? names.slice(0, 3).join(', ') + (names.length > 3 ? ' +' + (names.length - 3) : '') : 'nothing') +
+        (coins ? ' + ' + fmt(coins) + ' coins' : '');
+    };
+    $('#adm-offers').innerHTML = !o ? '<div class="online-note">Can\'t reach the server.</div>' : !o.offers.length
+      ? '<p class="hint">No open offers</p>' : o.offers.map((x) =>
+        '<div class="adm-row"><span class="grow"><b>' + escHtml(x.from_name) + '</b> → <b>' + escHtml(x.to_name) + '</b> ' +
+        '<i>gives ' + escHtml(itemsLine(x.give, x.give_coins)) + ' · wants ' + escHtml(itemsLine(x.want, x.want_coins)) + '</i></span>' +
+        '<i>' + ago(x.created_at) + '</i><button class="btn btn-ghost btn-sm" data-admco="' + x.id + '">Cancel</button></div>').join('');
+    $('#adm-lobbies').innerHTML = !l ? '<div class="online-note">Can\'t reach the server.</div>' : !l.lobbies.length
+      ? '<p class="hint">No open battles</p>' : l.lobbies.map((x) => {
+        const box = CASES.find((c) => c.id === x.case_id);
+        return '<div class="adm-row"><span class="grow"><b>' + escHtml(box ? box.name : x.case_id) + '</b> <i>' +
+          x.players.map((pl) => escHtml(pl.name)).join(', ') + ' · ' + x.players.length + '/' + x.max_players +
+          ' · entry ' + fmt(x.cost) + '</i></span><i>' + ago(x.created_at) + '</i>' +
+          '<button class="btn btn-ghost btn-sm" data-admcl="' + x.id + '">Cancel</button></div>';
+      }).join('');
+    $$('#adm-offers [data-admco]').forEach((b) => b.addEventListener('click', async () => {
+      if (await adminDo('cancel_offer', { offer: b.dataset.admco }, 'Offer cancelled and refunded')) loadAdminLive();
+    }));
+    $$('#adm-lobbies [data-admcl]').forEach((b) => b.addEventListener('click', async () => {
+      if (await adminDo('cancel_lobby', { lobby: b.dataset.admcl }, 'Battle cancelled and refunded')) loadAdminLive();
+    }));
+  }
+
+  async function loadAdminSettings() {
+    const c = await cloud.config(true);
+    if (!c) { $('#adm-maint-state').textContent = 'Can\'t reach the server'; return; }
+    if (document.activeElement !== $('#adm-announce')) $('#adm-announce').value = c.announcement;
+    $('#adm-maint-state').textContent = c.maintenance ? 'On: accounts are paused' : 'Off';
+    $('#adm-maint-state').style.color = c.maintenance ? 'var(--mythic)' : '';
+    $('#adm-maint').textContent = c.maintenance ? 'Turn off' : 'Turn on';
+    $('#adm-maint').dataset.on = c.maintenance ? '1' : '';
+  }
+
+  async function saveAnnouncement(text) {
+    if (await adminDo('settings', { announcement: text }, text ? 'Announcement published' : 'Announcement cleared')) {
+      await cloud.config(true);
+      loadAdminSettings();
+    }
+  }
+
+  async function toggleMaintenance() {
+    const on = !$('#adm-maint').dataset.on;
+    if (on && !confirm('Pause the game for every account?')) return;
+    if (await adminDo('settings', { maintenance: on }, on ? 'Maintenance on' : 'Maintenance off')) {
+      await cloud.config(true);
+      loadAdminSettings();
+    }
+  }
+
+  async function loadAdminLog() {
+    const r = await adminDo('log');
+    const host = $('#adm-log');
+    if (!r) { host.innerHTML = '<div class="online-note">Can\'t reach the server.</div>'; return; }
+    host.innerHTML = r.entries.length ? r.entries.map((e) =>
+      '<div class="adm-row"><span class="grow"><b>' + escHtml(e.target || '') + '</b> <i>' + escHtml(e.detail || e.action) + '</i></span>' +
+      '<i title="' + escAttr(when(e.at)) + '">' + ago(e.at) + '</i></div>').join('') : '<p class="hint">Nothing yet</p>';
+  }
+
+  const giftIdOf = (code) => {
+    try { return JSON.parse(unutf8.decode(unb64u(code.split('.')[1]))).id; } catch (e) { return null; }
+  };
+
+  // Claims per gift, and whether it's been cancelled, from the server.
+  async function loadGiftClaims() {
+    const ids = adminLog().map((row) => giftIdOf(row.code)).filter(Boolean).slice(0, 80);
+    if (!ids.length) return;
+    const r = await cloud.admin('gifts', { gifts: ids }).catch(() => null);
+    if (!r) return;
+    adminUi.gifts = r.gifts;
+    renderGiftLog();
   }
 
   /* =========================================================
@@ -4588,8 +5021,9 @@
     return '<div class="lb-row' + (me ? ' me' : '') + (i < 3 ? ' top' + (i + 1) : '') + '">' +
       '<div class="lb-rank">' + (i + 1) + '</div>' +
       '<div class="lb-player"><span class="lb-av" style="--h:' + (hashString(e.i) % 360) + '">' +
-        escHtml(e.n.charAt(0).toUpperCase()) + '</span><span title="' + escAttr(e.i) + '"><b>' + escHtml(e.n) + '</b><i>#' +
-        escHtml(tagOf(e.i)) + '</i>' + (me ? '<em>You</em>' : '') + (actions || '') + '</span></div>' +
+        escHtml(e.n.charAt(0).toUpperCase()) + '</span><span class="lb-name" title="' + escAttr(e.i) + '"><b>' + escHtml(e.n) + '</b><i>#' +
+        escHtml(tagOf(e.i)) + '</i>' + (me ? '<em>You</em>' : '') + '</span>' +
+        (actions ? '<span class="lb-acts">' + actions + '</span>' : '') + '</div>' +
       '<div class="lb-num" data-k="value">' + fmt(e.s[4]) + '</div>' +
       '<div class="lb-best" data-k="best">' + (best
         ? '<span class="lb-thumb" style="--rc:' + RARITY_COLOR[best.rarity] + '">' + artFor(best) + '</span>' +
@@ -4620,7 +5054,7 @@
       ? escHtml(acct.name) + '<i>#' + escHtml(tagOf(acct.id)) + '</i>'
       : 'Guest';
     const btn = $('#acct-btn');
-    btn.textContent = acct ? 'Log out' : 'Log in';
+    btn.textContent = acct ? 'Account' : 'Log in';
     $('#reset-btn').style.display = acct ? 'none' : '';
   }
 
@@ -4952,10 +5386,12 @@
       try { out = await res.json(); } catch (e) { out = {}; }
       if (token) setStatus('online');
       if ((res.status === 401 || (res.status === 403 && out.error === 'banned')) && token && path !== '/api/logout') {
-        signOut(res.status === 401 ? 'Your login expired. Log in again.' : 'This account is banned.');
+        signOut(res.status === 401 ? 'Your login expired. Log in again.'
+          : 'This account is banned.' + (out.reason ? ' Reason: ' + out.reason : ''));
       }
       if (!res.ok) {
-        const err = new Error(out.error === 'banned' ? 'This account is banned.' : out.error || 'Server error');
+        const err = new Error(out.error === 'banned' ? 'This account is banned.' + (out.reason ? ' Reason: ' + out.reason : '')
+          : out.error || 'Server error');
         err.status = res.status;
         throw err;
       }
@@ -5031,6 +5467,7 @@
 
     // Called once at start-up. Resolves true when a saved login still works.
     async function boot() {
+      config(true);
       try { token = localStorage.getItem(SESSION_KEY) || null; } catch (e) { token = null; }
       setStatus(token ? 'online' : 'off');
       if (!token) return false;
@@ -5112,6 +5549,7 @@
     }
 
     function afterLogin() {
+      renderBanner();
       ui.searched = false;
       board.at = 0;
       let lobby = null;
@@ -5132,6 +5570,7 @@
       load();
       SFX.setMuted(state.muted);
       refreshAll();
+      renderBanner();
       if (message) showLogin(message);
     }
 
@@ -5220,6 +5659,7 @@
       host.innerHTML = rows.map((r, i) => {
         let actions = '';
         if (!r.me && signedIn()) actions += '<button class="lb-act" data-lbtrade="' + escAttr(r.p.id) + '">Trade</button>';
+        if (adminState.key) actions += '<button class="lb-act" data-lbmanage="' + escAttr(r.p.id) + '">Manage</button>';
         if (!r.me && adminState.key) actions += '<button class="lb-act bad" data-lbban="' + escAttr(r.p.id) + '">Ban</button>';
         return boardRow(r.e, i, r.me, actions);
       }).join('');
@@ -5230,22 +5670,111 @@
       }));
       $$('#lb-body [data-lbban]').forEach((b) => b.addEventListener('click', () => {
         const row = board.list.find((p) => p.id === b.dataset.lbban);
-        if (confirm('Ban ' + (row ? row.name : b.dataset.lbban) + '?')) moderate('ban', b.dataset.lbban);
+        const reason = prompt('Ban ' + (row ? row.name : b.dataset.lbban) + '? Reason (shown to them, optional):', '');
+        if (reason !== null) moderate('ban', b.dataset.lbban, { reason: reason });
+      }));
+      $$('#lb-body [data-lbmanage]').forEach((b) => b.addEventListener('click', () => {
+        SFX.blip();
+        setTab('admin');
+        setAdminView('players');
+        openAdminPlayer(b.dataset.lbmanage);
       }));
     }
 
-    async function moderate(action, who, password) {
-      who = String(who || '').trim();
-      if (!adminState.key) return;
-      if (!who) { toast('Enter a username or id', 'bad'); return; }
-      const p = JSON.stringify({ a: action, id: who, password: password || undefined, ts: Math.floor(Date.now() / 1000) });
+    /* ---------- admin requests ----------
+       Signed with the admin key, with a one-time id, so the server knows
+       they're from you and a copied request can't be replayed. */
+
+    async function adminCall(action, fields) {
+      if (!adminState.key) throw new Error('Unlock admin first');
+      const p = JSON.stringify(Object.assign({}, fields, { a: action, n: randomId(), ts: Math.floor(Date.now() / 1000) }));
+      const g = b64u(new Uint8Array(await crypto.subtle.sign(SIGN, adminState.key, utf8.encode(p))));
+      return api('POST', '/api/admin', { p: p, g: g });
+    }
+
+    async function moderate(action, who, extra) {
       try {
-        const g = b64u(new Uint8Array(await crypto.subtle.sign(SIGN, adminState.key, utf8.encode(p))));
-        const r = await api('POST', '/api/admin', { p: p, g: g });
-        toast({ ban: 'Banned ', unban: 'Unbanned ', reset: 'New password set for ' }[action] + r.name, 'good');
+        await adminCall(action, Object.assign({ id: who }, extra || {}));
+        toast(action === 'ban' ? 'Banned' : 'Done', 'good');
         board.at = 0;
         if ($('#panel-leaderboard').classList.contains('active')) renderLeaderboard();
       } catch (e) { toast(e.message, 'bad'); }
+    }
+
+    /* ---------- announcement and maintenance ---------- */
+
+    let cfg = { announcement: '', maintenance: false }, cfgAt = 0;
+    const DISMISS_KEY = 'case-sim-announce-seen';
+
+    async function config(force) {
+      if (!force && Date.now() - cfgAt < 25000) return cfg;
+      cfgAt = Date.now();
+      try { cfg = await api('GET', '/api/config'); }
+      catch (e) { return null; }
+      renderBanner();
+      return cfg;
+    }
+
+    function renderBanner() {
+      const el = $('#announce');
+      let seen = '';
+      try { seen = sessionStorage.getItem(DISMISS_KEY) || ''; } catch (e) { seen = ''; }
+      const maint = !!cfg.maintenance && signedIn();
+      const text = maint ? 'Maintenance: opening cases, selling, trades and battles are paused for a bit. Your items are safe.'
+        : cfg.announcement;
+      if (!text || (!maint && seen === text)) { el.style.display = 'none'; return; }
+      el.style.display = '';
+      el.classList.toggle('maint', maint);
+      $('#announce-tag').textContent = maint ? 'Maintenance' : 'News';
+      $('#announce-text').textContent = text;
+      $('#announce-x').style.display = maint ? 'none' : '';
+    }
+
+    function dismissBanner() {
+      try { sessionStorage.setItem(DISMISS_KEY, cfg.announcement || ''); } catch (e) { /* shows again next time */ }
+      SFX.blip();
+      renderBanner();
+    }
+
+    /* ---------- the player's account screen ---------- */
+
+    function showAccount() {
+      if (!signedIn()) return;
+      const a = acct;
+      const best = a.best_item >= 0 ? ALL_ITEMS[a.best_item] : null;
+      $('#acct-name').innerHTML = escHtml(a.name) + ' <i style="font-style:normal;color:var(--ink-3)">#' + escHtml(tagOf(a.id)) + '</i>';
+      $('#acct-since').textContent = a.created_at ? 'Playing since ' + new Date(a.created_at * 1000).toLocaleDateString() : '';
+      $('#acct-stats').innerHTML = [['Coins', fmt(a.coins)], ['Item value', fmt(a.inv_value)], ['Items', fmt(a.inv_count)],
+        ['Cases opened', fmt(a.opened)], ['Best drop', best ? fmt(a.best_value) : '—'], ['Time played', fmtTime(a.played)]]
+        .map((x) => '<div class="tile"><b style="font-size:17px">' + x[1] + '</b><span>' + x[0] + '</span></div>').join('');
+      ['#acct-old', '#acct-new', '#acct-new2'].forEach((id) => { $(id).value = ''; });
+      $('#acct-err').textContent = '';
+      $('#account-overlay').classList.add('open');
+    }
+
+    const hideAccount = () => $('#account-overlay').classList.remove('open');
+
+    async function changePassword() {
+      const old = $('#acct-old').value, next = $('#acct-new').value, again = $('#acct-new2').value;
+      const err = $('#acct-err');
+      if (next.length < 6) { err.textContent = 'New passwords are at least 6 characters'; return; }
+      if (next !== again) { err.textContent = 'The new passwords don\'t match'; return; }
+      try {
+        await api('POST', '/api/account/password', { old: old, password: next });
+        err.textContent = '';
+        ['#acct-old', '#acct-new', '#acct-new2'].forEach((id) => { $(id).value = ''; });
+        SFX.win('rare');
+        toast('Password changed. Other devices were logged out.', 'good');
+      } catch (e) { err.textContent = e.message; SFX.lose(); }
+    }
+
+    async function logoutEverywhere() {
+      if (!confirm('Log out on every device, including this one?')) return;
+      try { await api('POST', '/api/account/logout-all'); } catch (e) { toast(e.message, 'bad'); return; }
+      hideAccount();
+      signOut();
+      toast('Logged out everywhere');
+      showLogin();
     }
 
     /* ---------- trades ---------- */
@@ -5692,11 +6221,12 @@
 
     let ticks = 0;
     async function tick() {
+      config();
       if (!signedIn()) return;
       ticks++;
       const now = Date.now();
       if (refreshWanted && !animating()) { refreshWanted = false; refresh(); }
-      if (document.visibilityState === 'visible' && now - lastPing > 60000) {
+      if (document.visibilityState === 'visible' && now - lastPing > 30000) {
         lastPing = now;
         try {
           const r = await api('POST', '/api/ping');
@@ -5721,6 +6251,8 @@
       submitLogin: submitLogin, playAsGuest: playAsGuest, logout: logout, refresh: refresh,
       open: open, sell: sell, upgrade: upgradeItems, claimGift: claimGift,
       renderBoard: renderBoard, moderate: moderate, renderTradeBadge: renderTradeBadge,
+      admin: adminCall, config: config, dismissBanner: dismissBanner,
+      showAccount: showAccount, hideAccount: hideAccount, changePassword: changePassword, logoutEverywhere: logoutEverywhere,
       renderTradeView: renderTradeView, search: search, pickPartner: pickPartner,
       battleBusy: battleBusy, createBattle: createBattle, renderBattles: renderBattles, finishBattle: finishBattle
     };
@@ -5897,14 +6429,18 @@
       battle.src = c.dataset.src; SFX.blip(); renderBattleSetup();
     }));
     $('#to-search').addEventListener('input', (e) => cloud.search(e.target.value.trim()));
-    $('#mod-ban').addEventListener('click', () => cloud.moderate('ban', $('#mod-id').value));
-    $('#mod-unban').addEventListener('click', () => cloud.moderate('unban', $('#mod-id').value));
-    $('#mod-reset').addEventListener('click', () => {
-      const pass = $('#mod-pass').value;
-      if (pass.length < 6) { toast('Passwords are at least 6 characters', 'bad'); return; }
-      cloud.moderate('reset', $('#mod-id').value, pass);
-      $('#mod-pass').value = '';
-    });
+    $$('#adm-tabs .chip').forEach((c) => c.addEventListener('click', () => { SFX.blip(); setAdminView(c.dataset.view); }));
+    $('#adm-search').addEventListener('input', (e) => searchAdminPlayers(e.target.value.trim()));
+    $('#adm-announce-save').addEventListener('click', () => saveAnnouncement($('#adm-announce').value.trim()));
+    $('#adm-announce-clear').addEventListener('click', () => { $('#adm-announce').value = ''; saveAnnouncement(''); });
+    $('#adm-maint').addEventListener('click', toggleMaintenance);
+    $('#announce-x').addEventListener('click', cloud.dismissBanner);
+    $('#acct-close').addEventListener('click', cloud.hideAccount);
+    $('#account-overlay').addEventListener('click', (e) => { if (e.target.id === 'account-overlay') cloud.hideAccount(); });
+    $('#acct-pass-go').addEventListener('click', cloud.changePassword);
+    $('#acct-new2').addEventListener('keydown', (e) => { if (e.key === 'Enter') cloud.changePassword(); });
+    $('#acct-logout-all').addEventListener('click', cloud.logoutEverywhere);
+    $('#acct-logout').addEventListener('click', () => { cloud.hideAccount(); cloud.logout(); });
     $$('#login-tabs [data-auth]').forEach((b) => b.addEventListener('click', () => {
       SFX.blip(); cloud.setAuthMode(b.dataset.auth); $('#login-err').textContent = '';
     }));
@@ -5915,10 +6451,11 @@
     $('#trade-login').addEventListener('click', () => cloud.showLogin());
     $('#acct-btn').addEventListener('click', () => {
       SFX.blip();
-      if (cloud.signedIn()) { if (confirm('Log out?')) cloud.logout(); }
+      if (cloud.signedIn()) cloud.showAccount();
       else cloud.showLogin();
     });
     $('#admin-btn').addEventListener('click', () => { SFX.blip(); setTab('admin'); });
+    $('#admin-btn-m').addEventListener('click', () => { SFX.blip(); setTab('admin'); });
     $$('#lb-sort [data-sort]').forEach((c) => c.addEventListener('click', () => {
       lb.sort = c.dataset.sort; SFX.blip(); renderLeaderboard();
     }));
@@ -5946,6 +6483,7 @@
       if (e.key !== 'Escape') return;
       $('#contents-overlay').classList.remove('open');
       if (giftUi.res) closeGift();
+      cloud.hideAccount();
       if (opening && opening.settled) closeOpening(false);
     });
 
