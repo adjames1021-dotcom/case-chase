@@ -172,11 +172,8 @@ ok('unknown case refused', (await call('POST', '/open', { case_id: 'nope' }, a))
 ok('cannot afford', (await call('POST', '/open', { case_id: 'vanguard' }, a)).status === 409);
 r = await call('POST', '/open', { case_id: 'scrap' }, b);
 ok('free case', r.status === 200 && r.data.me.coins === 500);
-r = await call('POST', '/open', { case_id: 'scrap' }, b);
-ok('free case cooldown', r.status === 429 && +r.retry >= 1 && +r.retry <= core.FREE_COOLDOWN / 1000, [r.status, r.retry]);
-await sleep(core.FREE_COOLDOWN + 100);
 r = await call('POST', '/open', { case_id: 'scrap', count: 5 }, b);
-ok('free case after cooldown, one at a time', r.status === 200 && r.data.items.length === 1, r.data && r.data.items);
+ok('free case: no cooldown, x5 at once', r.status === 200 && r.data.items.length === 5, r.status);
 ok('holiday case not sold out of season', (await call('POST', '/open', { case_id: core.CASES.find((c) => c.season && !c.locked && core.seasonsOn(new Date(), {}).indexOf(c.season) < 0).id }, b)).status === 409);
 await call('POST', '/open', { case_id: 'starter', count: 5 }, b);
 

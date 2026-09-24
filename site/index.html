@@ -278,6 +278,13 @@
   .sheet-head p { margin: 4px 0 0; font-size: 12px; color: var(--ink-2); }
 
   /* ---------- Reel ---------- */
+  #reels[data-reels="3"] .reel-wrap { zoom: .8; }
+  #reels[data-reels="4"] .reel-wrap, #reels[data-reels="5"] .reel-wrap { zoom: .62; }
+  @media (max-height: 760px) {
+    #reels[data-reels="2"] .reel-wrap { zoom: .8; }
+    #reels[data-reels="3"] .reel-wrap { zoom: .66; }
+    #reels[data-reels="4"] .reel-wrap, #reels[data-reels="5"] .reel-wrap { zoom: .5; }
+  }
   .reel-wrap {
     position: relative; background: var(--bg-2); border: 1px solid var(--line);
     padding: 13px 0; margin-bottom: 11px; overflow: hidden;
@@ -3752,7 +3759,7 @@
   // The share of its price a paid case pays back on average: 95% for the
   // cheapest, rising with price to break-even at 50,000. The free case pays
   // far less (ODDS.free) and has a cooldown.
-  const FREE_COOLDOWN = 10000;                    // ms between free cases
+  const FREE_COOLDOWN = 0;                        // ms between free cases (none)
   function returnTarget(price) {
     return 0.95 + 0.05 * Math.max(0, Math.min(1, Math.log(price / 10) / Math.log(5000)));
   }
@@ -4269,13 +4276,6 @@
         btn.title = pairs ? '' : box.key ? 'Needs a ' + box.crate + ' and a ' + box.key : 'Get a ' + box.crate + ' from rewards or gifts';
         return;
       }
-      if (box.price === 0) {
-        const wait = freeWait();
-        btn.disabled = wait > 0;
-        btn.textContent = wait > 0 ? 'Ready in ' + wait + 's' : 'Open';
-        btn.title = 'Free, once every ' + FREE_COOLDOWN / 1000 + ' seconds';
-        return;
-      }
       const cost = box.price * openCount;
       btn.disabled = state.coins < cost;
       btn.textContent = openCount > 1 ? 'Open x' + openCount : 'Open';
@@ -4312,9 +4312,6 @@
     if (box.locked) {
       count = Math.min(count, lockedPairs(box));
       if (!count) { toast(heldNamed(box.crate) ? 'You need a ' + box.key : 'You need a ' + box.crate, 'bad'); return; }
-    } else if (box.price === 0) {
-      count = 1;                                   // the free case opens one at a time
-      if (freeWait()) { toast('The free case is ready in ' + freeWait() + 's', 'bad'); return; }
     }
     const cost = box.price * count;
     if (state.coins < cost) { toast('Not enough coins', 'bad'); return; }
@@ -4352,7 +4349,6 @@
         if (extra && Math.random() < box.bonusChance) bonus.push(instantiate(extra));
       }
     }
-    if (box.price === 0 && !box.locked) setFreeWait(FREE_COOLDOWN / 1000);
 
     opening = { winners, bonus, box, reels: [], finished: 0, settled: false, timers: [] };
 
@@ -4379,6 +4375,7 @@
     $('#open-results').style.display = 'none';
     $('#skip-btn').style.display = '';
     $('#reels').innerHTML = '';
+    $('#reels').dataset.reels = String(Math.min(count, 5));     // 3+ reels shrink so they all fit
     $('#open-overlay').classList.add('open');
 
     SFX.whoosh();

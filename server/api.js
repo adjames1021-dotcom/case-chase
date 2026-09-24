@@ -628,7 +628,7 @@ async function openCase(request, env, me) {
   if (!box) fail(400, 'Unknown case. Update your game.');
   if (!box.locked && !onSale(box, await activeSeasons(env))) fail(409, box.name + ' is only sold around ' + SEASONS[box.season].name);
   const free = box.price === 0 && !box.locked;
-  let count = free ? 1 : isInt(b.count, 1, 5) ? b.count : 1;      // the free case opens one at a time
+  let count = isInt(b.count, 1, 5) ? b.count : 1;
   if (me.inv_count + count * 3 > MAX_ITEMS) fail(409, 'Your inventory is full. Sell something first.');
   const t = Date.now(), ts = nowS();
   const stmts = [];
@@ -652,7 +652,7 @@ async function openCase(request, env, me) {
         me.id, JSON.stringify(removed), removed.length),
       db.prepare('DELETE FROM items WHERE owner = ? AND id IN (SELECT value FROM json_each(?))').bind(me.id, JSON.stringify(removed)));
   } else if (free) {
-    if (me.last_free > t - FREE_COOLDOWN) {
+    if (FREE_COOLDOWN && me.last_free > t - FREE_COOLDOWN) {
       const wait = Math.ceil((me.last_free + FREE_COOLDOWN - t) / 1000);
       fail(429, 'The free case is ready in ' + wait + 's', { retry: wait });
     }
