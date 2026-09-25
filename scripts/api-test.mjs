@@ -31,8 +31,9 @@ const b64u = (buf) => Buffer.from(buf).toString('base64').replace(/\+/g, '-').re
 const randomIp = () => '10.' + [0, 0, 0].map(() => Math.floor(Math.random() * 256)).join('.');
 // Likewise each call comes from a made-up device unless `device` is given.
 const randomDevice = () => 'dev' + Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2);
-async function call(method, path, body, token, ip, device) {
-  const headers = { 'CF-Connecting-IP': ip || randomIp(), 'X-Device': device || randomDevice(), 'X-Device-FP': 'fp' + (device || 'x').slice(0, 20) };
+async function call(method, path, body, token, ip, device, fp) {
+  device = device || randomDevice();
+  const headers = { 'CF-Connecting-IP': ip || randomIp(), 'X-Device': device, 'X-Device-FP': fp || 'fp' + device.slice(0, 20) };
   if (body) headers['Content-Type'] = 'application/json';
   if (token) headers.Authorization = 'Bearer ' + token;
   if (path === '/signup' && body && body.challenge === undefined) body = Object.assign(await human(), body);
@@ -108,7 +109,7 @@ for (const fake of ['L1LBEAN', 'lilbean_fan', 'Adm1n', 'TheModerator']) {
   const rr = await call('POST', '/signup', { name: fake, password: 'whatever1', challenge: '' });
   ok('staff look-alike refused: ' + fake, rr.status === 400 && /reserved/.test(rr.data.error), rr.data);
 }
-for (const fine of ['classic', 'Grape', 'peacock', 'Sussex']) {
+for (const fine of ['classic', 'Grape', 'peacock', 'Sussex', 'TiltedGamer', 'Kilkenny']) {
   ok('ordinary name allowed: ' + fine, (await call('POST', '/signup', { name: fine, password: 'whatever1' })).status === 200);
 }
 
@@ -141,6 +142,20 @@ ok('sign-up without a device id -> refused', noDevice.status === 400);
 const farm = 'device-farm-zzzzzzzzzzzz', farmed = [];
 for (let i = 0; i < 6; i++) farmed.push((await tryJoin({}, null, farm)).status);
 ok('5 new accounts a day per device', farmed.slice(0, 5).every((s) => s === 200) && farmed[5] === 429, farmed);
+const noFp = await fetch(BASE + '/signup', { method: 'POST', headers: { 'Content-Type': 'application/json', 'CF-Connecting-IP': randomIp(), 'X-Device': randomDevice() },
+  body: JSON.stringify(Object.assign(await human(), { name: botName(), password: 'botpass1' })) });
+ok('sign-up without a browser fingerprint -> refused', noFp.status === 400);
+const laptop = 'fp-classroom-laptop', cls = [];
+for (let i = 0; i < 11; i++) cls.push((await call('POST', '/signup', { name: botName(), password: 'botpass1' }, null, null, null, laptop)).status);
+ok('10 new accounts a day per browser, even clearing the device id', cls.slice(0, 10).every((s) => s === 200) && cls[10] === 429, cls);
+const rudeDev = randomDevice(), rudeTries = [];
+for (const n of ['NlGGER' + 525513, 'xNlggerx', 'Nllgger9']) rudeTries.push((await call('POST', '/signup', { name: n, password: 'botpass1' }, null, null, rudeDev)).status);
+ok('slurs with l for i refused', rudeTries.every((s) => s === 400), rudeTries);
+rr = await call('POST', '/signup', { name: botName(), password: 'botpass1' }, null, null, rudeDev);
+ok('three rude names -> that device can\'t sign up for a day', rr.status === 429 && +rr.retry > 3600, rr);
+rr = await call('POST', '/signup', { name: botName(), password: 'botpass1' }, null, null, null, 'fp' + rudeDev.slice(0, 20));
+ok('...nor that browser with a fresh device id', rr.status === 429, rr.data);
+ok('...while other devices can', (await tryJoin({})).status === 200);
 
 /* ---- rate limits ---- */
 for (let i = 0; i < 50; i++) await call('POST', '/login', { name: 'nobody' + i, password: 'wrong-pass' }, null, '198.51.100.7');

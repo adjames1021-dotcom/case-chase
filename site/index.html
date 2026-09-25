@@ -4073,10 +4073,13 @@
   }
 
   // Whether a name (or one word of a message) contains a blocked word.
+  // A lower-case l passes for a capital I, so every name is also read with
+  // its l's as i's (NlGGER); 1 is read as both i and l. That reading never
+  // squashes the i's it makes, or tilt would read as a rude word.
   function isRude(name) {
-    const squash = (s) => s.replace(/(.)\1+/g, '$1');           // fuuuck -> fuck
-    for (const one of ['i', 'l']) {
-      const words = nameWords(name, one), all = words.join('');
+    for (const [one, lAsI] of [['i', false], ['l', false], ['i', true]]) {
+      const squash = lAsI ? (s) => s.replace(/([^i])\1+/g, '$1') : (s) => s.replace(/(.)\1+/g, '$1');   // fuuuck -> fuck
+      const words = nameWords(name, one).map((w) => (lAsI ? w.replace(/l+/g, 'i') : w)), all = words.join('');
       if (NAME_WORDS.any.some((w) => all.indexOf(w) >= 0 || squash(all).indexOf(w) >= 0)) return true;
       for (const p of words.concat(words.length > 1 ? [all] : [])) {
         if (NAME_WORDS.word.some((w) => p === w || p === w + 's' || p === w + 'es' || (p.length > w.length && squash(p) === squash(w)))) return true;

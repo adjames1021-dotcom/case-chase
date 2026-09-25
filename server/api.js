@@ -59,7 +59,7 @@
 import {
   CASES, ALL_ITEMS, ITEM_INDEX, GAME_VERSION, VAULT_KEY, VAULT_CRATE, WEARS, NO_WEAR, NO_TRACKER,
   rollItem, rollWear, instantiate, bonusChance, itemTuple, tupleToItem,
-  pickTarget, upgradeChance, computeBattle, seededRng, hashString, nameProblem, textProblem, RARITIES,
+  pickTarget, upgradeChance, computeBattle, seededRng, hashString, nameProblem, isRude, textProblem, RARITIES,
   FREE_COOLDOWN, SEASONS, seasonsOn, onSale, caseBonus
 } from './core.js';
 
@@ -272,7 +272,8 @@ const LIMITS = {                          // [how many, in how many seconds]
   gift:       [30, 600],                  // gift codes tried per account
   listing:    [60, 600],                  // market listings made per account
   invite:     [60, 600],                  // battle invites sent per account
-  suggest:    [5, 3600]                   // suggestions posted per account
+  suggest:    [5, 3600],                  // suggestions posted per account
+  rude_name:  [3, 86400]                  // rude names sent per device or browser (the game never sends one)
 };
 const ipOf = (request) => request.headers.get('CF-Connecting-IP') || 'local';
 const hitRow = (db, name, who) => db.prepare('INSERT INTO hits (k, at) VALUES (?, ?)').bind(name + ':' + who, nowS());
@@ -356,6 +357,7 @@ async function checkHuman(db, b) {
 const DEVICE_KINDS = { d: 'Device', f: 'Browser', n: 'Network' };
 const DEVICE_FLAG = { d: 3, f: 6, n: 10 };      // accounts on one before it's flagged
 const DEVICE_SIGNUPS_PER_DAY = 5;
+const BROWSER_SIGNUPS_PER_DAY = 10;       // roomier: a class of identical school laptops shares one
 
 function deviceLabel(ua) {
   ua = String(ua || '');
@@ -410,21 +412,35 @@ async function signup(request, env) {
   const db = env.DB;
   const b = await body(request);
   const { name, password } = readCredentials(b);
-  const problem = nameProblem(name);
-  if (problem) fail(400, problem);
   const ip = ipOf(request);
   await limit(db, 'signup_try', ip, 'Too many sign-up attempts from this network. Try again in a few minutes.');
+  const keys = await deviceKeys(request, db);
+  const device = keys.find((k) => k[0] === 'd'), browser = keys.find((k) => k[0] === 'f');
+  if (!device || !browser) fail(400, 'Reload the page and try again.');          // the game always sends both
+  // The game checks names before sending them, so a rude one here comes from a
+  // bot or an edited game: three in a day and that device and browser can't
+  // make accounts until the day is up.
+  const who = [device.join(':'), browser.join(':')];
+  for (const w of who) {
+    const wait = await waitFor(db, 'rude_name', w);
+    if (wait) fail(429, 'This device can\'t make new accounts right now. Try again tomorrow.', { retry: wait });
+  }
+  const problem = nameProblem(name);
+  if (problem) {
+    if (isRude(name)) await db.batch(who.map((w) => hitRow(db, 'rude_name', w)));
+    fail(400, problem);
+  }
   const challengeId = await checkHuman(db, b);
   const t = nowS();
-  const keys = await deviceKeys(request, db);
-  const device = keys.find((k) => k[0] === 'd');
-  if (!device) fail(400, 'Reload the page and try again.');          // the game always sends one
   await checkBlocked(db, keys);
   const onDevice = await db.prepare(
     `SELECT COALESCE(SUM(a.banned), 0) AS banned, COALESCE(SUM(d.first_at > ?), 0) AS today
        FROM account_devices d JOIN accounts a ON a.id = d.account WHERE d.kind = 'd' AND d.value = ?`).bind(t - 86400, device[1]).first();
   if (onDevice.banned) fail(403, 'An account on this device is banned, so it can\'t make new ones.');
   if (onDevice.today >= DEVICE_SIGNUPS_PER_DAY) fail(429, 'This device has made a lot of accounts today. Try again tomorrow.');
+  const onBrowser = await db.prepare(`SELECT COUNT(*) AS n FROM account_devices WHERE kind = 'f' AND value = ? AND first_at > ?`)
+    .bind(browser[1], t - 86400).first();
+  if (onBrowser.n >= BROWSER_SIGNUPS_PER_DAY) fail(429, 'This browser has made a lot of accounts today. Try again tomorrow.');
   const [hour, day, everyone, taken] = (await db.batch([
     db.prepare('SELECT COUNT(*) AS n FROM signups WHERE ip = ? AND at > ?').bind(ip, t - 3600),
     db.prepare('SELECT COUNT(*) AS n FROM signups WHERE ip = ? AND at > ?').bind(ip, t - 86400),
