@@ -531,6 +531,17 @@ await admin({ a: 'rename', id: 'bob', name: 'bobby' });
 ok('rename', !!(await login('bobby', 'bobpass1')));
 ok('rename to a taken name refused', (await admin({ a: 'rename', id: 'bobby', name: 'alice' })).status === 409);
 await admin({ a: 'rename', id: 'bobby', name: 'bob' });
+r = await admin({ a: 'create_account', name: 'FriendOne', password: 'friendpass' });
+ok('admin creates an account', r.status === 200 && r.data.name === 'FriendOne' && typeof r.data.id === 'string', r.data);
+r = await call('POST', '/login', { name: 'friendone', password: 'friendpass' });
+ok('...which logs in with that password', r.status === 200 && r.data.me.name === 'FriendOne' && r.data.me.coins === 500, r.data);
+ok('...not a taken name', (await admin({ a: 'create_account', name: 'friendONE', password: 'friendpass' })).status === 409);
+ok('...not a rude one', (await admin({ a: 'create_account', name: 'NlGGER77', password: 'friendpass' })).status === 400);
+ok('...not a short password', (await admin({ a: 'create_account', name: 'FriendTwo', password: '123' })).status === 400);
+r = await admin({ a: 'log' });
+ok('the log names the account, never the password', r.data.entries.some((e) => e.target === 'FriendOne' && e.action === 'create_account') &&
+  !JSON.stringify(r.data.entries).includes('friendpass'));
+ok('players can\'t create accounts that way', (await call('POST', '/admin', { p: JSON.stringify({ a: 'create_account', name: 'Sneaky', password: 'sneakypass' }) }, a)).status === 403);
 ok('rename to a rude name refused', (await admin({ a: 'rename', id: 'bob', name: 'Sh1tHead' })).status === 400);
 ok('admins may use staff names', (await admin({ a: 'rename', id: 'bob', name: 'Moderator' })).status === 200);
 await admin({ a: 'rename', id: 'Moderator', name: 'bob' });

@@ -1682,6 +1682,21 @@ const ADMIN = {
       res.results.slice(0, 5).map((r) => ALL_ITEMS[r.idx].name).join(', ') + (res.results.length > 5 ? '…' : '')] };
   },
 
+  // Makes an account for someone, skipping the sign-up check and the device
+  // limits. The name rules still apply; the password never goes in the log.
+  async create_account(db, p) {
+    const { name, password } = readCredentials(p);
+    const problem = nameProblem(name);
+    if (problem) fail(400, problem);
+    if (await db.prepare('SELECT 1 FROM accounts WHERE name_lower = ?').bind(name.toLowerCase()).first()) fail(409, 'That username is taken');
+    const id = randomId(9), t = nowS();
+    const pass = await hashPassword(password, randomId(16), PBKDF2_ROUNDS);
+    await db.prepare('INSERT INTO accounts (id, name, name_lower, pass, created_at, last_seen, last_ping) VALUES (?, ?, ?, ?, ?, ?, ?)')
+      .bind(id, name, name.toLowerCase(), pass, t, t, t).run()
+      .catch((e) => { if (/UNIQUE/i.test(String(e && e.message))) fail(409, 'That username is taken'); throw e; });
+    return { id: id, name: name, log: [name, 'account created'] };
+  },
+
   async rename(db, p) {
     const a = await findAccount(db, p.id);
     const name = String(p.name || '').trim();

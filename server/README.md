@@ -61,7 +61,7 @@ Tabs:
   - **Banned accounts:** delete every banned account for good (type DELETE to confirm).
 
   Bulk actions never touch admin accounts.
-- **Players:** find anyone by username. For each player you can:
+- **Players:** find anyone by username, or **create an account** for a friend (pick the username and password, then send them both; it skips the sign-up check and device limits but still follows the name rules, and the password is never logged). For each player you can:
   - see their stats, recent trades and full inventory, and the devices, browsers and networks they've used, each with how many other accounts share it (click one to open it)
   - give, take or set coins
   - give any item (choose the wear, a tracker, and up to 100 at once)
