@@ -4005,9 +4005,14 @@
 
   // Always aim at an item that really exists in a drop table, so the quoted
   // multiplier is one the game can actually pay out.
+  // Holiday and event items (from cases with a season or sold in the Shop)
+  // only come from their own crates, never from the upgrader.
+  const NO_UPGRADE = {};
+  CASES.forEach((c) => { if (c.season || c.shop) c.items.forEach((it) => { NO_UPGRADE[it.name] = 1; }); });
+
   function pickTarget(stake, mult) {
     const wanted = stake * mult;
-    const candidates = ALL_ITEMS.filter((it) => it.value > stake * 1.05 && it.kind !== 'key' && it.kind !== 'crate');
+    const candidates = ALL_ITEMS.filter((it) => it.value > stake * 1.05 && it.kind !== 'key' && it.kind !== 'crate' && !NO_UPGRADE[it.name]);
     if (!candidates.length) return null;
     return candidates.reduce((best, it) =>
       Math.abs(it.value - wanted) < Math.abs(best.value - wanted) ? it : best, candidates[0]);

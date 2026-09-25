@@ -200,6 +200,9 @@ inv = (await me(a)).inventory;
 r = await call('POST', '/upgrade', { ids: [inv[0][0]], mult: 2 }, a);
 const after = (await me(a)).inventory;
 ok('upgrade resolves', r.status === 200 && typeof r.data.won === 'boolean' && r.data.chance > 0 && r.data.chance <= 0.9, r.data && { won: r.data.won, chance: r.data.chance });
+const limitedNames = new Set(core.CASES.filter((c) => c.season || c.shop).flatMap((c) => c.items.map((it) => it.name)));
+ok('upgrader never aims at holiday or event items', !limitedNames.has(core.ALL_ITEMS[r.data.target].name) &&
+  [5, 50, 500, 5000].every((v) => [1.5, 2, 10].every((m) => !limitedNames.has(core.pickTarget(v, m).name))));
 ok('stake consumed', !after.some((x) => x[0] === inv[0][0]) && after.length === inv.length - 1 + (r.data.won ? 1 : 0));
 if (r.data.won) ok('won the quoted target', core.ALL_ITEMS[r.data.item[1]].name === core.ALL_ITEMS[r.data.target].name);
 ok('upgrade with a gone item refused', (await call('POST', '/upgrade', { ids: [inv[0][0]], mult: 2 }, a)).status === 409);
