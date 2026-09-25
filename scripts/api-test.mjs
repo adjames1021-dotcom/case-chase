@@ -189,6 +189,11 @@ r = await call('POST', '/open', { case_id: 'scrap' }, b);
 ok('free case', r.status === 200 && r.data.me.coins === 500);
 r = await call('POST', '/open', { case_id: 'scrap', count: 5 }, b);
 ok('free case: no cooldown, x5 at once', r.status === 200 && r.data.items.length === 5, r.status);
+const clicker = (await call('POST', '/signup', { name: 'autoclick', password: 'clickpass' })).data.token;
+const clicks = [];
+for (let i = 0; i < 14; i++) clicks.push((await call('POST', '/open', { case_id: 'scrap', count: 5 }, clicker)).status);
+const firstSlow = clicks.indexOf(429);
+ok('auto-clicking cases slows down after about 60 a minute', firstSlow >= 11 && firstSlow <= 13, clicks);
 ok('keyed case needs a crate and key', (await call('POST', '/open', { case_id: 'launch' }, b)).status === 409);
 await call('POST', '/open', { case_id: 'starter', count: 5 }, b);
 
@@ -472,9 +477,11 @@ let lb = (await call('GET', '/leaderboard?sort=opened')).data.players;
 ok('leaderboard sorted by cases', lb.length >= 3 && lb.every((p, i) => i === 0 || lb[i - 1].opened >= p.opened), lb.map((p) => p.name + ':' + p.opened));
 ok('sort cannot inject', (await call('GET', '/leaderboard?sort=' + encodeURIComponent('x; DROP TABLE accounts'))).status === 200);
 r = await call('POST', '/ping', null, a);
+const playedBefore = r.data.me.played;
 await sleep(1100);
 r = await call('POST', '/ping', null, a);
-ok('ping counts played time', r.data.me.played >= 1, r.data.me.played);
+// Played time is saved every couple of minutes, not on every ping, to save database writes.
+ok('quick pings don\'t write played time', r.status === 200 && r.data.me.played === playedBefore, [playedBefore, r.data.me.played]);
 
 if (ADMIN.d) {
 /* ---- admin ---- */

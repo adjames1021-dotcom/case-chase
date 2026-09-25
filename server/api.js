@@ -94,12 +94,12 @@ let permanentAdmins = new Set();
 const isPermanentAdmin = (id) => permanentAdmins.has(id);
 // The owner's accounts keep a list of the network addresses they're used
 // from (owner_access): sign-ins, wrong passwords, and the heartbeat of a
-// session already signed in (at most once a minute per address).
+// session already signed in (at most once every 5 minutes per address).
 const ownerAccess = (db, request, account, what) => db.prepare(
   `INSERT INTO owner_access (account, ip, label, first_at, last_at, logins, fails) VALUES (?, ?, ?, ?, ?, ?, ?)
      ON CONFLICT (account, ip) DO UPDATE SET last_at = excluded.last_at, label = excluded.label,
        logins = owner_access.logins + excluded.logins, fails = owner_access.fails + excluded.fails
-     WHERE excluded.logins + excluded.fails > 0 OR owner_access.last_at < excluded.last_at - 60`)
+     WHERE excluded.logins + excluded.fails > 0 OR owner_access.last_at < excluded.last_at - 300`)
   .bind(account, ipOf(request), deviceLabel(request.headers.get('User-Agent')), nowS(), nowS(),
         what === 'login' ? 1 : 0, what === 'fail' ? 1 : 0);
 
@@ -257,10 +257,12 @@ const QUICK_LIMITS = {                    // requests a minute, and how many can
   read:    { rate: 1500, burst: 400 },
   write:   { rate: 1500, burst: 400 },
   admin:   { rate: 600,  burst: 200 },
-  account: { rate: 240,  burst: 80 }      // anything logged in, per account
+  account: { rate: 240,  burst: 80 },     // anything logged in, per account
+  opens:   { rate: 40,   burst: 60 }      // cases opened a minute, per account (an auto-clicker could use up the database's daily writes)
 };
 let buckets = new Map();
-function quickLimit(key, rule) {
+function quickLimit(key, rule, cost) {
+  cost = cost || 1;
   const now = Date.now();
   let b = buckets.get(key);
   if (!b) {
@@ -270,8 +272,8 @@ function quickLimit(key, rule) {
   }
   b.left = Math.min(rule.burst, b.left + (now - b.at) * rule.rate / 60000);
   b.at = now;
-  if (b.left < 1) fail(429, 'Slow down a little and try again.', { retry: Math.ceil((1 - b.left) * 60 / rule.rate) });
-  b.left -= 1;
+  if (b.left < cost) fail(429, 'Slow down a little and try again.', { retry: Math.ceil((cost - b.left) * 60 / rule.rate) });
+  b.left -= cost;
 }
 
 const LIMITS = {                          // [how many, in how many seconds]
@@ -526,7 +528,7 @@ async function authed(request, env) {
     return null;
   }
   if (row.banned) fail(403, 'banned', { reason: await banReason(env.DB, row.id) });
-  if (t - row.s_used > 600 || t - row.last_seen > 60) {
+  if (t - row.s_used > 600 || t - row.last_seen > 120) {
     await env.DB.batch([
       env.DB.prepare('UPDATE sessions SET last_used = ? WHERE token_hash = ?').bind(t, hash),
       env.DB.prepare('UPDATE accounts SET last_seen = ? WHERE id = ?').bind(t, row.id)
@@ -542,10 +544,14 @@ async function ping(request, env, me) {
   const t = nowS();
   await env.DB.batch(recordDevices(env.DB, me.id, await deviceKeys(request, env.DB), request)
     .concat(isPermanentAdmin(me.id) ? [ownerAccess(env.DB, request, me.id, 'seen')] : []));
-  // Adds the time since the last ping, as long as the game has been pinging steadily.
-  await env.DB.prepare(
-    `UPDATE accounts SET played = played + CASE WHEN ? - last_ping BETWEEN 1 AND 120 THEN ? - last_ping ELSE 0 END,
-            last_ping = ?, last_seen = ? WHERE id = ?`).bind(t, t, t, t, me.id).run();
+  // Adds the time since the last saved ping, as long as the game has been
+  // pinging steadily. Saved every couple of minutes, not every ping: each
+  // save is several database row writes, and the free plan counts them.
+  if (t - me.last_ping >= 110 || t < me.last_ping) {
+    await env.DB.prepare(
+      `UPDATE accounts SET played = played + CASE WHEN ? - last_ping BETWEEN 1 AND 300 THEN ? - last_ping ELSE 0 END,
+              last_ping = ?, last_seen = ? WHERE id = ?`).bind(t, t, t, t, me.id).run();
+  }
   const pending = await env.DB.prepare(`SELECT COUNT(*) AS n FROM offers WHERE to_id = ? AND status = 'pending'`).bind(me.id).first();
   return json(Object.assign({ me: await meFull(env.DB, await account(env.DB, me.id)), pending: pending.n, sold: await newSales(env.DB, me),
     invites: await myInvites(env.DB, me) }, await perks(env.DB, me)));
@@ -660,6 +666,7 @@ async function openCase(request, env, me) {
   if (!box.locked && !onSale(box, await activeSeasons(env))) fail(409, box.name + ' is only sold around ' + SEASONS[box.season].name);
   const free = box.price === 0 && !box.locked;
   let count = isInt(b.count, 1, 5) ? b.count : 1;
+  quickLimit('opens:' + me.id, QUICK_LIMITS.opens, count);
   if (me.inv_count + count * 3 > MAX_ITEMS) fail(409, 'Your inventory is full. Sell something first.');
   const t = Date.now(), ts = nowS();
   const stmts = [];
@@ -983,7 +990,7 @@ async function offerAction(id, action, env, me) {
       db.prepare('UPDATE accounts SET coins = coins - ? WHERE id = ?').bind(o.want_coins, me.id),
       db.prepare('UPDATE items SET owner = ? WHERE owner = ? AND locked IS NULL AND id IN (SELECT value FROM json_each(?))')
         .bind(o.from_id, me.id, wantIds),
-      db.prepare('UPDATE items SET owner = ?, locked = NULL WHERE locked = ?').bind(me.id, tag),
+      db.prepare('UPDATE items SET owner = ?, locked = NULL WHERE owner = ? AND locked = ?').bind(me.id, o.from_id, tag),
       db.prepare('UPDATE accounts SET coins = coins + ? WHERE id = ?').bind(o.give_coins, me.id),
       db.prepare('UPDATE accounts SET coins = coins + ? WHERE id = ?').bind(o.want_coins, o.from_id),
       db.prepare(`UPDATE offers SET status = 'accepted', updated_at = ? WHERE id = ?`).bind(t, id)
@@ -993,7 +1000,7 @@ async function offerAction(id, action, env, me) {
     if (action === 'cancel' && o.from_id !== me.id) fail(403, 'Only the sender can cancel');
     await transact(db, [
       isPending,
-      db.prepare('UPDATE items SET locked = NULL WHERE locked = ?').bind(tag),
+      db.prepare('UPDATE items SET locked = NULL WHERE owner = ? AND locked = ?').bind(o.from_id, tag),
       db.prepare('UPDATE accounts SET coins = coins + ? WHERE id = ?').bind(o.give_coins, o.from_id),
       db.prepare('UPDATE offers SET status = ?, updated_at = ? WHERE id = ?').bind(action === 'decline' ? 'declined' : 'cancelled', t, id)
     ]);
@@ -1308,7 +1315,7 @@ async function listingAction(id, action, env, me) {
     if (l.seller !== me.id) fail(403, 'Only the seller can take it down');
     await transact(db, [
       isOpen,
-      db.prepare('UPDATE items SET locked = NULL WHERE locked = ?').bind(tag),
+      db.prepare('UPDATE items SET locked = NULL WHERE id = ? AND locked = ?').bind(l.item, tag),
       db.prepare(`UPDATE listings SET status = 'cancelled', updated_at = ? WHERE id = ?`).bind(t, id)
     ]);
   } else {
@@ -1331,7 +1338,7 @@ async function newSales(db, me) {
 // Takes down listings (admin, bans, deleted accounts): the items go back to their owners.
 const listingCancel = (db, l, t) => [
   check(db, `(SELECT status FROM listings WHERE id = ?) = 'open'`, l.id),
-  db.prepare('UPDATE items SET locked = NULL WHERE locked = ?').bind('m:' + l.id),
+  db.prepare('UPDATE items SET locked = NULL WHERE id = ? AND locked = ?').bind(l.item, 'm:' + l.id),
   db.prepare(`UPDATE listings SET status = 'cancelled', updated_at = ? WHERE id = ?`).bind(t, l.id)
 ];
 
@@ -1441,7 +1448,7 @@ async function changePassword(request, env, me) {
 
 const offerRefund = (db, o, status, t) => [
   check(db, `(SELECT status FROM offers WHERE id = ?) = 'pending'`, o.id),
-  db.prepare('UPDATE items SET locked = NULL WHERE locked = ?').bind('o:' + o.id),
+  db.prepare('UPDATE items SET locked = NULL WHERE owner = ? AND locked = ?').bind(o.from_id, 'o:' + o.id),
   db.prepare('UPDATE accounts SET coins = coins + ? WHERE id = ?').bind(o.give_coins, o.from_id),
   db.prepare('UPDATE offers SET status = ?, updated_at = ? WHERE id = ?').bind(status, t, o.id)
 ];
@@ -2132,9 +2139,14 @@ export default {
         return json(Object.assign({ error: err.message }, err.extra || {}), err.status, retry ? { 'Retry-After': String(retry) } : null);
       }
       console.error(err && err.stack || err);
-      // Database errors carry a short reason (never data), so an outage can be told apart from a bug.
-      const msg = String(err && err.message || '');
-      return json(Object.assign({ error: 'Server error' }, /D1_|SQLITE/i.test(msg) ? { reason: msg.slice(0, 160) } : {}), 500);
+      // The free database plan allows so many row writes a day (reset at
+      // midnight UTC). Past that nothing can be saved: say so plainly.
+      if (/exceeded.*daily.*limit/i.test(String(err && err.message))) {
+        const left = Math.ceil((86400 - (nowS() % 86400)) / 3600);
+        return json({ error: 'The game\'s server hit its daily limit, so nothing can be saved right now. It resets in about ' + left +
+          ' hour' + (left === 1 ? '' : 's') + ' (midnight UTC).', limit: true }, 503);
+      }
+      return json({ error: 'Server error' }, 500);
     }
   }
 };
