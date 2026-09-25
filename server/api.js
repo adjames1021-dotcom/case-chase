@@ -25,6 +25,7 @@
     POST /api/ping             auth  counts time played   -> { me, pending }
     POST /api/open             auth  { case_id, count }
     POST /api/sell             auth  { ids }
+    POST /api/shop             auth  { case_id, what: 'crate' | 'key', count }
     POST /api/upgrade          auth  { ids, mult }
     POST /api/gift             auth  { code }
     GET  /api/leaderboard            ?sort=value|best|opened|played&limit=1..200
@@ -683,6 +684,30 @@ async function openCase(request, env, me) {
     me: meOut(await account(db, me.id)),
     items: sorted(res[pullAt]), bonus: bonusAt >= 0 ? sorted(res[bonusAt]) : [], removed: removed
   });
+}
+
+// The Shop: crates and keys go into the inventory like any item, so they can
+// be traded, listed or opened later. Crates only sell in their season; keys always do.
+async function buyShop(request, env, me) {
+  const db = env.DB;
+  const b = await body(request);
+  const box = CASES.find((c) => c.id === b.case_id && c.shop);
+  if (!box || (b.what !== 'crate' && b.what !== 'key')) fail(400, 'Unknown shop item. Update your game.');
+  if (b.what === 'crate' && box.season && (await activeSeasons(env)).indexOf(box.season) < 0) {
+    fail(409, box.crate + ' crates are only sold around ' + SEASONS[box.season].name);
+  }
+  const count = isInt(b.count, 1, 10) ? b.count : 1;
+  if (me.inv_count + count > MAX_ITEMS) fail(409, 'Your inventory is full. Sell something first.');
+  const base = ALL_ITEMS[ITEM_INDEX[b.what === 'crate' ? box.crate : box.key]];
+  const cost = box.shop[b.what] * count;
+  if (me.coins < cost) fail(409, 'Not enough coins');
+  const rows = [];
+  for (let i = 0; i < count; i++) rows.push(itemRow(instantiate(base, rand)));
+  const ts = nowS();
+  const stmts = [db.prepare('UPDATE accounts SET coins = coins - ?, last_seen = ? WHERE id = ?').bind(cost, ts, me.id)];
+  const at = stmts.push(insertItems(db, me.id, rows, ts)) - 1;
+  const res = await transact(db, stmts);
+  return json({ me: meOut(await account(db, me.id)), items: sorted(res[at]) });
 }
 
 async function sell(request, env, me) {
@@ -2030,6 +2055,7 @@ export default {
       if (method === 'POST') await openForBusiness(env);
       if (method === 'POST' && a === 'open') return await openCase(request, env, me);
       if (method === 'POST' && a === 'sell') return await sell(request, env, me);
+      if (method === 'POST' && a === 'shop') return await buyShop(request, env, me);
       if (method === 'POST' && a === 'upgrade') return await upgrade(request, env, me);
       if (method === 'POST' && a === 'gift') return await gift(request, env, me);
       if (method === 'POST' && a === 'offers' && !b) return await createOffer(request, env, me);

@@ -174,7 +174,7 @@ r = await call('POST', '/open', { case_id: 'scrap' }, b);
 ok('free case', r.status === 200 && r.data.me.coins === 500);
 r = await call('POST', '/open', { case_id: 'scrap', count: 5 }, b);
 ok('free case: no cooldown, x5 at once', r.status === 200 && r.data.items.length === 5, r.status);
-ok('holiday case not sold out of season', (await call('POST', '/open', { case_id: core.CASES.find((c) => c.season && !c.locked && core.seasonsOn(new Date(), {}).indexOf(c.season) < 0).id }, b)).status === 409);
+ok('keyed case needs a crate and key', (await call('POST', '/open', { case_id: 'launch' }, b)).status === 409);
 await call('POST', '/open', { case_id: 'starter', count: 5 }, b);
 
 // Racing purchases can never overdraw.
@@ -619,24 +619,45 @@ ok('the heartbeat notices it', (await call('POST', '/ping', null, mt)).data.me.a
 
 
   /* ---- holiday seasons and presents ---- */
-  const offSeason = core.CASES.find((c) => c.season && !c.locked && core.seasonsOn(new Date(), {}).indexOf(c.season) < 0);
+  const offSeason = core.CASES.find((c) => c.season && c.shop && core.seasonsOn(new Date(), {}).indexOf(c.season) < 0);
   const holT = (await call('POST', '/signup', { name: 'festive', password: 'festpass' })).data.token;
   await admin({ a: 'coins', id: 'festive', set: 100000 });
-  ok('season off by the calendar', (await call('POST', '/open', { case_id: offSeason.id }, holT)).status === 409);
+  const buy = (case_id, what, count, t) => call('POST', '/shop', { case_id, what, count }, t || holT);
+  ok('holiday crate not sold out of season', (await buy(offSeason.id, 'crate', 1)).status === 409);
+  r = await buy(offSeason.id, 'key', 2);
+  ok('keys sell all year', r.status === 200 && r.data.items.length === 2 && r.data.me.coins === 100000 - 2 * offSeason.shop.key &&
+    r.data.items.every((row) => core.ALL_ITEMS[row[1]].name === offSeason.key), r.data);
+  ok('shop refuses unknown things', (await buy('starter', 'crate', 1)).status === 400 && (await buy(offSeason.id, 'skin', 1)).status === 400);
   const sw = {}; sw[offSeason.season] = 'on';
   await admin({ a: 'settings', seasons: sw });
   ok('config reports the season on', (await call('GET', '/config')).data.seasons.indexOf(offSeason.season) >= 0);
-  r = await call('POST', '/open', { case_id: offSeason.id, count: 2 }, holT);
-  ok('admin switches a season on: its case sells', r.status === 200 && r.data.items.length === 2 && r.data.me.coins === 100000 - 2 * offSeason.price, r.status);
-  r = await call('POST', '/battles', { case_id: offSeason.id, rounds: 1, max_players: 2, mode: 'high', version: core.GAME_VERSION }, holT);
-  ok('...and battles with it', r.status === 200, r.data);
-  if (r.status === 200) await call('POST', '/battles/' + r.data.id + '/leave', null, holT);
+  r = await buy(offSeason.id, 'crate', 3);
+  ok('admin switches a season on: its crates sell', r.status === 200 && r.data.items.length === 3 &&
+    r.data.me.coins === 100000 - 2 * offSeason.shop.key - 3 * offSeason.shop.crate, r.status);
+  ok('keyed cases are not bought or battled directly', (await call('POST', '/open', { case_id: offSeason.id, count: 1 }, holT)).status === 200 &&
+    (await call('POST', '/battles', { case_id: offSeason.id, rounds: 1, max_players: 2, mode: 'high', version: core.GAME_VERSION }, holT)).status === 400);
   sw[offSeason.season] = 'off';
   await admin({ a: 'settings', seasons: sw });
-  ok('switched off again', (await call('POST', '/open', { case_id: offSeason.id }, holT)).status === 409);
+  ok('switched off: no crates sold', (await buy(offSeason.id, 'crate', 1)).status === 409);
+  const coinsNow = (await me(holT)).me.coins;
+  r = await call('POST', '/open', { case_id: offSeason.id, count: 5 }, holT);
+  ok('held crates still open out of season, one key each', r.status === 200 && r.data.items.length === 1 && r.data.removed.length === 2 &&
+    r.data.me.coins === coinsNow && r.data.items.every((row) => offSeason.items.some((it) => it.name === core.ALL_ITEMS[row[1]].name)), r.data);
+  const spare = (await me(holT)).inventory.filter((x) => core.ALL_ITEMS[x[1]].name === offSeason.crate);
+  ok('the spare crate stays, no key left', spare.length === 1 && (await call('POST', '/open', { case_id: offSeason.id }, holT)).status === 409);
+  const F = (await call('POST', '/signup', { name: 'crateguy', password: 'cratepass' })).data, friend = F.token;
+  r = await call('POST', '/offers', { to: F.me.id, give: [spare[0][0]] }, holT);
+  if (r.status === 200) r = await call('POST', '/offers/' + r.data.id + '/accept', null, friend);
+  ok('crates can be traded', r.status === 200 && (await me(friend)).inventory.some((x) => x[0] === spare[0][0]), r.data);
   sw[offSeason.season] = 'auto';
   await admin({ a: 'settings', seasons: sw });
   ok('back to the calendar', JSON.stringify((await call('GET', '/config')).data.season_modes) === '{}');
+  r = await buy('launch', 'crate', 10);
+  ok('launch crates sell all year, up to 10 at once', r.status === 200 && r.data.items.length === 10, r.data);
+  ok('...and a bad count buys one', (await buy('launch', 'key', 11)).status === 200 && (await me(holT)).inventory.filter((x) => core.ALL_ITEMS[x[1]].name === 'Launch Key').length === 1);
+  const broke = (await call('POST', '/signup', { name: 'brokeguy', password: 'brokepass' })).data.token;
+  r = await buy('launch', 'crate', 2, broke);
+  ok('no overdraw in the shop', r.status === 409 && (await me(broke)).me.coins === 500, r.data);
   ok('no present, no opening', (await call('POST', '/open', { case_id: 'present' }, holT)).status === 409);
   await admin({ a: 'give', id: 'festive', idx: core.ITEM_INDEX['Frosty Present'], wear: -1, tracker: 0, count: 2 });
   const presentBox = core.CASES.find((c) => c.id === 'present');

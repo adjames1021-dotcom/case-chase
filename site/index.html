@@ -677,6 +677,26 @@
   .case-card { position: relative; }
   .case-season { position: absolute; top: 10px; left: 10px; z-index: 2; font-family: var(--cond); font-size: 10px; font-weight: 700;
                  letter-spacing: 1.2px; text-transform: uppercase; padding: 2px 8px; background: rgba(216,40,58,.85); color: #fff; }
+  .shop-note { margin: 4px 0 0; max-width: 620px; font-size: 12.5px; color: var(--ink-2); }
+  .shop-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 14px; }
+  .shop-card { position: relative; }
+  .shop-card.seasonal { padding-top: 34px; }
+  .shop-card:hover { transform: none; }
+  .shop-card .case-sub { margin-bottom: 8px; }
+  .shop-line { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-top: 1px solid var(--line); }
+  .shop-art { width: 84px; height: 60px; flex: 0 0 84px; display: grid; place-items: center; }
+  .shop-art svg, .shop-art img { width: 100%; height: 100%; object-fit: contain; }
+  .shop-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+  .shop-info b { font-size: 13px; }
+  .shop-info small { font-size: 11px; color: var(--ink-3); }
+  .shop-line .btn { min-width: 96px; }
+  .shop-card .link-btn { align-self: flex-start; margin-top: 6px; }
+  .case-tag, .yr-badge {
+    background: #2f6fe0; color: #fff; font-family: var(--cond); font-weight: 700; letter-spacing: 1px;
+  }
+  .case-tag { position: absolute; top: 10px; right: 10px; z-index: 2; font-size: 10px; padding: 2px 8px; }
+  .yr-badge { position: absolute; top: 6px; left: 6px; z-index: 2; font-size: 9px; padding: 2px 5px; }
+  .yr-badge.shift { left: 40px; }
   .case-price.need { font-size: 12px; font-weight: 600; color: var(--ink-2); font-family: inherit; }
   .case-price.need b { color: var(--gold); font-weight: 800; }
   .item.bonus { box-shadow: 0 0 0 1px var(--gold), 0 0 22px rgba(240,166,42,.3); }
@@ -1193,6 +1213,7 @@
   </div>
   <nav class="rail-nav">
       <button class="tab active" data-tab="cases" title="Cases"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8l9-4 9 4v8l-9 4-9-4z"/><path d="M3 8l9 4 9-4"/><path d="M12 12v8"/></svg><span>Cases</span></button>
+      <button class="tab" data-tab="shop" title="Shop"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 8h14l-1.1 11.1a1 1 0 0 1-1 .9H7.1a1 1 0 0 1-1-.9z"/><path d="M9 10V6.5a3 3 0 0 1 6 0V10"/></svg><span>Shop</span></button>
       <button class="tab" data-tab="inventory" title="Inventory"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="3.5" width="7" height="7" rx="1"/><rect x="13.5" y="3.5" width="7" height="7" rx="1"/><rect x="3.5" y="13.5" width="7" height="7" rx="1"/><rect x="13.5" y="13.5" width="7" height="7" rx="1"/></svg><span data-short="Items">Inventory</span><i class="pill" id="inv-count">0</i></button>
       <button class="tab" data-tab="upgrader" title="Upgrader"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="M12 16V8"/><path d="M8.5 11.5L12 8l3.5 3.5"/></svg><span data-short="Upgrade">Upgrader</span></button>
       <button class="tab" data-tab="trade" title="Trade"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h14"/><path d="M15 4.5L18.5 8 15 11.5"/><path d="M20 16H6"/><path d="M9 12.5L5.5 16 9 19.5"/></svg><span>Trade</span><i class="pill" id="trade-count" style="display:none">0</i></button>
@@ -1257,6 +1278,22 @@
       </div>
     </div>
     <div class="case-grid" id="case-grid"></div>
+  </section>
+
+  <section class="panel" id="panel-shop">
+    <div class="section-head">
+      <div>
+        <h2>Shop</h2>
+        <p class="shop-note">Crates and keys go to your inventory, where you can trade them, list them on the market, or open a crate with its key. Holiday crates are only sold in their season; keys are sold all year.</p>
+      </div>
+      <div class="toolbar" style="margin:0">
+        <span class="label">Buy</span>
+        <button class="chip active" data-shopcount="1">x1</button>
+        <button class="chip" data-shopcount="5">x5</button>
+        <button class="chip" data-shopcount="10">x10</button>
+      </div>
+    </div>
+    <div class="shop-grid" id="shop-grid"></div>
   </section>
 
   <section class="panel" id="panel-inventory">
@@ -2347,12 +2384,13 @@
       wheat: 'M19,12 L21,12 L21,38 L19,38 Z M20,2 L23.5,7 L20,11 L16.5,7 Z M13,11 L19,14 L19,19 L13,17 Z M27,11 L21,14 L21,19 L27,17 Z ' +
         'M13,19 L19,22 L19,27 L13,25 Z M27,19 L21,22 L21,27 L27,25 Z',
       tree: 'M20,2 L28,12 L24,12 L32,21 L27,21 L36,32 L4,32 L13,21 L8,21 L16,12 L12,12 Z M17,32 L23,32 L23,38 L17,38 Z',
+      rocket: 'M20,2 Q30,10 28,25 L33,33 L26,33 L24,29 L16,29 L14,33 L7,33 L12,25 Q10,10 20,2 Z' + circ(20, 15, 4),
       gift: 'M5,15 L35,15 L35,22 L5,22 Z M7,22 L33,22 L33,37 L7,37 Z M18,15 L22,15 L22,37 L18,37 Z ' +
         'M20,15 Q9,3 7,10 Q6,15 20,15 Z M20,15 Q31,3 33,10 Q34,15 20,15 Z'
     };
 
     // Emblems drawn with cut-out rings or holes (even-odd fill).
-    const HOLED_EMBLEMS = { dial: 1, peel: 1, coin: 1, target: 1, hex: 1, pumpkin: 1 };
+    const HOLED_EMBLEMS = { dial: 1, peel: 1, coin: 1, target: 1, hex: 1, pumpkin: 1, rocket: 1 };
 
     const crateInfo = {};
     function registerCrates(list) {
@@ -2390,10 +2428,11 @@
       };
     }
 
-    function keyModel() {
+    function keyModel(item) {
+      const info = crateInfo[item.name] || {};
       return {
         box: '0 -6 240 132', shadow: [124, 116, 98, 4], rot: [-14, 120, 60],
-        look: { hex: '#d8a92e', finish: 'solid', l: 50 },
+        look: { hex: info.accent || '#d8a92e', finish: 'solid', l: 50 },
         parts: [
           { d: circ(58, 60, 31) + circ(58, 60, 13), m: 'skin', rule: 1 },
           { d: rr(86, 53, 118, 14, 5), m: 'skin' },
@@ -3104,7 +3143,7 @@
      Bump GAME_VERSION whenever items, cases or odds change.
      ====================================================================== */
 
-  const GAME_VERSION = 3;
+  const GAME_VERSION = 4;
 
   function hashString(str) {
     let h = 2166136261;
@@ -3175,7 +3214,8 @@
       ]
     },
     {
-      id: 'hollow', name: 'Haunted Hollow', sub: 'Only around Halloween', price: 666, season: 'halloween',
+      id: 'hollow', name: 'Haunted Hollow', sub: 'Crates sold around Halloween', price: 0, season: 'halloween', tag: '2026',
+      locked: true, crate: 'Haunted Hollow', key: 'Hollow Key', shop: { crate: 466, key: 200 },
       accent: '#ff7a1a', odds: ODDS.t3,
       items: [
         I('P-22 | Candy Corn', 'pistol', 'common', 124, 3),
@@ -3194,7 +3234,8 @@
       ]
     },
     {
-      id: 'harvest', name: 'Harvest Crate', sub: 'Only around Thanksgiving', price: 450, season: 'thanksgiving',
+      id: 'harvest', name: 'Harvest Crate', sub: 'Crates sold around Thanksgiving', price: 0, season: 'thanksgiving', tag: '2026',
+      locked: true, crate: 'Harvest Crate', key: 'Harvest Key', shop: { crate: 300, key: 150 },
       accent: '#c8702a', odds: ODDS.t3,
       items: [
         I('P-22 | Hayride', 'pistol', 'common', 91, 3),
@@ -3213,7 +3254,8 @@
       ]
     },
     {
-      id: 'wonder', name: 'Winter Wonder', sub: 'Only around Christmas', price: 1225, season: 'christmas',
+      id: 'wonder', name: 'Winter Wonder', sub: 'Crates sold around Christmas', price: 0, season: 'christmas', tag: '2026',
+      locked: true, crate: 'Winter Wonder', key: 'Winter Key', shop: { crate: 925, key: 300 },
       accent: '#d8283a', odds: ODDS.t4, bonusItem: 'Frosty Present', bonusChance: .02,
       items: [
         I('SP-5 | Tinsel', 'smg', 'common', 214, 3),
@@ -3688,6 +3730,27 @@
       ]
     },
     {
+      // Sold in the Shop all year: a crate and a key.
+      id: 'launch', name: 'Launch Crate', sub: 'Celebrating launch', price: 0,
+      locked: true, crate: 'Launch Crate', key: 'Launch Key', shop: { crate: 350, key: 150 },
+      accent: '#3f8cff', odds: ODDS.t3,
+      items: [
+        I('P-22 | Countdown', 'pistol', 'common', 100, 4),
+        I('SP-5 | Ignition', 'smg', 'common', 113, 4),
+        I('AR-12 | Liftoff', 'rifle_m4', 'common', 128, 4),
+        I('Hand Wraps | Mission Patch', 'gloves', 'uncommon', 224, 4),
+        I('Sticker | Day One', 'sticker', 'uncommon', 255, 4),
+        I('HX-45 | Launch Pad', 'pistol', 'uncommon', 286, 4),
+        I('KR-74 | Afterburner', 'rifle_ak', 'rare', 561, 4),
+        I('Charm | Tiny Rocket', 'charm', 'rare', 636, 4),
+        I('LR-800 | Stratosphere', 'sniper', 'rare', 713, 4),
+        I('AWS-7 | Escape Velocity', 'sniper', 'epic', 1580, 4),
+        I('Bayonet | Payload', 'knife_bayonet', 'epic', 1815, 4),
+        I('Butterfly Knife | Main Engine', 'knife_butterfly', 'legendary', 5665, 4),
+        I('Karambit | Maiden Voyage', 'knife_karambit', 'mythic', 21230, 4)
+      ]
+    },
+    {
       id: 'vault', name: 'Vault Case', sub: '', price: 0, locked: true, crate: 'Vault Case', key: 'Vault Key',
       accent: '#c9a227', odds: ODDS.t6,
       items: [
@@ -3709,7 +3772,7 @@
     {
       // Can't be bought: presents come from rewards, gifts and Winter Wonder cases, and open without a key.
       id: 'present', name: 'Frosty Present', sub: 'A gift, not for sale', price: 0, locked: true, crate: 'Frosty Present',
-      unit: 'present', season: 'christmas',
+      unit: 'present', season: 'christmas', tag: '2026',
       accent: '#3aa0d8', odds: ODDS.t4,
       items: [
         I('P-22 | Hot Cocoa', 'pistol', 'common', 60, 3),
@@ -3735,7 +3798,10 @@
   const SPECIAL_ITEMS = [VAULT_KEY, VAULT_CRATE];
   // Crates added later go through the case list's `since` ordering like any other item.
   const PRESENT_CRATE = I('Frosty Present', 'crate', 'legendary', 250, 3);
-  const CRATE_ITEMS = [PRESENT_CRATE];
+  // The crates and keys the Shop sells (cases with a `shop`), worth what they cost.
+  const SHOP_ITEMS = CASES.filter((c) => c.shop).reduce((acc, c) =>
+    acc.concat([I(c.crate, 'crate', 'epic', c.shop.crate, 4), I(c.key, 'key', 'legendary', c.shop.key, 4)]), []);
+  const CRATE_ITEMS = [PRESENT_CRATE].concat(SHOP_ITEMS);
   // Every item in a fixed order. Saved items point at their position here, so
   // the list only ever grows: items added after launch (the ones with a
   // `since`) always come after everything older, wherever they sit in a case.
@@ -3750,9 +3816,18 @@
   const ITEM_INDEX = {};
   ALL_ITEMS.forEach((it, i) => { if (ITEM_INDEX[it.name] == null) ITEM_INDEX[it.name] = i; });
 
+  // Items from cases with a `tag` (the 2026 holidays), and their crates and keys, wear that tag.
+  const ITEM_TAG = {};
+  CASES.forEach((c) => {
+    if (c.tag) c.items.map((it) => it.name).concat(c.crate || [], c.key || []).forEach((n) => { ITEM_TAG[n] = c.tag; });
+  });
+
+  // What one opening costs: the price, or a Shop crate and key together.
+  const casePrice = (box) => box.shop ? box.shop.crate + box.shop.key : box.price;
+
   // Chance per paid case of each bonus drop. Scales with price and caps low,
   // so the vault never pushes a case's return over its price.
-  const bonusChance = (box) => box.price > 0 ? Math.min(0.03, 0.0015 + box.price / 60000) : 0;
+  const bonusChance = (box) => casePrice(box) > 0 ? Math.min(0.03, 0.0015 + casePrice(box) / 60000) : 0;
 
   // The case's own extra bonus drop, if it has one (Winter Wonder can drop a Frosty Present).
   const caseBonus = (box) => box.bonusItem ? ALL_ITEMS[ITEM_INDEX[box.bonusItem]] : null;
@@ -3797,13 +3872,13 @@
     const rest = 1 - (base.common || 0);
     const up = RARITIES.slice(1).reduce((sum, r) => sum + (base[r] || 0) * worth[r], 0);
     const extra = 2 * bonusChance(box) * VAULT_KEY.value + (bonus ? box.bonusChance * bonus.value : 0);
-    const want = returnTarget(box.price) * box.price - extra;
+    const want = returnTarget(casePrice(box)) * casePrice(box) - extra;
     const k = Math.max(0.2, Math.min(0.98 / rest, (want - worth.common) / (up - worth.common * rest)));
     const odds = { common: 1 - k * rest };
     RARITIES.slice(1).forEach((r) => { odds[r] = (base[r] || 0) * k; });
     return odds;
   }
-  CASES.forEach((box) => { if (box.price > 0 && !box.locked) box.odds = tuneOdds(box); });
+  CASES.forEach((box) => { if (box.price > 0 || box.shop) box.odds = tuneOdds(box); });
 
   /* ---------- holiday seasons ---------- */
 
@@ -4035,9 +4110,11 @@
     obsidian: 'gem', blades: 'dagger', prism: 'prism', chroma: 'flask', apex: 'crown', vanguard: 'shield', vault: 'dial',
     pocket: 'coin', backyard: 'target', arcade: 'pixel', harbor: 'anchor', frontier: 'hat', glacier: 'flake',
     canopy: 'leaf', reactor: 'hex', gala: 'mask', storm: 'cloud', emberforge: 'flame', celestial: 'moon', sovereign: 'diamond',
-    hollow: 'pumpkin', harvest: 'wheat', wonder: 'tree', present: 'gift'
+    hollow: 'pumpkin', harvest: 'wheat', wonder: 'tree', present: 'gift', launch: 'rocket'
   };
   ART.registerCrates(CASES.map((c) => ({ name: c.name, accent: c.accent, emblem: CASE_EMBLEMS[c.id] })));
+  // Shop keys take their case's colour (the Vault Key stays gold).
+  ART.registerCrates(CASES.filter((c) => c.shop).map((c) => ({ name: c.key, accent: c.accent })));
 
   /* =========================================================
      State
@@ -4145,6 +4222,7 @@
     return '<div class="item ' + (extra || '') + '" style="--rc:' + RARITY_COLOR[item.rarity] +
         '" title="' + tip + '">' +
       (item.tracker ? '<span class="st-badge">TRK</span>' : '') +
+      (ITEM_TAG[item.name] ? '<span class="yr-badge' + (item.tracker ? ' shift' : '') + '">' + ITEM_TAG[item.name] + '</span>' : '') +
       '<div class="item-art">' + artFor(item, lite) + '</div>' +
       '<div class="item-name">' + (item.name.indexOf(' | ') > -1
         ? '<small>' + item.name.split(' | ')[0] + '</small><b>' + item.name.split(' | ')[1] + '</b>'
@@ -4179,6 +4257,7 @@
     if (sub) sub.textContent = railTab ? railTab.title : name.charAt(0).toUpperCase() + name.slice(1);
     $$('.panel').forEach((p) => p.classList.toggle('active', p.id === 'panel-' + name));
     if (name === 'inventory') renderInventory();
+    if (name === 'shop') renderShop();
     if (name === 'upgrader') renderUpgrader();
     if (name === 'trade') renderTrade();
     if (name === 'battles') renderBattleSetup();
@@ -4231,6 +4310,7 @@
             : '<span class="case-price' + (box.price === 0 ? ' free' : '') + '">' +
                 (box.price === 0 ? 'FREE' : fmt(box.price)) + '</span>') +
           '<button class="link-btn" data-contents="' + i + '">Contents</button>' +
+          (box.shop ? '<button class="link-btn" data-toshop>Shop</button>' : '') +
           '<button class="btn btn-primary btn-sm" data-open="' + i + '">Open</button>' +
         '</div>' +
       '</article>';
@@ -4240,7 +4320,74 @@
       btn.addEventListener('click', () => startOpening(CASES[+btn.dataset.open])));
     $$('#case-grid [data-contents]').forEach((btn) =>
       btn.addEventListener('click', () => showContents(CASES[+btn.dataset.contents])));
+    $$('#case-grid [data-toshop]').forEach((btn) => btn.addEventListener('click', () => setTab('shop')));
     refreshCaseButtons();
+  }
+
+  /* =========================================================
+     Shop
+     ========================================================= */
+
+  // Crates and keys for the keyed cases. They land in the inventory, so they
+  // can be traded or listed; holiday crates only sell in their season.
+  let shopCount = 1, shopBusy = false;
+
+  function renderShop() {
+    const seasons = currentSeasons();
+    // All-year cases first, then the holidays.
+    const order = CASES.map((box, i) => i).filter((i) => CASES[i].shop).sort((x, y) => !!CASES[x].season - !!CASES[y].season || x - y);
+    $('#shop-grid').innerHTML = order.map((i) => {
+      const box = CASES[i];
+      const inSeason = !box.season || seasons.indexOf(box.season) >= 0;
+      const line = (what) => {
+        const base = ALL_ITEMS[ITEM_INDEX[what === 'crate' ? box.crate : box.key]];
+        const off = what === 'crate' && !inSeason;
+        return '<div class="shop-line">' +
+          '<div class="shop-art">' + artFor(base, true) + '</div>' +
+          '<div class="shop-info"><b>' + base.name + '</b><small>' + (what === 'crate' ? 'Crate' : 'Key') +
+            ' · you have ' + heldNamed(base.name) + '</small></div>' +
+          '<button class="btn btn-primary btn-sm" data-buy="' + i + '" data-what="' + what + '"' +
+            (off ? ' disabled title="Sold around ' + SEASONS[box.season].name + '"' : '') + '>' +
+            (off ? 'Not in season' : fmt(box.shop[what] * shopCount)) + '</button>' +
+        '</div>';
+      };
+      return '<article class="case-card shop-card' + (box.season ? ' seasonal' : '') + '">' +
+        (box.season ? '<span class="case-season">' + SEASONS[box.season].name + '</span>' : '') +
+        (box.tag ? '<span class="case-tag">' + box.tag + '</span>' : '') +
+        '<div class="case-name">' + box.name + '</div>' +
+        '<div class="case-sub">' + box.sub + ' · opening one takes a crate and a key</div>' +
+        line('crate') + line('key') +
+        '<button class="link-btn" data-shopcontents="' + i + '">Contents</button>' +
+      '</article>';
+    }).join('');
+    $$('#shop-grid [data-buy]').forEach((btn) =>
+      btn.addEventListener('click', () => buyShop(CASES[+btn.dataset.buy], btn.dataset.what)));
+    $$('#shop-grid [data-shopcontents]').forEach((btn) =>
+      btn.addEventListener('click', () => showContents(CASES[+btn.dataset.shopcontents])));
+  }
+
+  async function buyShop(box, what) {
+    if (shopBusy) return;
+    const count = shopCount, cost = box.shop[what] * count;
+    const base = ALL_ITEMS[ITEM_INDEX[what === 'crate' ? box.crate : box.key]];
+    if (state.coins < cost) { toast('Not enough coins', 'bad'); SFX.lose(); return; }
+    SFX.unlock();
+    if (cloud.signedIn()) {
+      shopBusy = true;
+      const ok = await cloud.buyShop(box, what, count);
+      shopBusy = false;
+      if (!ok) return;
+    } else {
+      state.coins -= cost;
+      for (let i = 0; i < count; i++) addItem(instantiate(base));
+      save();
+    }
+    SFX.coin();
+    toast('Bought ' + (count > 1 ? count + ' × ' : '') + base.name, 'good');
+    renderBalance();
+    renderShop();
+    renderCases();
+    renderInventory();
   }
 
   const heldNamed = (name) => state.inventory.filter((it) => it.name === name && !it.locked).length;
@@ -4477,7 +4624,7 @@
 
     const winners = opening.winners;
     const total = winners.reduce((s, it) => s + it.value, 0);
-    const spent = opening.box.price * winners.length;
+    const spent = casePrice(opening.box) * winners.length;
 
 
     $('#result-grid').innerHTML = winners.map((it, i) =>
@@ -6751,6 +6898,14 @@
       }
     }
 
+    async function buyShop(box, what, count) {
+      try {
+        const r = await api('POST', '/api/shop', { case_id: box.id, what: what, count: count });
+        took(r, r.items);
+        return true;
+      } catch (e) { actionFailed(e); return false; }
+    }
+
     async function sell(uids) {
       try {
         const r = await api('POST', '/api/sell', { ids: uids });
@@ -7908,7 +8063,7 @@
     return {
       signedIn: signedIn, account: account, boot: boot, showLogin: showLogin, setAuthMode: setAuthMode,
       submitLogin: submitLogin, checkNameAsTyped: checkNameAsTyped, playAsGuest: playAsGuest, logout: logout, refresh: refresh,
-      open: open, sell: sell, upgrade: upgradeItems, claimGift: claimGift,
+      open: open, buyShop: buyShop, sell: sell, upgrade: upgradeItems, claimGift: claimGift,
       renderBoard: renderBoard, moderate: moderate, renderTradeBadge: renderTradeBadge,
       admin: adminCall, config: config, cachedConfig: () => cfg, dismissBanner: dismissBanner, isAdminAccount: isAdminAccount, peekGift: peekGift,
       showAccount: showAccount, hideAccount: hideAccount, changePassword: changePassword, logoutEverywhere: logoutEverywhere,
@@ -8038,6 +8193,13 @@
         updateWheel();
       });
     });
+
+    $$('[data-shopcount]').forEach((btn) => btn.addEventListener('click', () => {
+      shopCount = +btn.dataset.shopcount;
+      $$('[data-shopcount]').forEach((b) => b.classList.toggle('active', b === btn));
+      SFX.blip();
+      renderShop();
+    }));
 
     $('#skip-btn').addEventListener('click', skipOpening);
     $('#keep-pulls').addEventListener('click', () => closeOpening(false));

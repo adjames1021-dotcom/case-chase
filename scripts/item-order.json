@@ -393,7 +393,28 @@
   "Bayonet | Icicle",
   "Butterfly Knife | Snow Globe",
   "Karambit | Frosty",
-  "Frosty Present"
+  "Frosty Present",
+  "P-22 | Countdown",
+  "SP-5 | Ignition",
+  "AR-12 | Liftoff",
+  "Hand Wraps | Mission Patch",
+  "Sticker | Day One",
+  "HX-45 | Launch Pad",
+  "KR-74 | Afterburner",
+  "Charm | Tiny Rocket",
+  "LR-800 | Stratosphere",
+  "AWS-7 | Escape Velocity",
+  "Bayonet | Payload",
+  "Butterfly Knife | Main Engine",
+  "Karambit | Maiden Voyage",
+  "Haunted Hollow",
+  "Hollow Key",
+  "Harvest Crate",
+  "Harvest Key",
+  "Winter Wonder",
+  "Winter Key",
+  "Launch Crate",
+  "Launch Key"
  ],
  "cases": [
   "scrap",
@@ -424,6 +445,7 @@
   "celestial",
   "vanguard",
   "sovereign",
+  "launch",
   "vault",
   "present"
  ]
