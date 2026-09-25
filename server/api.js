@@ -687,14 +687,14 @@ async function openCase(request, env, me) {
 }
 
 // The Shop: crates and keys go into the inventory like any item, so they can
-// be traded, listed or opened later. Crates only sell in their season; keys always do.
+// be traded, listed or opened later. Holiday crates and keys only sell in their season.
 async function buyShop(request, env, me) {
   const db = env.DB;
   const b = await body(request);
   const box = CASES.find((c) => c.id === b.case_id && c.shop);
   if (!box || (b.what !== 'crate' && b.what !== 'key')) fail(400, 'Unknown shop item. Update your game.');
-  if (b.what === 'crate' && box.season && (await activeSeasons(env)).indexOf(box.season) < 0) {
-    fail(409, box.crate + ' crates are only sold around ' + SEASONS[box.season].name);
+  if (box.season && (await activeSeasons(env)).indexOf(box.season) < 0) {
+    fail(409, (b.what === 'crate' ? box.crate + ' crates' : box.key + 's') + ' are only sold around ' + SEASONS[box.season].name);
   }
   const count = isInt(b.count, 1, 10) ? b.count : 1;
   if (me.inv_count + count > MAX_ITEMS) fail(409, 'Your inventory is full. Sell something first.');

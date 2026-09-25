@@ -627,21 +627,22 @@ ok('the heartbeat notices it', (await call('POST', '/ping', null, mt)).data.me.a
   await admin({ a: 'coins', id: 'festive', set: 100000 });
   const buy = (case_id, what, count, t) => call('POST', '/shop', { case_id, what, count }, t || holT);
   ok('holiday crate not sold out of season', (await buy(offSeason.id, 'crate', 1)).status === 409);
-  r = await buy(offSeason.id, 'key', 2);
-  ok('keys sell all year', r.status === 200 && r.data.items.length === 2 && r.data.me.coins === 100000 - 2 * offSeason.shop.key &&
-    r.data.items.every((row) => core.ALL_ITEMS[row[1]].name === offSeason.key), r.data);
+  ok('...nor its key', (await buy(offSeason.id, 'key', 1)).status === 409 && (await me(holT)).me.coins === 100000);
   ok('shop refuses unknown things', (await buy('starter', 'crate', 1)).status === 400 && (await buy(offSeason.id, 'skin', 1)).status === 400);
   const sw = {}; sw[offSeason.season] = 'on';
   await admin({ a: 'settings', seasons: sw });
   ok('config reports the season on', (await call('GET', '/config')).data.seasons.indexOf(offSeason.season) >= 0);
+  r = await buy(offSeason.id, 'key', 2);
+  ok('admin switches a season on: its keys sell', r.status === 200 && r.data.items.length === 2 && r.data.me.coins === 100000 - 2 * offSeason.shop.key &&
+    r.data.items.every((row) => core.ALL_ITEMS[row[1]].name === offSeason.key), r.data);
   r = await buy(offSeason.id, 'crate', 3);
-  ok('admin switches a season on: its crates sell', r.status === 200 && r.data.items.length === 3 &&
+  ok('...and its crates', r.status === 200 && r.data.items.length === 3 &&
     r.data.me.coins === 100000 - 2 * offSeason.shop.key - 3 * offSeason.shop.crate, r.status);
   ok('keyed cases are not bought or battled directly', (await call('POST', '/open', { case_id: offSeason.id, count: 1 }, holT)).status === 200 &&
     (await call('POST', '/battles', { case_id: offSeason.id, rounds: 1, max_players: 2, mode: 'high', version: core.GAME_VERSION }, holT)).status === 400);
   sw[offSeason.season] = 'off';
   await admin({ a: 'settings', seasons: sw });
-  ok('switched off: no crates sold', (await buy(offSeason.id, 'crate', 1)).status === 409);
+  ok('switched off: no crates or keys sold', (await buy(offSeason.id, 'crate', 1)).status === 409 && (await buy(offSeason.id, 'key', 1)).status === 409);
   const coinsNow = (await me(holT)).me.coins;
   r = await call('POST', '/open', { case_id: offSeason.id, count: 5 }, holT);
   ok('held crates still open out of season, one key each', r.status === 200 && r.data.items.length === 1 && r.data.removed.length === 2 &&

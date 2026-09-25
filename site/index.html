@@ -1284,7 +1284,7 @@
     <div class="section-head">
       <div>
         <h2>Shop</h2>
-        <p class="shop-note">Crates and keys go to your inventory, where you can trade them, list them on the market, or open a crate with its key. Holiday crates are only sold in their season; keys are sold all year.</p>
+        <p class="shop-note">Crates and keys go to your inventory, where you can trade them, list them on the market, or open a crate with its key. Holiday crates and keys are only sold in their season.</p>
       </div>
       <div class="toolbar" style="margin:0">
         <span class="label">Buy</span>
@@ -4334,7 +4334,7 @@
      ========================================================= */
 
   // Crates and keys for the keyed cases. They land in the inventory, so they
-  // can be traded or listed; holiday crates only sell in their season.
+  // can be traded or listed; holiday ones only sell in their season.
   let shopCount = 1, shopBusy = false;
 
   function renderShop() {
@@ -4344,16 +4344,15 @@
     $('#shop-grid').innerHTML = order.map((i) => {
       const box = CASES[i];
       const inSeason = !box.season || seasons.indexOf(box.season) >= 0;
+      if (!inSeason) return '';                    // holidays only show in their season
       const line = (what) => {
         const base = ALL_ITEMS[ITEM_INDEX[what === 'crate' ? box.crate : box.key]];
-        const off = what === 'crate' && !inSeason;
         return '<div class="shop-line">' +
           '<div class="shop-art">' + artFor(base, true) + '</div>' +
           '<div class="shop-info"><b>' + base.name + '</b><small>' + (what === 'crate' ? 'Crate' : 'Key') +
             ' · you have ' + heldNamed(base.name) + '</small></div>' +
-          '<button class="btn btn-primary btn-sm" data-buy="' + i + '" data-what="' + what + '"' +
-            (off ? ' disabled title="Sold around ' + SEASONS[box.season].name + '"' : '') + '>' +
-            (off ? 'Not in season' : fmt(box.shop[what] * shopCount)) + '</button>' +
+          '<button class="btn btn-primary btn-sm" data-buy="' + i + '" data-what="' + what + '">' +
+            fmt(box.shop[what] * shopCount) + '</button>' +
         '</div>';
       };
       return '<article class="case-card shop-card' + (box.season ? ' seasonal' : '') + '">' +
