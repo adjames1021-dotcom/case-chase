@@ -243,3 +243,17 @@ CREATE TABLE IF NOT EXISTS lobby_invites (
 );
 CREATE INDEX IF NOT EXISTS lobby_invites_account ON lobby_invites (account);
 CREATE TABLE IF NOT EXISTS private_lobbies (lobby TEXT PRIMARY KEY);
+
+-- Where the owner's accounts (ADMIN_ACCOUNTS in wrangler.toml) are used
+-- from: one row per network address, with sign-ins and wrong passwords.
+-- Only the owner sees it, in the admin panel.
+CREATE TABLE IF NOT EXISTS owner_access (
+  account   TEXT NOT NULL,
+  ip        TEXT NOT NULL,
+  label     TEXT NOT NULL DEFAULT '',
+  first_at  INTEGER NOT NULL,
+  last_at   INTEGER NOT NULL,
+  logins    INTEGER NOT NULL DEFAULT 0,
+  fails     INTEGER NOT NULL DEFAULT 0,
+  PRIMARY KEY (account, ip)
+);

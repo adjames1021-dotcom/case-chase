@@ -541,7 +541,16 @@
   }
   .bt-slot .item { width: 100%; border: 0; background: none; }
   .bt-slot .item::before { display: none; }
-  .bt-slot.spin .item { filter: blur(.4px); opacity: .85; }
+  .bt-slot.spin::after { content: ''; position: absolute; inset: 0; border: 1px solid rgba(242,106,27,.45); animation: slotwait 1s ease-in-out infinite alternate; }
+  @keyframes slotwait { from { opacity: .25; } to { opacity: 1; } }
+  .bt-reels { display: grid; gap: 12px; margin-bottom: 14px; }
+  .battle-grid > .bt-col { min-width: 0; }
+  .bt-reel { min-width: 0; }
+  .bt-reel .reel-wrap { margin-bottom: 0; }
+  .bt-reel-name { font-family: var(--cond); font-size: 11px; font-weight: 700; letter-spacing: 1.2px; text-transform: uppercase;
+                  color: var(--ink-2); margin: 0 0 5px 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .bt-reel.you .bt-reel-name { color: var(--orange); }
+  @media (max-width: 760px) { .bt-reels { grid-template-columns: 1fr !important; } }
 
   .bt-banner {
     margin-top: 16px; padding: 18px; text-align: center;
@@ -678,6 +687,13 @@
   .case-season { position: absolute; top: 10px; left: 10px; z-index: 2; font-family: var(--cond); font-size: 10px; font-weight: 700;
                  letter-spacing: 1.2px; text-transform: uppercase; padding: 2px 8px; background: rgba(216,40,58,.85); color: #fff; }
   .adm-side { min-width: 0; }
+  .adm-owner { margin-top: 18px; }
+  .adm-owner-rows { display: flex; flex-direction: column; margin-top: 8px; overflow-x: auto; }
+  .adm-owner-row { display: grid; grid-template-columns: minmax(130px, 1.3fr) minmax(110px, 1.2fr) repeat(2, minmax(70px, .7fr)) repeat(2, minmax(80px, .8fr));
+                   gap: 10px; padding: 7px 4px; border-top: 1px solid var(--line); font-size: 12.5px; min-width: 620px; }
+  .adm-owner-row.head { border-top: 0; font-size: 10.5px; font-weight: 700; letter-spacing: .8px; text-transform: uppercase; color: var(--ink-3); }
+  .adm-owner-row .ip { font-family: ui-monospace, Menlo, Consolas, monospace; }
+  .adm-owner-row.warn { color: #ffb4a8; }
   .adm-create { margin-top: 18px; display: flex; flex-direction: column; gap: 8px; }
   .adm-create h4, .adm-create .hint { margin-bottom: 0; }
   .adm-create .btn { align-self: flex-start; }
@@ -1119,6 +1135,7 @@
   .inv-grid .item:hover, .pick-grid .item:hover, .result-grid .item:hover { filter: brightness(1.12); border-color: rgba(255,255,255,.2); }
   .item-art { height: 96px; }
   .item-art svg, .item-art img { filter: drop-shadow(0 5px 6px rgba(0,0,0,.45)); }
+  .item-art img.reel-art { position: absolute; filter: none; max-width: none; max-height: none; object-fit: fill; }
   .item-name { display: flex; flex-direction: column; gap: 1px; white-space: normal; }
   .item-name small {
     font-size: 10px; font-weight: 600; color: var(--ink-2); letter-spacing: .2px;
@@ -1570,6 +1587,7 @@
       <div class="adm-view" data-view="overview">
         <div class="adm-tiles" id="adm-tiles"></div>
         <div class="adm-grid" id="adm-lists"></div>
+        <div class="card adm-owner" id="adm-owner" style="display:none"></div>
       </div>
 
       <div class="adm-view" data-view="players" style="display:none">
@@ -2917,7 +2935,11 @@
       return out + '</svg>';
     }
 
-    return { render: render, ensureDefs: ensureDefs, lookFor: lookFor, registerCrates: registerCrates, MODELS: MODELS };
+    // The art as a self-contained SVG file (the shared gradients copied in), for use as an image.
+    const SHARED_DEFS = SHARED.slice(SHARED.indexOf('<defs>') + 6, SHARED.lastIndexOf('</defs>'));
+    const standalone = (item) => render(item).replace('<defs>', '<defs>' + SHARED_DEFS);
+
+    return { render: render, standalone: standalone, ensureDefs: ensureDefs, lookFor: lookFor, registerCrates: registerCrates, MODELS: MODELS };
   })();
 
   /* =========================================================
@@ -4229,7 +4251,81 @@
   function artFor(item, lite) {
     const src = ITEM_IMAGES[item.name];
     if (src) return '<img src="' + escAttr(src) + '" alt="' + escAttr(item.name) + '" loading="lazy">';
+    const reel = lite === 'reel' && reelArtFor(item);
+    if (reel) {
+      return '<img class="reel-art" src="' + reel.url + '" alt="" style="width:' + reel.w + 'px;height:' + reel.h + 'px;' +
+        'left:calc(50% - ' + reel.w / 2 + 'px);top:calc(50% - ' + reel.h / 2 + 'px)">';
+    }
     return ART.render(lite ? { kind: item.kind, name: item.name, rarity: item.rarity } : item);
+  }
+
+  /* ---------- reel art ----------
+     A reel is 74 tiles long and x5 opens five of them. As inline SVG with a
+     CSS drop-shadow, every tile was painted again as it slid into view.
+     Reel tiles show the same art as an SVG image with that shadow built in,
+     made once per item, which the browser draws once and then just copies.
+     It sits where the inline SVG would, so the tiles look the same. */
+  const REEL_SHADOW = { dy: 5, blur: 6, pad: 18 };       // .item-art's drop-shadow(0 5px 6px), plus room for it
+  let reelBox = null;                                     // the art's box in a reel tile, CSS px
+  const reelArt = new Map();
+
+  // Measures the art box in a reel tile (it depends on the layout, so once the reels are on screen).
+  function measureReelBox(sample, host) {
+    const probe = document.createElement('div');
+    probe.className = 'reel-track';
+    probe.style.cssText = 'position:absolute;left:0;top:0;visibility:hidden';
+    probe.innerHTML = itemMarkup(sample, '', true);
+    (host || $('#reels')).appendChild(probe);
+    const r = probe.querySelector('.item-art svg, .item-art img').getBoundingClientRect();
+    probe.remove();
+    const box = r.width && r.height ? { w: r.width, h: r.height } : null;
+    if (box && (!reelBox || Math.abs(box.w - reelBox.w) > .5 || Math.abs(box.h - reelBox.h) > .5)) {
+      reelArt.forEach((a) => a && URL.revokeObjectURL(a.url));
+      reelArt.clear();
+      reelBox = box;
+    }
+  }
+
+  function reelArtFor(item) {
+    if (!reelBox || typeof URL === 'undefined' || !URL.createObjectURL) return null;
+    const key = item.kind + '|' + item.name + '|' + item.rarity;
+    if (!reelArt.has(key)) reelArt.set(key, makeReelArt({ kind: item.kind, name: item.name, rarity: item.rarity }));
+    return reelArt.get(key);
+  }
+
+  function makeReelArt(item) {
+    const svg = ART.standalone(item);
+    if (svg.indexOf('<text') >= 0) return null;                  // page fonts don't reach an image
+    const m = /^<svg viewBox="([-\d.]+) ([-\d.]+) ([\d.]+) ([\d.]+)"[^>]*>/.exec(svg);
+    if (!m) return null;
+    const [x, y, w, h] = m.slice(1, 5).map(Number);
+    const scale = Math.min(reelBox.w / w, reelBox.h / h);         // CSS px per unit, as preserveAspectRatio fits it
+    const u = (px) => +(px / scale).toFixed(3);                   // CSS px -> units
+    const pad = u(REEL_SHADOW.pad);
+    const out = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="' + [x - pad, y - pad, w + 2 * pad, h + 2 * pad].map((n) => +n.toFixed(3)).join(' ') + '">' +
+      '<defs><filter id="reel-ds" filterUnits="userSpaceOnUse" x="' + (x - pad) + '" y="' + (y - pad) + '" width="' + (w + 2 * pad) + '" height="' + (h + 2 * pad) + '" ' +
+        'color-interpolation-filters="sRGB"><feDropShadow dx="0" dy="' + u(REEL_SHADOW.dy) + '" stdDeviation="' + u(REEL_SHADOW.blur / 2) + '" ' +
+        'flood-color="#000" flood-opacity=".45"/></filter></defs>' +
+      '<g filter="url(#reel-ds)">' + svg.replace(/^<svg[^>]*>/, '<svg x="' + x + '" y="' + y + '" width="' + w + '" height="' + h + '" viewBox="' + m.slice(1, 5).join(' ') + '" overflow="hidden">') + '</g></svg>';
+    const url = URL.createObjectURL(new Blob([out], { type: 'image/svg+xml' }));
+    return { url: url, w: +(w * scale + 2 * REEL_SHADOW.pad).toFixed(2), h: +(h * scale + 2 * REEL_SHADOW.pad).toFixed(2) };
+  }
+
+  // Makes (and decodes) the reel art for a case's items before its reels spin.
+  function prepareReelArt(items, host) {
+    measureReelBox(items[0], host);
+    const waits = [];
+    items.forEach((it) => {
+      const a = reelArtFor(it);
+      if (a && !a.ready) {
+        const img = new Image();
+        img.src = a.url;
+        a.ready = img.decode ? img.decode().catch(() => {}) : Promise.resolve();
+      }
+      if (a) waits.push(a.ready);
+    });
+    // Never hold the spin up for long: anything slower just shows when it's ready.
+    return Promise.race([Promise.all(waits), new Promise((r) => setTimeout(r, 300))]);
   }
 
   function itemMarkup(item, extra, lite) {
@@ -4554,50 +4650,85 @@
     $('#open-overlay').classList.add('open');
 
     SFX.whoosh();
+    const run = opening;
+    await prepareReelArt(box.items);
+    if (opening !== run) return;
 
-    winners.forEach((winner, idx) => {
-      const wrap = document.createElement('div');
-      wrap.className = 'reel-wrap';
-      wrap.innerHTML = '<div class="marker"></div><div class="reel-track"></div>';
-      $('#reels').appendChild(wrap);
-
-      const track = wrap.querySelector('.reel-track');
-      let html = '';
-      for (let i = 0; i < STRIP_LEN; i++) {
-        html += i === WIN_INDEX ? itemMarkup(winner, 'win') : itemMarkup(rollItem(box), '', true);
-      }
-      track.innerHTML = html;
-
-      const viewport = wrap.clientWidth;
-      const jitter = (Math.random() - 0.5) * (TILE - 34);
-      const target = WIN_INDEX * PITCH + TILE / 2 - viewport / 2 + jitter;
-      const dur = SPIN_MS + idx * 450;
-
-      track.style.transform = 'translateX(0px)';
-      opening.reels.push({ wrap, track, target, winner });
-
-      requestAnimationFrame(() => requestAnimationFrame(() => {
-        track.style.transition = 'transform ' + dur + 'ms cubic-bezier(.08,.62,.12,1)';
-        track.style.transform = 'translateX(' + (-target) + 'px)';
-      }));
-
+    opening.reels = spinReels($('#reels'), box, winners, settleReel);
+    opening.reels.forEach((reel, idx) => {
       // Build tension when something big is about to land.
-      const rank = RARITIES.indexOf(winner.rarity);
-      if (rank >= 4) {
+      if (RARITIES.indexOf(reel.winner.rarity) >= 4) {
         opening.timers.push(setTimeout(() => {
           if (opening && !opening.reels[idx].done) SFX.riser(1.5);
-        }, dur - 1500));
+        }, reel.dur - 1500));
       }
-
-      track.addEventListener('transitionend', function handler(e) {
-        if (e.propertyName !== 'transform') return;
-        track.removeEventListener('transitionend', handler);
-        settleReel(idx);
-      });
     });
 
     runTicker();
   }
+
+  // The reels' easing, worked out in JS too, so the ticker knows where a reel
+  // is without asking the page every frame.
+  const REEL_EASING = 'cubic-bezier(.08,.62,.12,1)';
+  const REEL_EASE = (function (x1, y1, x2, y2) {
+    const at = (t, a, b) => ((1 - 3 * b + 3 * a) * t + (3 * b - 6 * a)) * t * t + 3 * a * t;
+    return (x) => {
+      if (x <= 0) return 0;
+      if (x >= 1) return 1;
+      let lo = 0, hi = 1, t = x;
+      for (let i = 0; i < 30; i++) {
+        const v = at(t, x1, x2);
+        if (Math.abs(v - x) < 1e-5) break;
+        if (v < x) lo = t; else hi = t;
+        t = (lo + hi) / 2;
+      }
+      return at(t, y1, y2);
+    };
+  })(.08, .62, .12, 1);
+
+  // One reel: random items from the case with the winner at WIN_INDEX.
+  function reelMarkup(box, winner) {
+    let tiles = '';
+    for (let i = 0; i < STRIP_LEN; i++) tiles += i === WIN_INDEX ? itemMarkup(winner, 'win') : itemMarkup(rollItem(box), '', 'reel');
+    return '<div class="reel-wrap"><div class="marker"></div><div class="reel-track">' + tiles + '</div></div>';
+  }
+
+  // Spins reels already on the page (one per winner), each a little longer
+  // than the last. onSettle(idx) runs as each one stops. Returns the reels.
+  function startReels(wraps, winners, onSettle, opts) {
+    const spin = (opts && opts.spin) || SPIN_MS, stagger = opts && opts.stagger != null ? opts.stagger : 450;
+    const widths = wraps.map((wrap) => wrap.clientWidth);                // one layout for every reel
+    const reels = wraps.map((wrap, idx) => {
+      const track = wrap.querySelector('.reel-track');
+      const jitter = (Math.random() - 0.5) * (TILE - 34);
+      track.style.transform = 'translateX(0px)';
+      return { wrap, track, winner: winners[idx], viewport: widths[idx], dur: spin + idx * stagger,
+               target: WIN_INDEX * PITCH + TILE / 2 - widths[idx] / 2 + jitter };
+    });
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      const t0 = performance.now();
+      reels.forEach((reel) => {
+        reel.start = t0;
+        reel.track.style.transition = 'transform ' + reel.dur + 'ms ' + REEL_EASING;
+        reel.track.style.transform = 'translateX(' + (-reel.target) + 'px)';
+      });
+    }));
+    reels.forEach((reel, idx) => reel.track.addEventListener('transitionend', function handler(e) {
+      if (e.propertyName !== 'transform') return;
+      reel.track.removeEventListener('transitionend', handler);
+      onSettle(idx);
+    }));
+    return reels;
+  }
+
+  // Fills `host` with one reel per winner and spins them.
+  function spinReels(host, box, winners, onSettle) {
+    host.innerHTML = winners.map((winner) => reelMarkup(box, winner)).join('');
+    return startReels(Array.prototype.slice.call(host.children), winners, onSettle);
+  }
+
+  // Where a reel is `now`, in tiles from the start: for the tick sound.
+  const reelTile = (reel, now) => Math.floor((reel.target * REEL_EASE((now - reel.start) / reel.dur) + reel.viewport / 2) / PITCH);
 
   function settleReel(idx) {
     const reel = opening && opening.reels[idx];
@@ -4612,18 +4743,12 @@
   // Clicks once per tile crossing the centre marker.
   function runTicker() {
     let last = -1;
-    function frame() {
+    function frame(now) {
       if (!opening || opening.settled) return;
       const reel = opening.reels[0];
-      if (reel && !reel.done) {
-        const raw = getComputedStyle(reel.track).transform;
-        if (raw && raw !== 'none') {
-          try {
-            const m = new DOMMatrixReadOnly(raw);
-            const idx = Math.floor((-m.m41 + reel.wrap.clientWidth / 2) / PITCH);
-            if (idx !== last) { last = idx; SFX.tick(); }
-          } catch (e) { /* mid-transition parse hiccup — skip this frame */ }
-        }
+      if (reel && !reel.done && reel.start != null) {
+        const idx = reelTile(reel, now);
+        if (idx !== last) { last = idx; SFX.tick(); }
       }
       requestAnimationFrame(frame);
     }
@@ -5473,7 +5598,27 @@
     }));
   }
 
+  // Where the owner's account (LILBEAN) has been used from. The server only
+  // answers the admin key or the owner's own account; other admins don't see it.
+  async function loadOwnerAccess() {
+    const host = $('#adm-owner');
+    let r;
+    try { r = await cloud.admin('owner_access', {}); } catch (e) { host.style.display = 'none'; return; }
+    const rows = r.rows || [];
+    host.style.display = '';
+    host.innerHTML = '<h4>Where ' + escHtml((rows[0] && rows[0].name) || 'your account') + ' is used from</h4>' +
+      '<p class="hint">Every network address that signed in to the owner account, got its password wrong, or used a session that was already signed in. Only you see this.</p>' +
+      (rows.length ? '<div class="adm-owner-rows"><div class="adm-owner-row head"><span>IP address</span><span>Device</span><span>Signed in</span>' +
+        '<span>Wrong passwords</span><span>First seen</span><span>Last seen</span></div>' +
+        rows.map((x) => '<div class="adm-owner-row' + (x.fails ? ' warn' : '') + '"><span class="ip">' + escHtml(x.ip) + '</span>' +
+          '<span>' + escHtml(x.label || '—') + '</span><span>' + fmt(x.logins) + '</span><span>' + fmt(x.fails) + '</span>' +
+          '<span title="' + escAttr(when(x.first_at)) + '">' + ago(x.first_at) + '</span>' +
+          '<span title="' + escAttr(when(x.last_at)) + '">' + ago(x.last_at) + '</span></div>').join('') + '</div>'
+        : '<p class="hint">Nothing recorded yet. It starts with the next sign-in.</p>');
+  }
+
   async function loadAdminOverview() {
+    loadOwnerAccess();
     $('#adm-tiles').innerHTML = '<div class="online-note">Loading…</div>';
     const [r, dv] = await Promise.all([adminDo('stats'), adminDo('devices')]);
     if (!r) { $('#adm-tiles').innerHTML = '<div class="online-note">Can\'t reach the server.</div>'; return; }
@@ -6318,6 +6463,7 @@
           : 'Round ' + Math.min(live.round + 1, live.rounds) + ' of ' + live.rounds) +
           ' · ' + (live.mode === 'high' ? 'Highest total wins' : 'Lowest total wins') + '</div>' +
       '</div>' +
+      (finished ? '' : '<div class="bt-reels" id="bt-reels" style="grid-template-columns:repeat(' + cols + ',1fr)"></div>') +
       '<div class="battle-grid" style="grid-template-columns:repeat(' + cols + ',1fr)">';
 
     live.players.forEach((pl, pi) => {
@@ -6339,6 +6485,11 @@
     $('#battle-view').innerHTML = html;
   }
 
+  // Battle reels spin a little quicker than opening a case, so rounds keep moving.
+  const BATTLE_SPIN = { spin: 4200, stagger: 250 }, BATTLE_PAUSE = 900;
+
+  // Each round, every player's reel spins (the same reels as opening a case)
+  // and lands on the item the plan already rolled for them.
   function runRound() {
     const live = battle.live;
     if (!live) return;
@@ -6347,45 +6498,50 @@
     const rnd = $('#bt-rnd');
     if (rnd) rnd.textContent = 'Round ' + (r + 1) + ' of ' + live.rounds + ' · ' +
       (live.mode === 'high' ? 'Highest total wins' : 'Lowest total wins');
+    const host = $('#bt-reels');
+    if (!host) return;
 
-    let pending = live.players.length;
-    live.players.forEach((pl, pi) => {
-      const finalItem = live.plan.pulls[pi][r];
-      const slot = $('#bt-slot-' + pi + '-' + r);
-      if (!slot) { pending--; return; }
-      slot.classList.remove('pending');
-      slot.classList.add('spin');
-
-      const dur = 1500 + pi * 160;
-      const started = Date.now();
-      const timer = setInterval(() => {
-        if (battle.live !== live) { clearInterval(timer); return; }
-        if (Date.now() - started >= dur) {
-          clearInterval(timer);
-          slot.classList.remove('spin');
-          slot.innerHTML = itemMarkup(finalItem);
-
-          pl.pulls[r] = finalItem;
-          pl.total += finalItem.value;
-          const tot = $('#bt-total-' + pi);
-          if (tot) tot.textContent = fmt(pl.total);
-          if (RARITIES.indexOf(finalItem.rarity) >= 3) SFX.win(finalItem.rarity);
-          else if (pl.you) SFX.blip();
-
-          if (--pending === 0) {
-            live.round++;
-            setTimeout(live.round >= live.rounds ? endBattle : runRound, 700);
-          }
-          return;
+    prepareReelArt(live.box.items, host).then(() => {
+      if (battle.live !== live || live.round !== r) return;
+      const finals = live.players.map((pl, pi) => live.plan.pulls[pi][r]);
+      host.innerHTML = live.players.map((pl, pi) =>
+        '<div class="bt-reel' + (pl.you ? ' you' : '') + '"><div class="bt-reel-name">' + escHtml(pl.name) + '</div>' +
+          reelMarkup(live.box, finals[pi]) + '</div>').join('');
+      live.players.forEach((pl, pi) => { const slot = $('#bt-slot-' + pi + '-' + r); if (slot) { slot.classList.remove('pending'); slot.classList.add('spin'); } });
+      let pending = live.players.length;
+      const reels = startReels($$('#bt-reels .reel-wrap'), finals, (pi) => {
+        if (battle.live !== live) return;
+        const pl = live.players[pi], item = finals[pi];
+        reels[pi].done = true;
+        reels[pi].wrap.classList.add('done');
+        const slot = $('#bt-slot-' + pi + '-' + r);
+        if (slot) { slot.classList.remove('pending', 'spin'); slot.innerHTML = itemMarkup(item); }
+        pl.pulls[r] = item;
+        pl.total += item.value;
+        const tot = $('#bt-total-' + pi);
+        if (tot) tot.textContent = fmt(pl.total);
+        if (RARITIES.indexOf(item.rarity) >= 3) SFX.win(item.rarity);
+        else if (pl.you) SFX.blip();
+        if (--pending === 0) {
+          live.round++;
+          setTimeout(live.round >= live.rounds ? endBattle : runRound, BATTLE_PAUSE);
         }
-        slot.innerHTML = itemMarkup(rollItem(live.box), '', true);
-        if (pi === 0) SFX.tick();
-      }, 85);
+      }, BATTLE_SPIN);
+      // Ticks follow the first reel, like opening a case.
+      let last = -1;
+      (function frame(now) {
+        if (battle.live !== live || reels[0].done) return;
+        if (reels[0].start != null) {
+          const idx = reelTile(reels[0], now);
+          if (idx !== last) { last = idx; SFX.tick(); }
+        }
+        requestAnimationFrame(frame);
+      })(performance.now());
     });
   }
 
   // Time a battle's reels take to play, used to skip ahead after a reload.
-  const battleDuration = (rounds, seats) => 500 + rounds * (1500 + (seats - 1) * 160 + 700);
+  const battleDuration = (rounds, seats) => 500 + rounds * (BATTLE_SPIN.spin + (seats - 1) * BATTLE_SPIN.stagger + BATTLE_PAUSE);
 
   // Hands the winner the table. Online battles pass through here once per
   // battle id, guarded by the online ledger.

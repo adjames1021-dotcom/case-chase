@@ -92,6 +92,17 @@ const rand = () => crypto.getRandomValues(new Uint32Array(1))[0] / 4294967296;
 // key can also make other accounts admins (the admin_accounts table).
 let permanentAdmins = new Set();
 const isPermanentAdmin = (id) => permanentAdmins.has(id);
+// The owner's accounts keep a list of the network addresses they're used
+// from (owner_access): sign-ins, wrong passwords, and the heartbeat of a
+// session already signed in (at most once a minute per address).
+const ownerAccess = (db, request, account, what) => db.prepare(
+  `INSERT INTO owner_access (account, ip, label, first_at, last_at, logins, fails) VALUES (?, ?, ?, ?, ?, ?, ?)
+     ON CONFLICT (account, ip) DO UPDATE SET last_at = excluded.last_at, label = excluded.label,
+       logins = owner_access.logins + excluded.logins, fails = owner_access.fails + excluded.fails
+     WHERE excluded.logins + excluded.fails > 0 OR owner_access.last_at < excluded.last_at - 60`)
+  .bind(account, ipOf(request), deviceLabel(request.headers.get('User-Agent')), nowS(), nowS(),
+        what === 'login' ? 1 : 0, what === 'fail' ? 1 : 0);
+
 async function isAdminAccount(db, id) {
   return isPermanentAdmin(id) || !!(await db.prepare('SELECT 1 FROM admin_accounts WHERE account = ?').bind(id).first());
 }
@@ -484,7 +495,8 @@ async function login(request, env) {
     await db.batch([
       db.prepare('UPDATE accounts SET fail_count = CASE WHEN ? - fail_at > ? THEN 1 ELSE fail_count + 1 END, fail_at = ? WHERE id = ?')
         .bind(t, LOGIN_LOCK * 10, t, a.id),
-      hitRow(db, 'login_fail', ip)
+      hitRow(db, 'login_fail', ip),
+      ...(isPermanentAdmin(a.id) ? [ownerAccess(db, request, a.id, 'fail')] : [])
     ]);
     fail(401, 'Wrong username or password');
   }
@@ -494,7 +506,8 @@ async function login(request, env) {
   const session = await newSession(db, a.id);
   await db.batch([session.stmt,
     db.prepare('UPDATE accounts SET fail_count = 0, last_seen = ?, last_ping = ? WHERE id = ?').bind(t, t, a.id),
-    ...recordDevices(db, a.id, keys, request)]);
+    ...recordDevices(db, a.id, keys, request),
+    ...(isPermanentAdmin(a.id) ? [ownerAccess(db, request, a.id, 'login')] : [])]);
   return json(Object.assign({ token: session.token, me: await meFull(db, await account(db, a.id)), inventory: await inventory(db, a.id),
     locks: await lockList(db, a.id) }, await perks(db, a)));
 }
@@ -527,7 +540,8 @@ const perks = async (db, me) => ({ reward_ready: (await rewardState(db, me)).rea
 
 async function ping(request, env, me) {
   const t = nowS();
-  await env.DB.batch(recordDevices(env.DB, me.id, await deviceKeys(request, env.DB), request));
+  await env.DB.batch(recordDevices(env.DB, me.id, await deviceKeys(request, env.DB), request)
+    .concat(isPermanentAdmin(me.id) ? [ownerAccess(env.DB, request, me.id, 'seen')] : []));
   // Adds the time since the last ping, as long as the game has been pinging steadily.
   await env.DB.prepare(
     `UPDATE accounts SET played = played + CASE WHEN ? - last_ping BETWEEN 1 AND 120 THEN ? - last_ping ELSE 0 END,
@@ -1979,6 +1993,15 @@ const ADMIN = {
     return { log: ['gift ' + id, p.undo ? 'reinstated' : 'cancelled'] };
   },
 
+  // Where the owner's accounts have been used from, newest first. Only the
+  // admin key or the owner's own account can see it (see OWNER_ONLY).
+  async owner_access(db) {
+    const { results } = await db.prepare(
+      `SELECT o.ip, o.label, o.first_at, o.last_at, o.logins, o.fails, a.name FROM owner_access o
+         LEFT JOIN accounts a ON a.id = o.account ORDER BY o.last_at DESC LIMIT 300`).all();
+    return { rows: results };
+  },
+
   async log(db) {
     const { results } = await db.prepare('SELECT * FROM admin_log ORDER BY id DESC LIMIT 150').all();
     return { entries: results };
@@ -1988,6 +2011,7 @@ const ADMIN = {
 // Actions only the admin key can do, and actions that can't touch an admin
 // account unless the key is used.
 const KEY_ONLY = { grant_admin: 1, revoke_admin: 1 };
+const OWNER_ONLY = { owner_access: 1 };                  // the key, or an ADMIN_ACCOUNTS account
 const PROTECTS_ADMINS = { ban: 1, delete: 1, reset: 1, rename: 1, logout: 1, coins: 1, take: 1 };
 
 // Two ways in: a request signed with the admin key, or the session of an
@@ -2018,6 +2042,7 @@ async function admin(request, env) {
   const run = Object.prototype.hasOwnProperty.call(ADMIN, p.a) && ADMIN[p.a];
   if (!run) fail(400, 'Unknown action');
   if (actor && KEY_ONLY[p.a]) fail(403, 'Only the admin key can do that');
+  if (actor && OWNER_ONLY[p.a] && !isPermanentAdmin(actor.id)) fail(403, 'Only the owner can see that');
   if (actor && PROTECTS_ADMINS[p.a]) {
     const target = await findAccount(db, p.id);
     if (target.id !== actor.id && await isAdminAccount(db, target.id)) fail(403, 'Admin accounts can only be changed with the admin key');
