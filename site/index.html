@@ -4294,6 +4294,7 @@
   function renderCases() {
     const seasons = currentSeasons();
     $('#case-grid').dataset.seasons = seasons.join();
+    $('#case-grid').dataset.shown = shownKey();
     $('#case-grid').innerHTML = CASES.map((box, i) => {
       if (!caseShown(box, seasons)) return '';
       const bars = RARITIES.map((r) =>
@@ -4414,8 +4415,12 @@
     refreshCaseButtons();
   }
 
+  // Which cases the grid should show right now: changes with the seasons and
+  // when holiday crates come or go (bought, gifted, traded or opened).
+  const shownKey = () => { const seasons = currentSeasons(); return CASES.map((box) => caseShown(box, seasons) ? 1 : 0).join(''); };
+
   function refreshCaseButtons() {
-    if ($('#case-grid').dataset.seasons !== currentSeasons().join()) { renderCases(); return; }
+    if ($('#case-grid').dataset.shown !== shownKey()) { renderCases(); return; }
     $$('#case-grid [data-held]').forEach((el) => {
       const box = CASES[+el.dataset.held], c = heldNamed(box.crate), unit = box.unit || 'case';
       el.innerHTML = '<b>' + c + '</b> ' + unit + (c === 1 ? '' : 's') +
@@ -6705,6 +6710,7 @@
       renderInventory();
       renderWhoami();
       renderUpgrader();
+      if ($('#panel-shop').classList.contains('active')) renderShop();
       if ($('#panel-trade').classList.contains('active')) renderTrade();
       if ($('#panel-battles').classList.contains('active') && !battle.live) renderBattleSetup();
       if ($('#panel-leaderboard').classList.contains('active')) renderLeaderboard();
