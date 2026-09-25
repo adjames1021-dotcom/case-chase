@@ -2033,7 +2033,10 @@ async function admin(request, env) {
         db.prepare('DELETE FROM admin_nonces WHERE at < ?').bind(nowS() - 86400),
         db.prepare('INSERT INTO admin_nonces (n, at) VALUES (?, ?)').bind(p.n, nowS())
       ]);
-    } catch (e) { fail(409, 'That request was already used'); }
+    } catch (e) {
+      if (/UNIQUE|constraint/i.test(String(e && e.message))) fail(409, 'That request was already used');
+      throw e;
+    }
   } else {
     const me = await authed(request, env).catch(() => null);
     if (!me || !(await isAdminAccount(db, me.id))) fail(403, 'Not admin');
@@ -2129,7 +2132,9 @@ export default {
         return json(Object.assign({ error: err.message }, err.extra || {}), err.status, retry ? { 'Retry-After': String(retry) } : null);
       }
       console.error(err && err.stack || err);
-      return json({ error: 'Server error' }, 500);
+      // Database errors carry a short reason (never data), so an outage can be told apart from a bug.
+      const msg = String(err && err.message || '');
+      return json(Object.assign({ error: 'Server error' }, /D1_|SQLITE/i.test(msg) ? { reason: msg.slice(0, 160) } : {}), 500);
     }
   }
 };
