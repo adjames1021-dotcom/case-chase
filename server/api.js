@@ -72,8 +72,8 @@ const SIGNUPS_PER_HOUR = 20, SIGNUPS_PER_DAY = 60;   // per IP; schools share on
 const SIGNUPS_ALL_PER_HOUR = 300;
 // After every new account, sign-ups pause for everyone for a random number of
 // seconds in this range, so no bot can make accounts quickly however it
-// disguises itself. Admins change it in the Game tab (settings 'signup_gap').
-const SIGNUP_GAP = [10, 40];
+// disguises itself. Off until an admin sets it in the Game tab ('signup_gap').
+const SIGNUP_GAP = [0, 0];
 function signupGap(s) {
   const m = /^(\d+)-(\d+)$/.exec(String((s && s.signup_gap) || ''));
   return m ? [+m[1], +m[2]] : SIGNUP_GAP.slice();

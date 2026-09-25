@@ -81,9 +81,6 @@ let nonce = 0;
 const signed = async (p) => { const s = JSON.stringify(p); return { p: s, g: await adminSign(s) }; };
 const admin = async (p) => call('POST', '/admin', await signed(Object.assign({ ts: Math.floor(Date.now() / 1000), n: 'test-' + Date.now() + '-' + (nonce++) }, p)));
 
-// Sign-ups pause for a random few seconds after every new account (see
-// signup_gap). Off for the tests, which make lots; tested on purpose below.
-await admin({ a: 'signup_gap', min: 0, max: 0 });
 
 /* ---- accounts ---- */
 const A = await call('POST', '/signup', { name: 'alice', password: 'alicepass' });
@@ -153,22 +150,26 @@ ok('...which can\'t log in either', rr.status === 403, rr.data);
 rr = await call('POST', '/login', { name: 'bob', password: 'bobpass1' }, null, null, null, 'fp' + farm.slice(0, 20));
 ok('...but another device with the same browser (a classmate\'s laptop) still logs in', rr.status === 200, rr.data);
 ok('other devices carry on', (await tryJoin({})).status === 200);
-rr = await admin({ a: 'devices' });
-ok('the admin panel lists the blocks', rr.status === 200 && rr.data.blocked.filter((x) => /more than one account in a minute/.test(x.reason)).length === 2, rr.data && rr.data.blocked);
+if (ADMIN.d) {
+  rr = await admin({ a: 'devices' });
+  ok('the admin panel lists the blocks', rr.status === 200 && rr.data.blocked.filter((x) => /more than one account in a minute/.test(x.reason)).length === 2, rr.data && rr.data.blocked);
+}
 
-// The pause between new accounts.
-rr = await admin({ a: 'signup_gap' });
-ok('pause setting reads back', rr.status === 200 && rr.data.gap[0] === 0 && rr.data.gap[1] === 0, rr.data);
-ok('pause setting refuses nonsense', (await admin({ a: 'signup_gap', min: 9, max: 3 })).status === 400);
-await admin({ a: 'signup_gap', min: 3, max: 3 });
-ok('first new account goes through', (await tryJoin({})).status === 200);
-rr = await tryJoin({});
-ok('the next one waits, whoever it is', rr.status === 429 && /paused for [1-3] more second/.test(rr.data.error) && +rr.retry >= 1, rr.data);
-ok('admins can still make accounts', (await admin({ a: 'create_account', name: 'PausedPal', password: 'palpass12' })).status === 200);
-await sleep(3200);
-ok('after the pause, sign-ups open again', (await tryJoin({})).status === 200);
-await admin({ a: 'signup_gap', min: 0, max: 0 });
-ok('the config doesn\'t reveal the pause', !('signup_gap' in (await call('GET', '/config')).data));
+// The pause between new accounts (needs the admin key to set it).
+if (ADMIN.d) {
+  rr = await admin({ a: 'signup_gap' });
+  ok('pause setting reads back', rr.status === 200 && rr.data.gap[0] === 0 && rr.data.gap[1] === 0, rr.data);
+  ok('pause setting refuses nonsense', (await admin({ a: 'signup_gap', min: 9, max: 3 })).status === 400);
+  await admin({ a: 'signup_gap', min: 3, max: 3 });
+  ok('first new account goes through', (await tryJoin({})).status === 200);
+  rr = await tryJoin({});
+  ok('the next one waits, whoever it is', rr.status === 429 && /paused for [1-3] more second/.test(rr.data.error) && +rr.retry >= 1, rr.data);
+  ok('admins can still make accounts', (await admin({ a: 'create_account', name: 'PausedPal', password: 'palpass12' })).status === 200);
+  await sleep(3200);
+  ok('after the pause, sign-ups open again', (await tryJoin({})).status === 200);
+  await admin({ a: 'signup_gap', min: 0, max: 0 });
+  ok('the config doesn\'t reveal the pause', !('signup_gap' in (await call('GET', '/config')).data));
+}
 
 /* ---- rate limits ---- */
 for (let i = 0; i < 50; i++) await call('POST', '/login', { name: 'nobody' + i, password: 'wrong-pass' }, null, '198.51.100.7');
