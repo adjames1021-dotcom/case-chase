@@ -347,9 +347,31 @@ function leadingZeroBits(bytes, bits) {
 }
 
 // Checks the sign-up form came from a person. Returns the challenge id to mark as used.
-async function checkHuman(db, b) {
+// Cloudflare Turnstile: a privacy-friendly CAPTCHA. Enabled only when the
+// environment has TURNSTILE_SECRET (and the page has the matching site key
+// from config). Without it, the sign-up check stays the proof-of-work below.
+async function verifyTurnstile(env, token, ip) {
+  if (!/^[\w.\-]{1,2048}$/.test(String(token || ''))) return false;
+  try {
+    const form = new URLSearchParams({ secret: env.TURNSTILE_SECRET, response: token });
+    if (ip) form.set('remoteip', ip);
+    const r = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
+      method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: form
+    });
+    const out = await r.json();
+    return !!(out && out.success);
+  } catch (e) { return false; }
+}
+
+// Returns the used-once challenge id to record (proof-of-work), or null when
+// Turnstile handled the check (Cloudflare enforces single use itself).
+async function checkHuman(db, b, env, ip) {
   const again = 'Sign-up check failed. Reload the page and try again.';
   if (b.website) fail(400, again);                                   // the hidden field
+  if (env && env.TURNSTILE_SECRET) {
+    if (!(await verifyTurnstile(env, b.cf_token, ip))) fail(400, 'Please complete the "I\'m human" check and try again.');
+    return null;
+  }
   const m = /^(\d{10})\.([A-Za-z0-9_-]{12})\.([A-Za-z0-9_-]{22})$/.exec(String(b.challenge || ''));
   const nonce = String(b.nonce || '');
   if (!m || !/^[0-9a-z]{1,12}$/.test(nonce)) fail(400, again);
@@ -443,7 +465,7 @@ async function signup(request, env) {
   if (problem) fail(400, problem);
   const ip = ipOf(request);
   await limit(db, 'signup_try', ip, 'Too many sign-up attempts from this network. Try again in a few minutes.');
-  const challengeId = await checkHuman(db, b);
+  const challengeId = await checkHuman(db, b, env, ip);
   const t = nowS();
   const keys = await deviceKeys(request, db);
   const device = keys.find((k) => k[0] === 'd');
@@ -493,8 +515,11 @@ async function signup(request, env) {
     check(db, "COALESCE((SELECT CAST(v AS INTEGER) FROM settings WHERE k = 'signup_open_at'), 0) <= ?", t),
     db.prepare("INSERT OR REPLACE INTO settings (k, v) VALUES ('signup_open_at', ?)").bind(String(openAt)),
     db.prepare('DELETE FROM signups WHERE at < ?').bind(t - 86400),
-    db.prepare('INSERT INTO used_challenges (id, at) VALUES (?, ?)').bind(challengeId, t),
-    db.prepare('DELETE FROM used_challenges WHERE at < ?').bind(t - POW_MAX_AGE - 60),
+    // Proof-of-work challenge id (skipped when Turnstile handled the check).
+    ...(challengeId ? [
+      db.prepare('INSERT INTO used_challenges (id, at) VALUES (?, ?)').bind(challengeId, t),
+      db.prepare('DELETE FROM used_challenges WHERE at < ?').bind(t - POW_MAX_AGE - 60)
+    ] : []),
     ...recordDevices(db, id, keys, request)
   ]).catch(async (e) => {
     if (e.status === 409) { await paused(); fail(409, 'That username is taken'); }      // someone else just signed up, or took the name
@@ -551,7 +576,7 @@ async function authed(request, env) {
     return null;
   }
   if (row.banned) fail(403, 'banned', { reason: await banReason(env.DB, row.id) });
-  if (t - row.s_used > 600 || t - row.last_seen > 120) {
+  if (t - row.s_used > 1800 || t - row.last_seen > 240) {   // coarse on purpose: fewer row writes (free D1 plan)
     await env.DB.batch([
       env.DB.prepare('UPDATE sessions SET last_used = ? WHERE token_hash = ?').bind(t, hash),
       env.DB.prepare('UPDATE accounts SET last_seen = ? WHERE id = ?').bind(t, row.id)
@@ -1437,6 +1462,7 @@ async function config(env) {
   const s = await settings(env.DB);
   return json({
     announcement: s.announcement || '', maintenance: s.maintenance === '1', version: GAME_VERSION,
+    turnstile: env.TURNSTILE_SITEKEY || '',
     seasons: seasonsOn(new Date(), seasonOverrides(s)), season_modes: seasonOverrides(s)
   });
 }

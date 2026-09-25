@@ -1217,6 +1217,7 @@
     <input class="control" id="login-pass" type="password" maxlength="72" autocomplete="current-password" placeholder="password">
     <!-- Hidden from people; bots that fill in every field give themselves away. -->
     <input class="hp-field" id="login-website" name="website" tabindex="-1" autocomplete="off" aria-hidden="true" placeholder="website">
+    <div id="turnstile-box" style="display:none;margin:4px 0"></div>
     <div class="name-err" id="login-err"></div>
     <button class="btn btn-primary" id="login-go">Log in</button>
     <button class="link-btn login-guest" id="login-guest">Play offline as a guest</button>
@@ -6988,8 +6989,43 @@
       $('#login-note').textContent = mode === 'signup'
         ? 'Your coins and items are saved to your account, so you can play from anywhere.'
         : 'Guests play on this device only: no trading or leaderboard.';
-      if (mode === 'signup') prepareHuman();
+      if (mode === 'signup') { if (cfg.turnstile) renderTurnstile(); else prepareHuman(); }
+      else hideTurnstile();
     }
+
+    // Cloudflare Turnstile ("I'm human" check). Used only when the server
+    // reports a site key (config.turnstile); otherwise the proof-of-work runs.
+    let tsWidget = null, tsLoading = null;
+    function loadTurnstile() {
+      if (window.turnstile) return Promise.resolve();
+      if (tsLoading) return tsLoading;
+      tsLoading = new Promise((resolve, reject) => {
+        const s = document.createElement('script');
+        s.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';
+        s.async = true; s.defer = true;
+        s.onload = () => resolve(); s.onerror = () => reject(new Error('turnstile'));
+        document.head.appendChild(s);
+      });
+      return tsLoading;
+    }
+    function renderTurnstile() {
+      const box = $('#turnstile-box');
+      if (!cfg.turnstile) { box.style.display = 'none'; return; }
+      box.style.display = '';
+      loadTurnstile().then(() => {
+        if (tsWidget != null) { try { window.turnstile.reset(tsWidget); } catch (e) { /* ignore */ } return; }
+        try {
+          tsWidget = window.turnstile.render(box, { sitekey: cfg.turnstile, theme: 'dark',
+            'error-callback': () => { $('#login-err').textContent = 'The human check couldn\'t load. Reload and try again.'; } });
+        } catch (e) { /* already rendered or script hiccup */ }
+      }).catch(() => { $('#login-err').textContent = 'The human check couldn\'t load. Reload and try again.'; });
+    }
+    function hideTurnstile() { $('#turnstile-box').style.display = 'none'; }
+    function turnstileToken() {
+      try { return (window.turnstile && tsWidget != null) ? window.turnstile.getResponse(tsWidget) : ''; }
+      catch (e) { return ''; }
+    }
+    function resetTurnstile() { try { if (window.turnstile && tsWidget != null) window.turnstile.reset(tsWidget); } catch (e) { /* ignore */ } }
 
     // Tells the player straight away when a name they're typing won't be allowed.
     let nameTimer = null;
@@ -7018,7 +7054,16 @@
       const signingUp = authMode === 'signup';
       try {
         const req = { name: name, password: password };
-        if (signingUp) {
+        if (signingUp && cfg.turnstile) {
+          req.website = $('#login-website').value;
+          req.cf_token = turnstileToken();
+          if (!req.cf_token) {
+            err.textContent = 'Please complete the "I\'m human" check.';
+            SFX.lose(); go.disabled = false; ui.busy = false; go.textContent = 'Create account';
+            renderTurnstile();
+            return;
+          }
+        } else if (signingUp) {
           go.textContent = 'Checking you\'re not a bot…';
           const job = prepareHuman();
           req.nonce = await job.ready;
@@ -8262,7 +8307,7 @@
       ticks++;
       const now = Date.now();
       if (refreshWanted && !animating()) { refreshWanted = false; refresh(); }
-      if (document.visibilityState === 'visible' && now - lastPing > 30000) {
+      if (document.visibilityState === 'visible' && now - lastPing > 60000) {   // 60s: the heartbeat is the main source of DB writes
         lastPing = now;
         try {
           const r = await api('POST', '/api/ping');
