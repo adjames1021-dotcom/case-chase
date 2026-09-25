@@ -1662,6 +1662,17 @@
             <div class="kv"><span>Status</span><b id="adm-maint-state">…</b></div>
             <button class="btn btn-ghost" id="adm-maint" style="width:100%;margin-top:12px">Turn on</button>
           </div>
+          <div class="card">
+            <h4>Pause between new accounts</h4>
+            <p class="hint">After every new account, sign-ups pause for everyone for a random number of seconds in this range, so bots can't make accounts quickly however they disguise themselves. 0 to 0 turns it off. Accounts you make here are never held up.</p>
+            <div class="adm-line">
+              <input class="control" id="adm-gap-min" type="number" min="0" max="3600" style="max-width:90px" aria-label="Shortest pause, seconds">
+              <span>to</span>
+              <input class="control" id="adm-gap-max" type="number" min="0" max="3600" style="max-width:90px" aria-label="Longest pause, seconds">
+              <span>seconds</span>
+              <button class="btn btn-ghost btn-sm" id="adm-gap-save">Save</button>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -6073,7 +6084,21 @@
     });
   }
 
+  async function loadSignupGap() {
+    let r;
+    try { r = await cloud.admin('signup_gap', {}); } catch (e) { return; }
+    if (document.activeElement !== $('#adm-gap-min')) $('#adm-gap-min').value = r.gap[0];
+    if (document.activeElement !== $('#adm-gap-max')) $('#adm-gap-max').value = r.gap[1];
+  }
+
+  async function saveSignupGap() {
+    const min = Math.floor(+$('#adm-gap-min').value), max = Math.floor(+$('#adm-gap-max').value);
+    if (!(min >= 0 && max >= min && max <= 3600)) { toast('Use 0 to 3600 seconds, the smallest first', 'bad'); return; }
+    if (await adminDo('signup_gap', { min: min, max: max }, max ? 'New accounts pause ' + min + '–' + max + ' seconds' : 'No pause between new accounts')) loadSignupGap();
+  }
+
   async function loadAdminSettings() {
+    loadSignupGap();
     const c = await cloud.config(true);
     if (!c) { $('#adm-maint-state').textContent = 'Can\'t reach the server'; return; }
     if (document.activeElement !== $('#adm-announce')) $('#adm-announce').value = c.announcement;
@@ -8461,6 +8486,7 @@
     $$('#adm-tabs .chip').forEach((c) => c.addEventListener('click', () => { SFX.blip(); setAdminView(c.dataset.view); }));
     $('#adm-search').addEventListener('input', (e) => searchAdminPlayers(e.target.value.trim()));
     $('#admc-go').addEventListener('click', createAdminAccount);
+    $('#adm-gap-save').addEventListener('click', saveSignupGap);
     $('#admc-pass').addEventListener('keydown', (e) => { if (e.key === 'Enter') createAdminAccount(); });
     $('#adm-announce-save').addEventListener('click', () => saveAnnouncement($('#adm-announce').value.trim()));
     $('#adm-announce-clear').addEventListener('click', () => { $('#adm-announce').value = ''; saveAnnouncement(''); });

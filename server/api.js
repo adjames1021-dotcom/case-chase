@@ -59,7 +59,7 @@
 import {
   CASES, ALL_ITEMS, ITEM_INDEX, GAME_VERSION, VAULT_KEY, VAULT_CRATE, WEARS, NO_WEAR, NO_TRACKER,
   rollItem, rollWear, instantiate, bonusChance, itemTuple, tupleToItem,
-  pickTarget, upgradeChance, computeBattle, seededRng, hashString, nameProblem, isRude, textProblem, RARITIES,
+  pickTarget, upgradeChance, computeBattle, seededRng, hashString, nameProblem, textProblem, RARITIES,
   FREE_COOLDOWN, SEASONS, seasonsOn, onSale, caseBonus
 } from './core.js';
 
@@ -69,7 +69,15 @@ const PBKDF2_ROUNDS = 20000;            // fits Cloudflare's free-plan CPU budge
 const SESSION_TTL = 60 * 86400;         // s of inactivity before a login expires
 const LOGIN_FAILS = 5, LOGIN_LOCK = 60; // 5 wrong passwords -> wait a minute
 const SIGNUPS_PER_HOUR = 20, SIGNUPS_PER_DAY = 60;   // per IP; schools share one IP, so keep them roomy
-const SIGNUPS_ALL_PER_HOUR = 300;       // across everyone, so a botnet can't flood the game
+const SIGNUPS_ALL_PER_HOUR = 300;
+// After every new account, sign-ups pause for everyone for a random number of
+// seconds in this range, so no bot can make accounts quickly however it
+// disguises itself. Admins change it in the Game tab (settings 'signup_gap').
+const SIGNUP_GAP = [10, 40];
+function signupGap(s) {
+  const m = /^(\d+)-(\d+)$/.exec(String((s && s.signup_gap) || ''));
+  return m ? [+m[1], +m[2]] : SIGNUP_GAP.slice();
+}       // across everyone, so a botnet can't flood the game
 const POW_BITS = 18;                    // sign-up proof of work: about a second of a browser's time
 const POW_MIN_AGE = 2, POW_MAX_AGE = 15 * 60;   // s from getting a sign-up challenge to using it
 const MAX_ITEMS = 3000;
@@ -285,8 +293,7 @@ const LIMITS = {                          // [how many, in how many seconds]
   gift:       [30, 600],                  // gift codes tried per account
   listing:    [60, 600],                  // market listings made per account
   invite:     [60, 600],                  // battle invites sent per account
-  suggest:    [5, 3600],                  // suggestions posted per account
-  rude_name:  [3, 86400]                  // rude names sent per device or browser (the game never sends one)
+  suggest:    [5, 3600]                   // suggestions posted per account
 };
 const ipOf = (request) => request.headers.get('CF-Connecting-IP') || 'local';
 const hitRow = (db, name, who) => db.prepare('INSERT INTO hits (k, at) VALUES (?, ?)').bind(name + ':' + who, nowS());
@@ -370,7 +377,6 @@ async function checkHuman(db, b) {
 const DEVICE_KINDS = { d: 'Device', f: 'Browser', n: 'Network' };
 const DEVICE_FLAG = { d: 3, f: 6, n: 10 };      // accounts on one before it's flagged
 const DEVICE_SIGNUPS_PER_DAY = 5;
-const BROWSER_SIGNUPS_PER_DAY = 10;       // roomier: a class of identical school laptops shares one
 
 function deviceLabel(ua) {
   ua = String(ua || '');
@@ -400,10 +406,18 @@ const recordDevices = (db, account, keys, request) => keys.map(([kind, value]) =
   .bind(account, kind, value, kind === 'n' ? '' : deviceLabel(request.headers.get('User-Agent')), nowS(), nowS()));
 
 // Refuses a request from a blocked device, browser or network.
-async function checkBlocked(db, keys) {
-  const row = await db.prepare(`SELECT reason FROM device_bans WHERE (kind || ':' || value) IN (SELECT value FROM json_each(?)) LIMIT 1`)
-    .bind(JSON.stringify(keys.map((k) => k.join(':')))).first();
-  if (row) fail(403, 'This device is blocked from making or using accounts.' + (row.reason ? ' Reason: ' + row.reason : ''));
+// Automatic browser blocks (see signup) only stop new accounts, and only for
+// a day: identical school laptops share a browser id, so a whole class could
+// otherwise be locked out by one spammer. Device ids are one browser each.
+const AUTO_DEVICE = 'Made more than one account in a minute';
+const AUTO_BROWSER = 'Its device made more than one account in a minute';
+async function checkBlocked(db, keys, signingUp) {
+  const rows = (await db.prepare(`SELECT reason, at FROM device_bans WHERE (kind || ':' || value) IN (SELECT value FROM json_each(?))`)
+    .bind(JSON.stringify(keys.map((k) => k.join(':')))).all()).results;
+  const row = rows.find((r) => r.reason !== AUTO_BROWSER || (signingUp && nowS() - r.at < 86400));
+  if (!row) return;
+  if (row.reason === AUTO_BROWSER) fail(403, 'This browser made accounts too quickly, so it can\'t make new ones until tomorrow.');
+  fail(403, 'This device is blocked from making or using accounts.' + (row.reason ? ' Reason: ' + row.reason : ''));
 }
 
 async function newSession(db, id) {
@@ -425,35 +439,31 @@ async function signup(request, env) {
   const db = env.DB;
   const b = await body(request);
   const { name, password } = readCredentials(b);
+  const problem = nameProblem(name);
+  if (problem) fail(400, problem);
   const ip = ipOf(request);
   await limit(db, 'signup_try', ip, 'Too many sign-up attempts from this network. Try again in a few minutes.');
-  const keys = await deviceKeys(request, db);
-  const device = keys.find((k) => k[0] === 'd'), browser = keys.find((k) => k[0] === 'f');
-  if (!device || !browser) fail(400, 'Reload the page and try again.');          // the game always sends both
-  // The game checks names before sending them, so a rude one here comes from a
-  // bot or an edited game: three in a day and that device and browser can't
-  // make accounts until the day is up.
-  const who = [device.join(':'), browser.join(':')];
-  for (const w of who) {
-    const wait = await waitFor(db, 'rude_name', w);
-    if (wait) fail(429, 'This device can\'t make new accounts right now. Try again tomorrow.', { retry: wait });
-  }
-  const problem = nameProblem(name);
-  if (problem) {
-    if (isRude(name)) await db.batch(who.map((w) => hitRow(db, 'rude_name', w)));
-    fail(400, problem);
-  }
   const challengeId = await checkHuman(db, b);
   const t = nowS();
-  await checkBlocked(db, keys);
+  const keys = await deviceKeys(request, db);
+  const device = keys.find((k) => k[0] === 'd');
+  if (!device) fail(400, 'Reload the page and try again.');          // the game always sends one
+  await checkBlocked(db, keys, true);
   const onDevice = await db.prepare(
-    `SELECT COALESCE(SUM(a.banned), 0) AS banned, COALESCE(SUM(d.first_at > ?), 0) AS today
-       FROM account_devices d JOIN accounts a ON a.id = d.account WHERE d.kind = 'd' AND d.value = ?`).bind(t - 86400, device[1]).first();
+    `SELECT COALESCE(SUM(a.banned), 0) AS banned, COALESCE(SUM(d.first_at > ?), 0) AS today, COALESCE(SUM(a.created_at > ?), 0) AS minute
+       FROM account_devices d JOIN accounts a ON a.id = d.account WHERE d.kind = 'd' AND d.value = ?`).bind(t - 86400, t - 60, device[1]).first();
   if (onDevice.banned) fail(403, 'An account on this device is banned, so it can\'t make new ones.');
+  // A second new account from one device inside a minute is a bot or a
+  // spammer: the device is blocked (no sign-ups or logins), and its browser
+  // can't make accounts for a day (see checkBlocked). Admins can lift either
+  // from the admin panel's Overview.
+  if (onDevice.minute >= 1) {
+    await db.batch(keys.filter((k) => k[0] !== 'n').map(([kind, value]) =>
+      db.prepare('INSERT OR REPLACE INTO device_bans (kind, value, reason, at) VALUES (?, ?, ?, ?)')
+        .bind(kind, value, kind === 'd' ? AUTO_DEVICE : AUTO_BROWSER, t)));
+    fail(403, 'This device made accounts too quickly, so it has been blocked.');
+  }
   if (onDevice.today >= DEVICE_SIGNUPS_PER_DAY) fail(429, 'This device has made a lot of accounts today. Try again tomorrow.');
-  const onBrowser = await db.prepare(`SELECT COUNT(*) AS n FROM account_devices WHERE kind = 'f' AND value = ? AND first_at > ?`)
-    .bind(browser[1], t - 86400).first();
-  if (onBrowser.n >= BROWSER_SIGNUPS_PER_DAY) fail(429, 'This browser has made a lot of accounts today. Try again tomorrow.');
   const [hour, day, everyone, taken] = (await db.batch([
     db.prepare('SELECT COUNT(*) AS n FROM signups WHERE ip = ? AND at > ?').bind(ip, t - 3600),
     db.prepare('SELECT COUNT(*) AS n FROM signups WHERE ip = ? AND at > ?').bind(ip, t - 86400),
@@ -463,6 +473,14 @@ async function signup(request, env) {
   if (hour >= SIGNUPS_PER_HOUR || day >= SIGNUPS_PER_DAY) fail(429, 'Too many new accounts from this network. Try again later.');
   if (everyone >= SIGNUPS_ALL_PER_HOUR) fail(429, 'Lots of people are signing up right now. Try again in a few minutes.');
   if (taken) fail(409, 'That username is taken');
+  const paused = async () => {
+    const gate = await db.prepare("SELECT v FROM settings WHERE k = 'signup_open_at'").first();
+    const wait = (gate ? Number(gate.v) || 0 : 0) - nowS();
+    if (wait > 0) fail(429, 'New accounts are paused for ' + wait + ' more second' + (wait === 1 ? '' : 's') + '. Try again then.', { retry: wait });
+  };
+  await paused();
+  const gap = signupGap(await settings(db));
+  const openAt = t + gap[0] + Math.floor(rand() * (gap[1] - gap[0] + 1));
 
   const id = randomId(9);
   const pass = await hashPassword(password, randomId(16), PBKDF2_ROUNDS);
@@ -472,11 +490,16 @@ async function signup(request, env) {
       .bind(id, name, name.toLowerCase(), pass, t, t, t),
     session.stmt,
     db.prepare('INSERT INTO signups (ip, at) VALUES (?, ?)').bind(ip, t),
+    check(db, "COALESCE((SELECT CAST(v AS INTEGER) FROM settings WHERE k = 'signup_open_at'), 0) <= ?", t),
+    db.prepare("INSERT OR REPLACE INTO settings (k, v) VALUES ('signup_open_at', ?)").bind(String(openAt)),
     db.prepare('DELETE FROM signups WHERE at < ?').bind(t - 86400),
     db.prepare('INSERT INTO used_challenges (id, at) VALUES (?, ?)').bind(challengeId, t),
     db.prepare('DELETE FROM used_challenges WHERE at < ?').bind(t - POW_MAX_AGE - 60),
     ...recordDevices(db, id, keys, request)
-  ]).catch((e) => { if (e.status === 409) fail(409, 'That username is taken'); throw e; });
+  ]).catch(async (e) => {
+    if (e.status === 409) { await paused(); fail(409, 'That username is taken'); }      // someone else just signed up, or took the name
+    throw e;
+  });
   return json(Object.assign({ token: session.token, me: meOut(await account(db, id)), inventory: [], locks: [] }, await perks(db, { id: id })));
 }
 
@@ -1921,6 +1944,18 @@ const ADMIN = {
     const ids = names.filter((a) => nameProblem(a.name, true)).map((a) => a.id);
     const n = await banOrDelete(db, ids, mode, String(p.reason || 'Username breaks the rules').slice(0, 200));
     return { count: n, log: ['rule-breaking names', (mode === 'delete' ? 'deleted ' : 'banned ') + n + ' account(s)'] };
+  },
+
+  // The random pause between new accounts, in seconds. With no fields it reports it.
+  async signup_gap(db, p) {
+    if (p.min == null && p.max == null) return { gap: signupGap(await settings(db)), default: SIGNUP_GAP };
+    if (!isInt(p.min, 0, 3600) || !isInt(p.max, 0, 3600) || p.min > p.max) fail(400, 'Use 0 to 3600 seconds, the smallest first');
+    await db.batch([                                     // takes effect now: a pause already running ends
+      db.prepare("INSERT OR REPLACE INTO settings (k, v) VALUES ('signup_gap', ?)").bind(p.min + '-' + p.max),
+      db.prepare("DELETE FROM settings WHERE k = 'signup_open_at'")
+    ]);
+    settingsCache.at = 0;
+    return { gap: [p.min, p.max], log: ['sign-ups', p.max ? 'pause between new accounts: ' + p.min + '-' + p.max + 's' : 'no pause between new accounts'] };
   },
 
   async settings(db, p) {

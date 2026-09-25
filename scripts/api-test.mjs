@@ -81,6 +81,10 @@ let nonce = 0;
 const signed = async (p) => { const s = JSON.stringify(p); return { p: s, g: await adminSign(s) }; };
 const admin = async (p) => call('POST', '/admin', await signed(Object.assign({ ts: Math.floor(Date.now() / 1000), n: 'test-' + Date.now() + '-' + (nonce++) }, p)));
 
+// Sign-ups pause for a random few seconds after every new account (see
+// signup_gap). Off for the tests, which make lots; tested on purpose below.
+await admin({ a: 'signup_gap', min: 0, max: 0 });
+
 /* ---- accounts ---- */
 const A = await call('POST', '/signup', { name: 'alice', password: 'alicepass' });
 ok('signup', A.status === 200 && A.data.token && A.data.me.coins === 500, A.status);
@@ -140,22 +144,31 @@ const noDevice = await fetch(BASE + '/signup', { method: 'POST', headers: { 'Con
   body: JSON.stringify(Object.assign(await human(), { name: botName(), password: 'botpass1' })) });
 ok('sign-up without a device id -> refused', noDevice.status === 400);
 const farm = 'device-farm-zzzzzzzzzzzz', farmed = [];
-for (let i = 0; i < 6; i++) farmed.push((await tryJoin({}, null, farm)).status);
-ok('5 new accounts a day per device', farmed.slice(0, 5).every((s) => s === 200) && farmed[5] === 429, farmed);
-const noFp = await fetch(BASE + '/signup', { method: 'POST', headers: { 'Content-Type': 'application/json', 'CF-Connecting-IP': randomIp(), 'X-Device': randomDevice() },
-  body: JSON.stringify(Object.assign(await human(), { name: botName(), password: 'botpass1' })) });
-ok('sign-up without a browser fingerprint -> refused', noFp.status === 400);
-const laptop = 'fp-classroom-laptop', cls = [];
-for (let i = 0; i < 11; i++) cls.push((await call('POST', '/signup', { name: botName(), password: 'botpass1' }, null, null, null, laptop)).status);
-ok('10 new accounts a day per browser, even clearing the device id', cls.slice(0, 10).every((s) => s === 200) && cls[10] === 429, cls);
-const rudeDev = randomDevice(), rudeTries = [];
-for (const n of ['NlGGER' + 525513, 'xNlggerx', 'Nllgger9']) rudeTries.push((await call('POST', '/signup', { name: n, password: 'botpass1' }, null, null, rudeDev)).status);
-ok('slurs with l for i refused', rudeTries.every((s) => s === 400), rudeTries);
-rr = await call('POST', '/signup', { name: botName(), password: 'botpass1' }, null, null, rudeDev);
-ok('three rude names -> that device can\'t sign up for a day', rr.status === 429 && +rr.retry > 3600, rr);
-rr = await call('POST', '/signup', { name: botName(), password: 'botpass1' }, null, null, null, 'fp' + rudeDev.slice(0, 20));
-ok('...nor that browser with a fresh device id', rr.status === 429, rr.data);
-ok('...while other devices can', (await tryJoin({})).status === 200);
+for (let i = 0; i < 3; i++) farmed.push((await tryJoin({}, null, farm)).status);
+ok('a second account from one device inside a minute blocks the device', farmed[0] === 200 && farmed[1] === 403 && farmed[2] === 403, farmed);
+rr = await call('POST', '/signup', { name: botName(), password: 'botpass1' }, null, null, null, 'fp' + farm.slice(0, 20));
+ok('...and its browser, even with a fresh device id', rr.status === 403, rr.data);
+rr = await call('POST', '/login', { name: 'bob', password: 'bobpass1' }, null, null, farm);
+ok('...which can\'t log in either', rr.status === 403, rr.data);
+rr = await call('POST', '/login', { name: 'bob', password: 'bobpass1' }, null, null, null, 'fp' + farm.slice(0, 20));
+ok('...but another device with the same browser (a classmate\'s laptop) still logs in', rr.status === 200, rr.data);
+ok('other devices carry on', (await tryJoin({})).status === 200);
+rr = await admin({ a: 'devices' });
+ok('the admin panel lists the blocks', rr.status === 200 && rr.data.blocked.filter((x) => /more than one account in a minute/.test(x.reason)).length === 2, rr.data && rr.data.blocked);
+
+// The pause between new accounts.
+rr = await admin({ a: 'signup_gap' });
+ok('pause setting reads back', rr.status === 200 && rr.data.gap[0] === 0 && rr.data.gap[1] === 0, rr.data);
+ok('pause setting refuses nonsense', (await admin({ a: 'signup_gap', min: 9, max: 3 })).status === 400);
+await admin({ a: 'signup_gap', min: 3, max: 3 });
+ok('first new account goes through', (await tryJoin({})).status === 200);
+rr = await tryJoin({});
+ok('the next one waits, whoever it is', rr.status === 429 && /paused for [1-3] more second/.test(rr.data.error) && +rr.retry >= 1, rr.data);
+ok('admins can still make accounts', (await admin({ a: 'create_account', name: 'PausedPal', password: 'palpass12' })).status === 200);
+await sleep(3200);
+ok('after the pause, sign-ups open again', (await tryJoin({})).status === 200);
+await admin({ a: 'signup_gap', min: 0, max: 0 });
+ok('the config doesn\'t reveal the pause', !('signup_gap' in (await call('GET', '/config')).data));
 
 /* ---- rate limits ---- */
 for (let i = 0; i < 50; i++) await call('POST', '/login', { name: 'nobody' + i, password: 'wrong-pass' }, null, '198.51.100.7');
@@ -776,9 +789,14 @@ ok('the heartbeat notices it', (await call('POST', '/ping', null, mt)).data.me.a
   const onDevice = (dev, name, pass) => call('POST', '/signup', { name, password: pass || 'devpass1' }, null, null, dev);
   const D1 = 'device-one-aaaaaaaaaaaa', D2 = 'device-two-bbbbbbbbbbbb', D3 = 'device-three-ccccccccccc';
   const d1 = [];
-  for (const n of ['botone', 'bottwo', 'botthree']) d1.push((await onDevice(D1, n)).data.me.id);
+  // Made on their own devices (a second new account on one device inside a
+  // minute blocks it), then all logged in on D1.
+  for (const n of ['botone', 'bottwo', 'botthree']) {
+    d1.push((await call('POST', '/signup', { name: n, password: 'devpass1' })).data.me.id);
+    await call('POST', '/login', { name: n, password: 'devpass1' }, null, null, D1);
+  }
   r = await admin({ a: 'player', id: 'botone' });
-  const devRow = r.data.devices.find((d) => d.kind === 'd');
+  const devRow = r.data.devices.find((d) => d.kind === 'd' && d.others > 0);         // D1, not its own sign-up device
   ok('player page lists devices', devRow && devRow.others === 2, r.data.devices);
   r = await admin({ a: 'devices' });
   ok('3 accounts on one device get flagged', r.data.flagged.some((g) => g.kind === 'd' && g.value === devRow.value && g.accounts === 3), r.data.flagged.length);
@@ -805,9 +823,11 @@ ok('the heartbeat notices it', (await call('POST', '/ping', null, mt)).data.me.a
   ok('a device with a banned account can\'t make new ones', r.status === 403 && /banned/.test(r.data.error), r.data);
   // Admins are never swept up.
   const D4 = 'device-four-dddddddddddd';
-  await onDevice(D4, 'modhelper'); await onDevice(D4, 'modalt');
+  await onDevice(D4, 'modhelper');
+  await call('POST', '/signup', { name: 'modalt', password: 'devpass1' });                      // its own device, then on D4
+  await call('POST', '/login', { name: 'modalt', password: 'devpass1' }, null, null, D4);
   await admin({ a: 'grant_admin', id: 'modhelper' });
-  const d4 = (await admin({ a: 'player', id: 'modalt' })).data.devices.find((d) => d.kind === 'd').value;
+  const d4 = (await admin({ a: 'player', id: 'modalt' })).data.devices.find((d) => d.kind === 'd' && d.others > 0).value;
   r = await admin({ a: 'ban_device', kind: 'd', value: d4, reason: 'test' });
   ok('ban all skips admin accounts', r.data.count === 1 && (await call('POST', '/login', { name: 'modhelper', password: 'devpass1' })).status === 200, r.data);
   ok('delete all needs DELETE typed', (await admin({ a: 'delete_device', kind: 'd', value: d4 })).status === 400);
