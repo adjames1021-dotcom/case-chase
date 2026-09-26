@@ -87,7 +87,8 @@ CREATE TABLE IF NOT EXISTS items (
   created_at  INTEGER NOT NULL
 );
 CREATE INDEX IF NOT EXISTS items_owner  ON items (owner, locked);
-CREATE INDEX IF NOT EXISTS items_locked ON items (locked);
+-- items_locked dropped: every lock lookup also filters by owner or id, so the (owner, locked) index and the primary key cover them, and this index just cost a write per item change.
+DROP INDEX IF EXISTS items_locked;
 
 CREATE TRIGGER IF NOT EXISTS items_ai AFTER INSERT ON items BEGIN
   UPDATE accounts SET inv_value = inv_value + NEW.value, inv_count = inv_count + 1, rev = rev + 1 WHERE id = NEW.owner;
